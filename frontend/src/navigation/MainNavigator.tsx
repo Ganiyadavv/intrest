@@ -13,6 +13,9 @@ import { PersonRecordsScreen } from '../screens/PersonRecordsScreen';
 import { AddPersonScreen } from '../screens/AddPersonScreen';
 import { EditPersonScreen } from '../screens/EditPersonScreen';
 import { PersonDetailsScreen } from '../screens/PersonDetailsScreen';
+import { LenderRecordsScreen } from '../screens/LenderRecordsScreen';
+import { AddLenderRecordScreen } from '../screens/AddLenderRecordScreen';
+import { LenderRecordDetailsScreen } from '../screens/LenderRecordDetailsScreen';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
 import { NotificationDetailsScreen } from '../screens/NotificationDetailsScreen';
 import { COLORS } from '../constants/colors';
@@ -73,6 +76,9 @@ export const MainNavigator = () => {
       <Stack.Screen name="AddPerson" component={AddPersonScreen} options={{ headerShown: false }} />
       <Stack.Screen name="EditPerson" component={EditPersonScreen} options={{ headerShown: false }} />
       <Stack.Screen name="PersonDetails" component={PersonDetailsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="LenderRecords" component={LenderRecordsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="AddLenderRecord" component={AddLenderRecordScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="LenderRecordDetails" component={LenderRecordDetailsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="NotificationDetails" component={NotificationDetailsScreen} options={{ headerShown: false }} />
     </Stack.Navigator>

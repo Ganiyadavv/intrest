@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, TextInput, Text, StyleSheet, TouchableOpacity, KeyboardTypeOptions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants/colors';
 
 interface AppInputProps {
@@ -33,7 +34,7 @@ export const AppInput: React.FC<AppInputProps> = ({
         error ? styles.inputError : null
       ]}>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { outlineStyle: 'none' } as any]}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
@@ -48,7 +49,7 @@ export const AppInput: React.FC<AppInputProps> = ({
             style={styles.eyeIcon} 
             onPress={() => setIsSecure(!isSecure)}
           >
-            <Text style={styles.eyeText}>{isSecure ? 'Show' : 'Hide'}</Text>
+            <Ionicons name={isSecure ? 'eye-off-outline' : 'eye-outline'} size={20} color={COLORS.TEXT_SECONDARY} />
           </TouchableOpacity>
         )}
       </View>

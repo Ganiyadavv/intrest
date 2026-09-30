@@ -10,6 +10,7 @@ import { Notification } from '../types/notification';
 import { PersonRecord } from '../types/personRecord';
 import { notificationService } from '../services/notificationService';
 import { personRecordService } from '../services/personRecordService';
+import { lenderRecordService } from '../services/lenderRecordService';
 import { Loading } from '../components/Loading';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { formatCurrency } from '../utils/currency';
@@ -24,7 +25,7 @@ interface Props {
 
 export const NotificationDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
   const { id } = route.params;
-  const [record, setRecord] = useState<PersonRecord | null>(null);
+  const [record, setRecord] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
@@ -50,7 +51,11 @@ export const NotificationDetailsScreen: React.FC<Props> = ({ navigation, route }
   const handleAccept = async (recordId: string) => {
     setProcessing(true);
     try {
-      await personRecordService.acceptPersonRecord(recordId);
+      if (record?.recordType === 'LENDER_RECORD') {
+        await lenderRecordService.acceptLenderRecord(recordId);
+      } else {
+        await personRecordService.acceptPersonRecord(recordId);
+      }
       Alert.alert('Success', 'Request accepted successfully');
       navigation.goBack();
     } catch (err: any) {
@@ -68,7 +73,11 @@ export const NotificationDetailsScreen: React.FC<Props> = ({ navigation, route }
         onPress: async () => {
           setProcessing(true);
           try {
-            await personRecordService.rejectPersonRecord(recordId);
+            if (record?.recordType === 'LENDER_RECORD') {
+              await lenderRecordService.rejectLenderRecord(recordId);
+            } else {
+              await personRecordService.rejectPersonRecord(recordId);
+            }
             Alert.alert('Success', 'Request rejected');
             navigation.goBack();
           } catch (err: any) {
@@ -121,7 +130,9 @@ export const NotificationDetailsScreen: React.FC<Props> = ({ navigation, route }
           </View>
           <View style={styles.detailRow}>
             <Text style={styles.label}>Given Date:</Text>
-            <Text style={styles.value}>{new Date(record.givenDate).toLocaleDateString('en-GB')}</Text>
+            <Text style={styles.value}>
+              {new Date(record.recordType === 'LENDER_RECORD' ? record.receivedDate : record.givenDate).toLocaleDateString('en-GB')}
+            </Text>
           </View>
           <View style={styles.detailRow}>
             <Text style={styles.label}>Phone:</Text>

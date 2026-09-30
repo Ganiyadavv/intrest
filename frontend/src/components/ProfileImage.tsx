@@ -15,7 +15,7 @@ export const ProfileImage: React.FC<ProfileImageProps> = ({
   onEdit 
 }) => {
   const imageSource = uri 
-    ? { uri: uri.startsWith('http') ? uri : `${API_BASE_URL.replace('/api', '')}/uploads/${uri}` }
+    ? { uri: uri.match(/^(http|https|data|blob|file):/i) ? uri : `${API_BASE_URL.replace('/api', '')}/uploads/${uri}` }
     : require('../../assets/favicon.png'); // fallback to some local image
 
   return (

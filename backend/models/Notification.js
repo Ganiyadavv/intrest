@@ -31,6 +31,14 @@ const Notification = sequelize.define("Notification", {
       key: 'id'
     }
   },
+  lenderRecordId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'lender_records',
+      key: 'id'
+    }
+  },
   type: {
     type: DataTypes.STRING,
     allowNull: false

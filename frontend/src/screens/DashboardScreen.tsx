@@ -13,6 +13,7 @@ import { PersonRecord } from '../types/personRecord';
 import { personRecordService } from '../services/personRecordService';
 import { formatCurrency } from '../utils/currency';
 import { notificationService } from '../services/notificationService';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
@@ -25,6 +26,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [personRecords, setPersonRecords] = useState<PersonRecord[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const { language, setLanguage, t } = useLanguage();
 
   const loadData = async () => {
     try {
@@ -86,20 +88,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
 
 
 
-  // Calculate Aggregates
-  let totalPrincipal = 0;
-  let activeRecords = 0;
-  let completedRecords = 0;
-
-  const recordsList = Array.isArray(personRecords) ? personRecords : [];
-  recordsList.forEach(person => {
-    totalPrincipal += Number(person.amount) || 0;
-    if (person.status === 'PENDING' || person.status === 'ACCEPTED') {
-      activeRecords++;
-    } else if (person.status === 'COMPLETED') {
-      completedRecords++;
-    }
-  });
+  // Aggregates removed as per user request
 
   return (
     <SafeAreaView style={styles.container}>
@@ -110,39 +99,41 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.topDarkSection}>
             <View style={styles.headerTop}>
               <View>
-                <Text style={styles.greetingText}>Good Morning,</Text>
-                <Text style={styles.userName}>{user?.firstName || 'User'}!</Text>
+                <Text style={styles.userName}>{user?.firstName || 'User'}</Text>
               </View>
-              <TouchableOpacity style={styles.profileAvatar} onPress={() => navigation.navigate('Profile')} activeOpacity={0.8}>
-                <Text style={styles.avatarInitials}>{user?.firstName?.[0]?.toUpperCase() || 'U'}</Text>
-              </TouchableOpacity>
+              <View style={styles.headerRight}>
+                <TouchableOpacity 
+                  style={styles.languageToggle} 
+                  onPress={() => setLanguage(language === 'en' ? 'te' : 'en')}
+                >
+                  <Text style={styles.languageToggleText}>{language === 'en' ? 'తెలుగు' : 'English'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.profileAvatar} onPress={() => navigation.navigate('Profile')} activeOpacity={0.8}>
+                  <Text style={styles.avatarInitials}>{user?.firstName?.[0]?.toUpperCase() || 'U'}</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
-            {/* Neon Hero Card */}
+            {/* Interest Project Banner */}
             <View style={styles.neonCard}>
-              <View style={styles.neonCardHeader}>
-                <View style={styles.neonIconWrapper}>
-                  <Ionicons name="albums" size={20} color="#FF6BE7" />
+              <View style={styles.bannerContainer}>
+                <View style={styles.bannerIconGroup}>
+                  <View style={[styles.bannerIconWrapper, { backgroundColor: 'rgba(74, 144, 226, 0.2)' }]}>
+                    <Ionicons name="trending-up" size={32} color="#4A90E2" />
+                  </View>
+                  <View style={[styles.bannerIconWrapper, { backgroundColor: 'rgba(255, 107, 231, 0.2)', marginTop: -15, marginLeft: -10 }]}>
+                    <Ionicons name="pie-chart" size={28} color="#FF6BE7" />
+                  </View>
+                  <View style={[styles.bannerIconWrapper, { backgroundColor: 'rgba(16, 185, 129, 0.2)', marginTop: -5, marginLeft: -10 }]}>
+                    <Ionicons name="cash" size={24} color="#10B981" />
+                  </View>
                 </View>
-                <Text style={styles.neonCardTitle}>Records Overview</Text>
-              </View>
-
-              <View style={styles.neonStatsRow}>
-                <View style={styles.neonStatItem}>
-                   <Text style={styles.neonStatValue}>{activeRecords}</Text>
-                   <Text style={styles.neonStatLabel}>Active Loans</Text>
-                </View>
-                <View style={styles.neonStatItem}>
-                   <Text style={styles.neonStatValue}>{completedRecords}</Text>
-                   <Text style={styles.neonStatLabel}>Completed</Text>
+                
+                <View style={styles.bannerTextContent}>
+                  <Text style={styles.bannerTitle}>{t('dashboard.smartInterest')}</Text>
+                  <Text style={styles.bannerSubtitle}>{t('dashboard.trackLoans')}</Text>
                 </View>
               </View>
-
-              {/* Glowing Progress Bar Simulator */}
-              <View style={styles.neonProgressTrack}>
-                 <View style={styles.neonProgressFill} />
-              </View>
-              <Text style={styles.neonProgressText}>{formatCurrency(totalPrincipal)} Total Principal</Text>
             </View>
           </View>
 
@@ -155,13 +146,14 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.bottomLightSection}>
             
             <View style={styles.neuGrid}>
-              {renderNeumorphicButton('Borrower\nRecords', 'PersonRecords', 'people', '#10B981')}
-              {renderNeumorphicButton('Interest\nCalculator', 'InterestCalculator', 'calculator', '#F5A623')}
-              {renderNeumorphicButton('Rate\nCalculator', 'RateCalculator', 'pie-chart', '#FF6BE7')}
-              {renderNeumorphicButton('Notifications', 'Notifications', 'notifications', '#FBBF24', unreadCount)}
-              {renderNeumorphicButton('Search', 'SearchUser', 'search', '#50E3C2')}
-              {renderNeumorphicButton('Profile', 'Profile', 'person', '#B865D6')}
-              {renderNeumorphicButton('Logout', 'Auth', 'log-out', '#E74C3C')}
+              {renderNeumorphicButton(t('dashboard.borrowerRecords'), 'PersonRecords', 'people', '#10B981')}
+              {renderNeumorphicButton(t('dashboard.lenderRecords'), 'LenderRecords', 'wallet', '#4A90E2')}
+              {renderNeumorphicButton(t('dashboard.interestCalculator'), 'InterestCalculator', 'calculator', '#F5A623')}
+              {renderNeumorphicButton(t('dashboard.rateCalculator'), 'RateCalculator', 'pie-chart', '#FF6BE7')}
+              {renderNeumorphicButton(t('dashboard.notifications'), 'Notifications', 'notifications', '#FBBF24', unreadCount)}
+              {renderNeumorphicButton(t('dashboard.search'), 'SearchUser', 'search', '#50E3C2')}
+              {renderNeumorphicButton(t('dashboard.profile'), 'Profile', 'person', '#B865D6')}
+              {renderNeumorphicButton(t('dashboard.logout'), 'Auth', 'log-out', '#E74C3C')}
             </View>
 
           </View>
@@ -226,6 +218,24 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.5,
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  languageToggle: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  languageToggleText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
   profileAvatar: {
     width: 52,
     height: 52,
@@ -253,66 +263,43 @@ const styles = StyleSheet.create({
     shadowRadius: 30,
     elevation: 15,
   },
-  neonCardHeader: {
+  bannerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
   },
-  neonIconWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 107, 231, 0.1)',
+  bannerIconGroup: {
+    flexDirection: 'row',
+    marginRight: 16,
+    width: 70,
+    height: 70,
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  bannerIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    position: 'absolute',
+    borderWidth: 2,
+    borderColor: '#1A1B2F'
   },
-  neonCardTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#FFF',
-  },
-  neonStatsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  neonStatItem: {
+  bannerTextContent: {
     flex: 1,
   },
-  neonStatValue: {
-    fontSize: 28,
-    fontWeight: '900',
+  bannerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
     color: '#FFF',
-    marginBottom: 4,
+    marginBottom: 6,
+    letterSpacing: 0.5,
   },
-  neonStatLabel: {
+  bannerSubtitle: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '600',
-  },
-  neonProgressTrack: {
-    height: 6,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 3,
-    marginBottom: 12,
-    overflow: 'hidden',
-  },
-  neonProgressFill: {
-    width: '60%',
-    height: '100%',
-    backgroundColor: '#4D8BFF',
-    borderRadius: 3,
-    shadowColor: '#4D8BFF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  neonProgressText: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
-    textAlign: 'right',
+    color: 'rgba(255,255,255,0.6)',
+    lineHeight: 18,
   },
   neuGrid: {
     flexDirection: 'row',

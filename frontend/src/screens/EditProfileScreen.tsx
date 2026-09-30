@@ -57,21 +57,34 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
   }, []);
 
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      setError('Sorry, we need camera roll permissions to make this work!');
-      return;
-    }
+    try {
+      if (Platform.OS !== 'web') {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          setError('Sorry, we need camera roll permissions to make this work!');
+          return;
+        }
+      }
 
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.5,
-    });
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+        base64: true,
+      });
 
-    if (!result.canceled) {
-      setProfileImage(result.assets[0].uri);
+      if (!result.canceled) {
+        const asset = result.assets[0];
+        if (asset.base64) {
+          setProfileImage(`data:image/jpeg;base64,${asset.base64}`);
+        } else {
+          setProfileImage(asset.uri);
+        }
+      }
+    } catch (err) {
+      console.log('Image picker error', err);
+      setError('Could not open image picker.');
     }
   };
 

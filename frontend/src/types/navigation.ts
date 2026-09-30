@@ -33,6 +33,10 @@ export type MainStackParamList = {
   AddPerson: undefined;
   EditPerson: { id: string };
   PersonDetails: { id: string };
+  LenderRecords: undefined;
+  AddLenderRecord: undefined;
+  EditLenderRecord: { id: string };
+  LenderRecordDetails: { id: string };
   Notifications: undefined;
   NotificationDetails: { id: string };
 };

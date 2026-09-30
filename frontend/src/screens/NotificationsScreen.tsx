@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Alert, Platform, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -20,6 +20,8 @@ export const NotificationsScreen: React.FC<Props> = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [notificationToDelete, setNotificationToDelete] = useState<string | null>(null);
 
   const fetchNotifications = async () => {
     try {
@@ -43,6 +45,32 @@ export const NotificationsScreen: React.FC<Props> = ({ navigation }) => {
   const onRefresh = () => {
     setRefreshing(true);
     fetchNotifications();
+  };
+
+  const handleDeleteNotification = (id: string) => {
+    setNotificationToDelete(id);
+    setDeleteModalVisible(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!notificationToDelete) return;
+    const id = notificationToDelete;
+    
+    // Optimistic UI update
+    setNotifications(prev => prev.filter(n => n.id !== id));
+    setDeleteModalVisible(false);
+    setNotificationToDelete(null);
+    
+    try {
+      await notificationService.deleteNotification(id);
+    } catch (err) {
+      console.log('Failed to delete notification', err);
+    }
+  };
+
+  const cancelDelete = () => {
+    setDeleteModalVisible(false);
+    setNotificationToDelete(null);
   };
 
   const handleNotificationPress = async (item: any) => {
@@ -89,8 +117,17 @@ export const NotificationsScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </View>
         <View style={styles.actions}>
-          <Text style={styles.actionText}>View Details</Text>
-          <Ionicons name="chevron-forward" size={16} color="#3498DB" />
+          <TouchableOpacity 
+            onPress={() => handleDeleteNotification(item.id)}
+            style={styles.deleteAction}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="trash-outline" size={20} color="#E74C3C" />
+          </TouchableOpacity>
+          <View style={styles.viewDetailsAction}>
+            <Text style={styles.actionText}>View Details</Text>
+            <Ionicons name="chevron-forward" size={16} color="#3498DB" />
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -139,6 +176,32 @@ export const NotificationsScreen: React.FC<Props> = ({ navigation }) => {
           </>
         )}
       </View>
+
+      {/* DELETE CONFIRMATION MODAL */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={deleteModalVisible}
+        onRequestClose={cancelDelete}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalIconContainer}>
+              <Ionicons name="trash-outline" size={32} color="#E74C3C" />
+            </View>
+            <Text style={styles.modalTitle}>Delete Notification</Text>
+            <Text style={styles.modalText}>Are you sure you want to delete this notification? This action cannot be undone.</Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.cancelButton} onPress={cancelDelete}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.confirmDeleteButton} onPress={confirmDelete}>
+                <Text style={styles.confirmDeleteButtonText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -164,6 +227,20 @@ const styles = StyleSheet.create({
   readText: { color: '#7F8C8D', fontWeight: '600' },
   message: { fontSize: 14, color: '#7F8C8D', marginBottom: 8, lineHeight: 20 },
   dateText: { fontSize: 12, color: '#BDC3C7' },
-  actions: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: 12, borderTopWidth: 1, borderTopColor: '#ECF0F1', paddingTop: 12 },
-  actionText: { fontSize: 14, fontWeight: 'bold', color: '#3498DB', marginRight: 4 }
+  actions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, borderTopWidth: 1, borderTopColor: '#ECF0F1', paddingTop: 12 },
+  deleteAction: { padding: 4 },
+  viewDetailsAction: { flexDirection: 'row', alignItems: 'center' },
+  actionText: { fontSize: 14, fontWeight: 'bold', color: '#3498DB', marginRight: 4 },
+  
+  /* Modal Styles */
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center', zIndex: 100 },
+  modalContent: { width: '85%', backgroundColor: '#FFF', borderRadius: 20, padding: 24, alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 },
+  modalIconContainer: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#FDEDEC', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#2C3E50', marginBottom: 8 },
+  modalText: { fontSize: 15, color: '#7F8C8D', textAlign: 'center', marginBottom: 24, lineHeight: 22 },
+  modalActions: { flexDirection: 'row', justifyContent: 'space-between', width: '100%' },
+  cancelButton: { flex: 1, paddingVertical: 12, marginRight: 8, borderRadius: 12, backgroundColor: '#F2F4F4', alignItems: 'center' },
+  cancelButtonText: { color: '#7F8C8D', fontSize: 16, fontWeight: 'bold' },
+  confirmDeleteButton: { flex: 1, paddingVertical: 12, marginLeft: 8, borderRadius: 12, backgroundColor: '#E74C3C', alignItems: 'center' },
+  confirmDeleteButtonText: { color: '#FFF', fontSize: 16, fontWeight: 'bold' }
 });
