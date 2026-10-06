@@ -11,6 +11,8 @@ interface AppInputProps {
   error?: string;
   secureTextEntry?: boolean;
   keyboardType?: KeyboardTypeOptions;
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  autoCorrect?: boolean;
 }
 
 export const AppInput: React.FC<AppInputProps> = ({
@@ -21,6 +23,8 @@ export const AppInput: React.FC<AppInputProps> = ({
   error,
   secureTextEntry = false,
   keyboardType = 'default',
+  autoCapitalize,
+  autoCorrect,
 }) => {
   const [isSecure, setIsSecure] = useState(secureTextEntry);
   const [isFocused, setIsFocused] = useState(false);
@@ -41,6 +45,8 @@ export const AppInput: React.FC<AppInputProps> = ({
           placeholderTextColor={COLORS.TEXT_SECONDARY}
           secureTextEntry={isSecure}
           keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize}
+          autoCorrect={autoCorrect}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
         />

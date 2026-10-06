@@ -101,6 +101,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation, route }) => {
                   onChangeText={(text) => setEmail(text.toLowerCase())}
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  autoCorrect={false}
                 />
                 
                 <AppInput

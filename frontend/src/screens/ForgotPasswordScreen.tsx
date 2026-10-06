@@ -84,6 +84,7 @@ export const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
                   onChangeText={(text) => setEmail(text.toLowerCase())}
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  autoCorrect={false}
                 />
 
                 <TouchableOpacity 

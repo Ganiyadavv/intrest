@@ -181,6 +181,8 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
                   value={email}
                   onChangeText={(text) => setEmail(text.toLowerCase())}
                   keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
                 />
                 <AppInput
                   label="Phone"
