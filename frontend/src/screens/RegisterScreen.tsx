@@ -112,7 +112,7 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                   label="Email Address"
                   placeholder="name@example.com"
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={(text) => setEmail(text.toLowerCase())}
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />

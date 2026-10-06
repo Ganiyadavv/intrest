@@ -27,6 +27,7 @@ export type MainStackParamList = {
     days?: string;
     givenDate?: string;
   } | undefined;
+  CompoundInterest: undefined;
   RateCalculator: undefined;
   SearchUser: undefined;
   PersonRecords: undefined;

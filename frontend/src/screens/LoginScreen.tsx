@@ -98,7 +98,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation, route }) => {
                   label="Email Address"
                   placeholder="name@example.com"
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={(text) => setEmail(text.toLowerCase())}
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />

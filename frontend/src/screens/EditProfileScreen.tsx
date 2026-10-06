@@ -179,7 +179,7 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
                   label="Email"
                   placeholder="Enter email address"
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={(text) => setEmail(text.toLowerCase())}
                   keyboardType="email-address"
                 />
                 <AppInput

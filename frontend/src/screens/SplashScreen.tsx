@@ -88,8 +88,7 @@ export const SplashScreen: React.FC<Props> = ({ navigation }) => {
           <Ionicons name="wallet" size={54} color="#FFF" />
         </Animated.View>
         <Text style={styles.title}>DhanaMitra</Text>
-        <Text style={styles.subtitle}>Smart Interest Calculator</Text>
-        <Text style={styles.subtitle}>& Lender/Borrower Records</Text>
+        <Text style={styles.subtitle}>Smart Interest Calculator{'\n'}Lender & Borrower Records</Text>
       </Animated.View>
       
       <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
@@ -159,6 +158,8 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontWeight: '500',
     letterSpacing: 0.8,
+    textAlign: 'center',
+    paddingHorizontal: 20,
   },
   footer: {
     position: 'absolute',

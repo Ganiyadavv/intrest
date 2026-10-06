@@ -60,14 +60,15 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
 
   const renderNeumorphicButton = (
     title: string, 
-    screen: keyof MainStackParamList, 
+    screen: keyof MainStackParamList | 'Auth', 
     iconName: keyof typeof Ionicons.glyphMap, 
     iconColor: string,
-    badgeCount?: number
+    badgeCount?: number,
+    onPress?: () => void
   ) => (
     <TouchableOpacity 
       style={styles.neuButtonWrapper}
-      onPress={() => navigation.navigate(screen)}
+      onPress={onPress || (() => navigation.navigate(screen as any))}
       activeOpacity={0.6}
     >
       <View style={styles.neuButtonOuter}>
@@ -149,11 +150,12 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
               {renderNeumorphicButton(t('dashboard.borrowerRecords'), 'PersonRecords', 'people', '#10B981')}
               {renderNeumorphicButton(t('dashboard.lenderRecords'), 'LenderRecords', 'wallet', '#4A90E2')}
               {renderNeumorphicButton(t('dashboard.interestCalculator'), 'InterestCalculator', 'calculator', '#F5A623')}
+              {renderNeumorphicButton('Compound Interest', 'CompoundInterest', 'trending-up', '#FF6BE7')}
               {renderNeumorphicButton(t('dashboard.rateCalculator'), 'RateCalculator', 'pie-chart', '#FF6BE7')}
               {renderNeumorphicButton(t('dashboard.notifications'), 'Notifications', 'notifications', '#FBBF24', unreadCount)}
               {renderNeumorphicButton(t('dashboard.search'), 'SearchUser', 'search', '#50E3C2')}
               {renderNeumorphicButton(t('dashboard.profile'), 'Profile', 'person', '#B865D6')}
-              {renderNeumorphicButton(t('dashboard.logout'), 'Auth', 'log-out', '#E74C3C')}
+              {renderNeumorphicButton(t('dashboard.logout'), 'Auth', 'log-out', '#E74C3C', 0, handleLogout)}
             </View>
 
           </View>

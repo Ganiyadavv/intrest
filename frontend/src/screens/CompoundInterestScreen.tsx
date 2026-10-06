@@ -1,17 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { AppInput } from '../components/AppInput';
 import { ErrorMessage } from '../components/ErrorMessage';
-import { COLORS } from '../constants/colors';
-import { 
-  calculateMonthlyInterest, 
-  calculateTotalMonths, 
-  calculateTotalInterestCalc, 
-  calculateTotalAmount 
-} from '../utils/interestCalculator';
+import { calculateCompoundInterest } from '../utils/compoundInterest';
 import { formatCurrency } from '../utils/currency';
 import { getUser } from '../storage/storage';
 import { User } from '../types/user';
@@ -19,15 +12,15 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { MainStackParamList } from '../types/navigation';
 
-type InterestCalculatorScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'InterestCalculator'>;
-type InterestCalculatorScreenRouteProp = RouteProp<MainStackParamList, 'InterestCalculator'>;
+type CompoundInterestScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'CompoundInterest'>;
+type CompoundInterestScreenRouteProp = RouteProp<MainStackParamList, 'CompoundInterest'>;
 
 interface Props {
-  navigation: InterestCalculatorScreenNavigationProp;
-  route: InterestCalculatorScreenRouteProp;
+  navigation: CompoundInterestScreenNavigationProp;
+  route: CompoundInterestScreenRouteProp;
 }
 
-export const InterestCalculatorScreen: React.FC<Props> = ({ navigation, route }) => {
+export const CompoundInterestScreen: React.FC<Props> = ({ navigation }) => {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -38,41 +31,13 @@ export const InterestCalculatorScreen: React.FC<Props> = ({ navigation, route })
     loadUser();
   }, []);
 
-  const [principal, setPrincipal] = useState(route.params?.principal || '');
-  const [ptr, setPtr] = useState(route.params?.rate || '');
-  const [years, setYears] = useState(route.params?.years || '0');
-  const [months, setMonths] = useState(route.params?.months || '0');
-  const [days, setDays] = useState(route.params?.days || '0');
+  const [principal, setPrincipal] = useState('');
+  const [ptr, setPtr] = useState('');
+  const [years, setYears] = useState('0');
+  const [months, setMonths] = useState('0');
+  const [days, setDays] = useState('0');
+  const [compoundsPerYear, setCompoundsPerYear] = useState(12);
   
-  const [givenDate] = useState(route.params?.givenDate ? new Date(route.params.givenDate) : null);
-  const [endDate, setEndDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  
-  useEffect(() => {
-    if (givenDate) {
-      const d1 = givenDate;
-      const d2 = endDate;
-      
-      let y = d2.getFullYear() - d1.getFullYear();
-      let m = d2.getMonth() - d1.getMonth();
-      let d = d2.getDate() - d1.getDate();
-
-      if (d < 0) {
-        m -= 1;
-        const prevMonth = new Date(d2.getFullYear(), d2.getMonth(), 0);
-        d += prevMonth.getDate();
-      }
-      if (m < 0) {
-        y -= 1;
-        m += 12;
-      }
-      
-      setYears(Math.max(0, y).toString());
-      setMonths(Math.max(0, m).toString());
-      setDays(Math.max(0, d).toString());
-    }
-  }, [endDate, givenDate]);
-
   const [error, setError] = useState('');
   
   const [result, setResult] = useState<{
@@ -81,10 +46,10 @@ export const InterestCalculatorScreen: React.FC<Props> = ({ navigation, route })
     years: number;
     months: number;
     days: number;
-    monthlyInterest: number;
-    totalMonths: number;
-    totalInterest: number;
     totalAmount: number;
+    compoundInterest: number;
+    timeInYears: number;
+    compoundsPerYear: number;
   } | null>(null);
 
   const handleCalculate = () => {
@@ -99,7 +64,7 @@ export const InterestCalculatorScreen: React.FC<Props> = ({ navigation, route })
 
     // Validation
     if (!principal || isNaN(p) || p <= 0) {
-      setError('Please enter a valid principal amount greater than 0.');
+      setError('Please enter a valid amount greater than 0.');
       return;
     }
     if (!ptr || isNaN(r) || r < 0) {
@@ -110,26 +75,22 @@ export const InterestCalculatorScreen: React.FC<Props> = ({ navigation, route })
       setError('Negative duration is not allowed');
       return;
     }
-    if (m > 11) {
-      setError('Months should normally be 0–11');
-      return;
-    }
-    if (d > 29) {
-      setError('Days should normally be 0–29');
+    
+    if (y === 0 && m === 0 && d === 0) {
+      setError('Please enter a valid duration.');
       return;
     }
 
-    const monthlyInterest = calculateMonthlyInterest(p, r);
-    const totalMonths = calculateTotalMonths(y, m, d);
-    
-    let totalInterest = 0;
-    if (totalMonths > 0) {
-      totalInterest = calculateTotalInterestCalc(p, r, y, m, d);
-    }
-    
-    const totalAmount = calculateTotalAmount(p, totalInterest);
+    const compoundResult = calculateCompoundInterest({
+        principal: p,
+        annualRate: r,
+        years: y,
+        months: m,
+        days: d,
+        compoundsPerYear
+    });
 
-    if (isNaN(totalAmount) || !isFinite(totalAmount)) {
+    if (isNaN(compoundResult.totalAmount) || !isFinite(compoundResult.totalAmount)) {
       setError('Unable to calculate with the entered values. Please check your inputs.');
       return;
     }
@@ -140,10 +101,10 @@ export const InterestCalculatorScreen: React.FC<Props> = ({ navigation, route })
       years: y,
       months: m,
       days: d,
-      monthlyInterest,
-      totalMonths,
-      totalInterest,
-      totalAmount
+      totalAmount: compoundResult.totalAmount,
+      compoundInterest: compoundResult.compoundInterest,
+      timeInYears: compoundResult.timeInYears,
+      compoundsPerYear
     });
   };
 
@@ -153,8 +114,20 @@ export const InterestCalculatorScreen: React.FC<Props> = ({ navigation, route })
     setYears('0');
     setMonths('0');
     setDays('0');
+    setCompoundsPerYear(12);
     setError('');
     setResult(null);
+  };
+
+  const getFrequencyText = (val: number) => {
+    switch (val) {
+      case 1: return 'Yearly (1 time per year)';
+      case 2: return 'Half-Yearly (2 times per year)';
+      case 4: return 'Quarterly (4 times per year)';
+      case 12: return 'Monthly (12 times per year)';
+      case 365: return 'Daily (365 times per year)';
+      default: return '';
+    }
   };
 
   return (
@@ -174,12 +147,12 @@ export const InterestCalculatorScreen: React.FC<Props> = ({ navigation, route })
                     <Ionicons name="arrow-back" size={20} color="#FFF" />
                   </View>
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Simple Interest</Text>
+                <Text style={styles.headerTitle}>Compound Interest</Text>
                 <View style={{ width: 40 }} />
               </View>
               
-              <Text style={styles.pageTitle}>Simple Interest</Text>
-              <Text style={styles.pageSubtitle}>Calculate simple interest based on amount, PTR and duration</Text>
+              <Text style={styles.pageTitle}>Compound Interest</Text>
+              <Text style={styles.pageSubtitle}>Calculate compounding interest dynamically</Text>
             </View>
 
             <View style={styles.waveConnectorDark}>
@@ -190,109 +163,75 @@ export const InterestCalculatorScreen: React.FC<Props> = ({ navigation, route })
               <View style={styles.neuFormContainer}>
             <ErrorMessage message={error} />
 
-            {givenDate ? (
-              <View style={styles.linkedModeCard}>
-                <View style={styles.linkedModeStatsRow}>
-                  <View style={styles.linkedModeStat}>
-                    <Text style={styles.linkedModeLabel}>Principal</Text>
-                    <Text style={styles.linkedModeValue}>{formatCurrency(Number(principal))}</Text>
-                  </View>
-                  <View style={styles.linkedModeStat}>
-                    <Text style={styles.linkedModeLabel}>Interest</Text>
-                    <Text style={styles.linkedModeValue}>{ptr}%</Text>
-                  </View>
-                </View>
-                
-                <View style={styles.linkedModeDivider} />
-                
-                <Text style={styles.dateLabel}>Given Date: <Text style={{ color: '#2C3E50', fontWeight: 'bold' }}>{givenDate.toLocaleDateString('en-GB')}</Text></Text>
-                
-                <Text style={[styles.dateLabel, { marginTop: 12 }]}>Select End Date:</Text>
-                {Platform.OS === 'web' ? (
-                  React.createElement('input', {
-                    type: 'date',
-                    value: endDate.toISOString().split('T')[0],
-                    onChange: (e: any) => {
-                      if (e.target.value) {
-                        const newDate = new Date(e.target.value);
-                        if (!isNaN(newDate.getTime())) setEndDate(newDate);
-                      }
-                    },
-                    style: { height: 44, borderRadius: 8, borderWidth: 1, borderColor: '#ECF0F1', paddingHorizontal: 12, marginBottom: 16, backgroundColor: '#FFF', width: '100%' }
-                  })
-                ) : (
-                  <>
-                    <TouchableOpacity style={[styles.datePickerButton, { backgroundColor: '#FFF' }]} onPress={() => setShowDatePicker(true)}>
-                      <Text style={styles.dateText}>{endDate.toISOString().split('T')[0]}</Text>
-                    </TouchableOpacity>
-                    {showDatePicker && (
-                      <DateTimePicker
-                        value={endDate}
-                        mode="date"
-                        display="default"
-                        onChange={(event, selectedDate) => {
-                          setShowDatePicker(Platform.OS === 'ios');
-                          if (selectedDate) setEndDate(selectedDate);
-                        }}
-                      />
-                    )}
-                  </>
-                )}
-                
-                <View style={styles.linkedModeDurationBox}>
-                  <Text style={styles.linkedModeLabel}>Calculated Duration</Text>
-                  <Text style={styles.linkedModeDurationText}>{years} Yrs, {months} Mos, {days} Days</Text>
-                </View>
-              </View>
-            ) : (
-              <>
-                <AppInput
-                  label="Principal Amount (₹)"
-                  placeholder="e.g., 10000"
-                  value={principal}
-                  onChangeText={setPrincipal}
-                  keyboardType="numeric"
-                />
-                
-                <AppInput
-                  label="Interest / PTR (%)"
-                  placeholder="e.g., 2"
-                  value={ptr}
-                  onChangeText={setPtr}
-                  keyboardType="numeric"
-                />
+            <AppInput
+              label="Principal Amount (₹)"
+              placeholder="e.g., 10000"
+              value={principal}
+              onChangeText={setPrincipal}
+              keyboardType="numeric"
+            />
+            
+            <AppInput
+              label="Annual Interest Rate (%)"
+              placeholder="e.g., 2"
+              value={ptr}
+              onChangeText={setPtr}
+              keyboardType="numeric"
+            />
 
-                <View style={styles.row}>
-                  <View style={styles.col}>
-                    <AppInput
-                      label="Years"
-                      placeholder="0"
-                      value={years}
-                      onChangeText={setYears}
-                      keyboardType="numeric"
-                    />
-                  </View>
-                  <View style={styles.col}>
-                    <AppInput
-                      label="Months"
-                      placeholder="0"
-                      value={months}
-                      onChangeText={setMonths}
-                      keyboardType="numeric"
-                    />
-                  </View>
-                  <View style={styles.col}>
-                    <AppInput
-                      label="Days"
-                      placeholder="0"
-                      value={days}
-                      onChangeText={setDays}
-                      keyboardType="numeric"
-                    />
-                  </View>
-                </View>
-              </>
-            )}
+            <View style={styles.row}>
+              <View style={styles.col}>
+                <AppInput
+                  label="Years"
+                  placeholder="0"
+                  value={years}
+                  onChangeText={setYears}
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.col}>
+                <AppInput
+                  label="Months"
+                  placeholder="0"
+                  value={months}
+                  onChangeText={setMonths}
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.col}>
+                <AppInput
+                  label="Days"
+                  placeholder="0"
+                  value={days}
+                  onChangeText={setDays}
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+
+            <View style={styles.frequencyContainer}>
+                <Text style={styles.frequencyLabel}>Compounding Frequency</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.frequencyScroll}>
+                    {[
+                        { label: 'Daily', value: 365 },
+                        { label: 'Monthly', value: 12 },
+                        { label: 'Quarterly', value: 4 },
+                        { label: 'Half-Yearly', value: 2 },
+                        { label: 'Yearly', value: 1 },
+                    ].map((freq) => (
+                        <TouchableOpacity
+                            key={freq.value}
+                            style={[styles.freqButton, compoundsPerYear === freq.value && styles.freqButtonActive]}
+                            onPress={() => setCompoundsPerYear(freq.value)}
+                        >
+                            <Text style={[styles.freqButtonText, compoundsPerYear === freq.value && styles.freqButtonTextActive]}>
+                                {freq.label}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+                <Text style={styles.frequencyDescText}>{getFrequencyText(compoundsPerYear)}</Text>
+            </View>
 
             <TouchableOpacity style={styles.neuCalculateBtn} onPress={handleCalculate} activeOpacity={0.8}>
               <View style={styles.neuCalculateBtnInner}>
@@ -310,7 +249,7 @@ export const InterestCalculatorScreen: React.FC<Props> = ({ navigation, route })
             <View style={styles.neonResultCard}>
               <View style={styles.neonCardHeader}>
                 <View style={styles.neonIconWrapper}>
-                  <Ionicons name="analytics" size={20} color="#4D8BFF" />
+                  <Ionicons name="analytics" size={20} color="#FF6BE7" />
                 </View>
                 <Text style={styles.neonCardTitle}>Calculation Result</Text>
               </View>
@@ -321,7 +260,7 @@ export const InterestCalculatorScreen: React.FC<Props> = ({ navigation, route })
               </View>
               
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Interest / PTR</Text>
+                <Text style={styles.infoLabel}>Interest Rate</Text>
                 <Text style={styles.infoValue}>{result.ptr}%</Text>
               </View>
 
@@ -333,15 +272,22 @@ export const InterestCalculatorScreen: React.FC<Props> = ({ navigation, route })
               </View>
 
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Monthly Interest</Text>
-                <Text style={styles.infoValue}>{formatCurrency(result.monthlyInterest || 0)}</Text>
+                <Text style={styles.infoLabel}>Compounding</Text>
+                <Text style={styles.infoValue}>
+                  {result.compoundsPerYear === 365 ? 'Daily' :
+                   result.compoundsPerYear === 12 ? 'Monthly' :
+                   result.compoundsPerYear === 4 ? 'Quarterly' :
+                   result.compoundsPerYear === 2 ? 'Half-Yearly' : 'Yearly'}
+                </Text>
               </View>
 
               <View style={styles.neonDivider} />
 
+
+
               <View style={styles.highlightRow}>
-                <Text style={styles.highlightLabel}>Simple Interest</Text>
-                <Text style={styles.highlightValue}>{formatCurrency(result.totalInterest || 0)}</Text>
+                <Text style={styles.highlightLabel}>Compound Interest</Text>
+                <Text style={styles.highlightValue}>{formatCurrency(result.compoundInterest || 0)}</Text>
               </View>
 
               <View style={styles.highlightRow}>
@@ -350,6 +296,23 @@ export const InterestCalculatorScreen: React.FC<Props> = ({ navigation, route })
               </View>
             </View>
           )}
+
+          {/* Educational Section */}
+          <View style={styles.educationalCard}>
+             <Text style={styles.eduTitle}>What is Compound Interest?</Text>
+             <Text style={styles.eduText}>
+                Compound interest is interest calculated on the original principal and on the interest accumulated during previous periods.
+             </Text>
+             <View style={styles.eduFormulaBox}>
+                <Text style={styles.eduFormula}>A = P(1 + r/n)^(nt)</Text>
+             </View>
+             <Text style={styles.eduFormulaDesc}>
+                P = Principal{'\n'}
+                r = Annual interest rate{'\n'}
+                n = Compounding frequency{'\n'}
+                t = Time in years
+             </Text>
+          </View>
 
             </View>
           </View>
@@ -464,6 +427,47 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 6,
   },
+  frequencyContainer: {
+    marginTop: 10,
+    marginBottom: 16,
+  },
+  frequencyLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#7F8C8D',
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  frequencyScroll: {
+    paddingVertical: 4,
+  },
+  freqButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#F8F9FA',
+    borderWidth: 1,
+    borderColor: '#ECF0F1',
+    borderRadius: 20,
+    marginRight: 10,
+  },
+  freqButtonActive: {
+    backgroundColor: '#4D8BFF',
+    borderColor: '#4D8BFF',
+  },
+  freqButtonText: {
+    color: '#7F8C8D',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  freqButtonTextActive: {
+    color: '#FFF',
+  },
+  frequencyDescText: {
+    marginTop: 8,
+    fontSize: 13,
+    color: '#95A5A6',
+    marginLeft: 4,
+  },
   neuCalculateBtn: {
     marginTop: 16,
     backgroundColor: '#4A90E2',
@@ -563,23 +567,56 @@ const styles = StyleSheet.create({
   highlightValue: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#4D8BFF',
+    color: '#FF6BE7',
   },
   highlightValueTotal: {
     fontSize: 18,
     fontWeight: '900',
     color: '#50E3C2',
   },
-  datePickerContainer: { marginBottom: 16 },
-  dateLabel: { fontSize: 14, fontWeight: '600', color: '#7F8C8D', marginBottom: 8 },
-  datePickerButton: { backgroundColor: '#F8F9FA', borderWidth: 1, borderColor: '#ECF0F1', borderRadius: 8, paddingHorizontal: 12, height: 44, justifyContent: 'center', marginBottom: 16 },
-  dateText: { color: '#2C3E50', fontSize: 15 },
-  linkedModeCard: { backgroundColor: '#F4F6F8', borderRadius: 12, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: '#E0E6ED' },
-  linkedModeStatsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-  linkedModeStat: { flex: 1 },
-  linkedModeLabel: { fontSize: 13, color: '#95A5A6', fontWeight: '600', marginBottom: 4 },
-  linkedModeValue: { fontSize: 18, color: '#2C3E50', fontWeight: 'bold' },
-  linkedModeDivider: { height: 1, backgroundColor: '#E0E6ED', marginVertical: 12 },
-  linkedModeDurationBox: { backgroundColor: '#FFF', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#E0E6ED', alignItems: 'center', marginTop: 4 },
-  linkedModeDurationText: { fontSize: 16, color: '#2980B9', fontWeight: 'bold', marginTop: 4 }
+  educationalCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 40,
+    borderWidth: 1,
+    borderColor: '#ECF0F1',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  eduTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#2C3E50',
+    marginBottom: 12,
+  },
+  eduText: {
+    fontSize: 14,
+    color: '#7F8C8D',
+    lineHeight: 20,
+    marginTop: 4,
+  },
+  eduFormulaBox: {
+    backgroundColor: '#F8F9FA',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginVertical: 12,
+    borderWidth: 1,
+    borderColor: '#E0E6ED',
+  },
+  eduFormula: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#2980B9',
+    letterSpacing: 1,
+  },
+  eduFormulaDesc: {
+    fontSize: 13,
+    color: '#95A5A6',
+    lineHeight: 20,
+  }
 });

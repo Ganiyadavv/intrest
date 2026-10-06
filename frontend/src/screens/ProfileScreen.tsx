@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MainStackParamList } from '../types/navigation';
@@ -22,6 +22,7 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const fetchProfile = async () => {
     setLoading(true);
@@ -43,25 +44,17 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
     return unsubscribe;
   }, [navigation]);
 
-  const handleLogout = () => {
-    Alert.alert(
-      "Logout",
-      "Are you sure you want to logout?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Logout", 
-          style: "destructive",
-          onPress: async () => {
-            await authService.logoutUser();
-            navigation.getParent()?.reset({
-              index: 0,
-              routes: [{ name: 'Auth' }],
-            });
-          }
-        }
-      ]
-    );
+  const handleLogoutPress = () => {
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = async () => {
+    setShowLogoutModal(false);
+    await authService.logoutUser();
+    navigation.getParent()?.reset({
+      index: 0,
+      routes: [{ name: 'Auth' }],
+    });
   };
 
   if (loading && !user) {
@@ -184,7 +177,7 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
 
                   <TouchableOpacity 
                     style={styles.actionBtnNeuDanger} 
-                    onPress={handleLogout}
+                    onPress={handleLogoutPress}
                     activeOpacity={0.8}
                   >
                     <Ionicons name="log-out" size={20} color="#E74C3C" style={{marginRight: 8}}/>
@@ -197,6 +190,40 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </View>
       </ScrollView>
+
+      {/* Logout Confirmation Modal */}
+      <Modal
+        visible={showLogoutModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="log-out-outline" size={32} color="#E74C3C" />
+              <Text style={styles.modalTitle}>Logout</Text>
+            </View>
+            <Text style={styles.modalMessage}>Are you sure you want to logout?</Text>
+            
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={styles.modalCancelBtn} 
+                onPress={() => setShowLogoutModal(false)}
+              >
+                <Text style={styles.modalCancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.modalConfirmBtn} 
+                onPress={confirmLogout}
+              >
+                <Text style={styles.modalConfirmBtnText}>Logout</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 };
@@ -427,5 +454,70 @@ const styles = StyleSheet.create({
     color: '#E74C3C',
     fontSize: 16,
     fontWeight: '800',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#FFF',
+    borderRadius: 24,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#2C3E50',
+    marginTop: 12,
+  },
+  modalMessage: {
+    fontSize: 15,
+    color: '#7F8C8D',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#F8F9FA',
+    borderWidth: 1,
+    borderColor: '#E0E6ED',
+    alignItems: 'center',
+  },
+  modalCancelBtnText: {
+    color: '#7F8C8D',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  modalConfirmBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#E74C3C',
+    alignItems: 'center',
+  },
+  modalConfirmBtnText: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

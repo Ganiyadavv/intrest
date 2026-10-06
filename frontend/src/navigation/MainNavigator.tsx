@@ -7,6 +7,7 @@ import { EditProfileScreen } from '../screens/EditProfileScreen';
 import { ChangePasswordScreen } from '../screens/ChangePasswordScreen';
 import { PaymentsScreen } from '../screens/PaymentsScreen';
 import { InterestCalculatorScreen } from '../screens/InterestCalculatorScreen';
+import { CompoundInterestScreen } from '../screens/CompoundInterestScreen';
 import { RateCalculatorScreen } from '../screens/RateCalculatorScreen';
 import { SearchUserScreen } from '../screens/SearchUserScreen';
 import { PersonRecordsScreen } from '../screens/PersonRecordsScreen';
@@ -60,6 +61,11 @@ export const MainNavigator = () => {
       <Stack.Screen 
         name="InterestCalculator" 
         component={InterestCalculatorScreen} 
+        options={{ headerShown: false }} 
+      />
+      <Stack.Screen 
+        name="CompoundInterest" 
+        component={CompoundInterestScreen} 
         options={{ headerShown: false }} 
       />
       <Stack.Screen 
