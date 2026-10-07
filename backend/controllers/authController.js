@@ -8,6 +8,7 @@ const generateUserId = require("../utils/generateUserId");
 
 const register = async (req, res) => {
   try {
+
     const { fullName, email, password } = req.body;
 
     if (!fullName || !email || !password) {
