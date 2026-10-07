@@ -19,6 +19,7 @@ import { AddLenderRecordScreen } from '../screens/AddLenderRecordScreen';
 import { LenderRecordDetailsScreen } from '../screens/LenderRecordDetailsScreen';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
 import { NotificationDetailsScreen } from '../screens/NotificationDetailsScreen';
+import { EditLenderRecordScreen } from '../screens/EditLenderRecordScreen';
 import { COLORS } from '../constants/colors';
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
@@ -84,6 +85,7 @@ export const MainNavigator = () => {
       <Stack.Screen name="PersonDetails" component={PersonDetailsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="LenderRecords" component={LenderRecordsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="AddLenderRecord" component={AddLenderRecordScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="EditLenderRecord" component={EditLenderRecordScreen} options={{ headerShown: false }} />
       <Stack.Screen name="LenderRecordDetails" component={LenderRecordDetailsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="NotificationDetails" component={NotificationDetailsScreen} options={{ headerShown: false }} />

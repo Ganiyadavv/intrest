@@ -10,19 +10,19 @@ import { AppInput } from '../components/AppInput';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { SuccessMessage } from '../components/SuccessMessage';
 import { Loading } from '../components/Loading';
-import { personRecordService } from '../services/personRecordService';
+import { lenderRecordService } from '../services/lenderRecordService';
 import { COLORS } from '../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 
-type EditPersonNavigationProp = NativeStackNavigationProp<MainStackParamList, 'EditPerson'>;
-type EditPersonRouteProp = RouteProp<MainStackParamList, 'EditPerson'>;
+type EditLenderRecordNavigationProp = NativeStackNavigationProp<MainStackParamList, 'EditLenderRecord'>;
+type EditLenderRecordRouteProp = RouteProp<MainStackParamList, 'EditLenderRecord'>;
 
 interface Props {
-  navigation: EditPersonNavigationProp;
-  route: EditPersonRouteProp;
+  navigation: EditLenderRecordNavigationProp;
+  route: EditLenderRecordRouteProp;
 }
 
-export const EditPersonScreen: React.FC<Props> = ({ navigation, route }) => {
+export const EditLenderRecordScreen: React.FC<Props> = ({ navigation, route }) => {
   const { id } = route.params;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -56,12 +56,12 @@ export const EditPersonScreen: React.FC<Props> = ({ navigation, route }) => {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
-    fetchPersonDetails();
+    fetchLenderDetails();
   }, [id]);
 
-  const fetchPersonDetails = async () => {
+  const fetchLenderDetails = async () => {
     try {
-      const person = await personRecordService.getPersonRecordById(id);
+      const person = await lenderRecordService.getLenderRecordById(id);
       setUserId(person.targetUserId || '');
       setName(person.name);
       setFatherName(person.fatherName || '');
@@ -75,10 +75,9 @@ export const EditPersonScreen: React.FC<Props> = ({ navigation, route }) => {
       setAmount(person.amount.toString());
       setInterestRate(person.interestRate.toString());
       setNotes(person.notes || '');
-      setDate(new Date(person.givenDate));
-      // Not populating image directly for editing base64 from backend to local file path
+      setDate(new Date(person.receivedDate));
     } catch (err) {
-      setError('Failed to load person details.');
+      setError('Failed to load lender details.');
     } finally {
       setLoading(false);
     }
@@ -165,7 +164,7 @@ export const EditPersonScreen: React.FC<Props> = ({ navigation, route }) => {
       formData.append('phoneNumber', phoneNumber);
       formData.append('amount', amount);
       formData.append('interestRate', interestRate);
-      formData.append('givenDate', date.toISOString().split('T')[0]);
+      formData.append('receivedDate', date.toISOString().split('T')[0]);
 
       if (fatherName) formData.append('fatherName', fatherName);
       if (village) formData.append('village', village);
@@ -190,7 +189,7 @@ export const EditPersonScreen: React.FC<Props> = ({ navigation, route }) => {
         }
       }
 
-      await personRecordService.updatePersonRecord(id, formData);
+      await lenderRecordService.updateLenderRecord(id, formData);
       setSuccess('Record updated successfully!');
       
       setTimeout(() => {
@@ -217,7 +216,7 @@ export const EditPersonScreen: React.FC<Props> = ({ navigation, route }) => {
                 <Ionicons name="arrow-back" size={20} color="#FFF" />
               </View>
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Edit Person Record</Text>
+            <Text style={styles.headerTitle}>Edit Lender Record</Text>
             <View style={{ width: 40 }} />
           </View>
         </View>
@@ -249,14 +248,14 @@ export const EditPersonScreen: React.FC<Props> = ({ navigation, route }) => {
             {/* REQUIRED INFO NEU CARD */}
             <View style={styles.cardNeu}>
               <Text style={styles.sectionTitle}>Required Information</Text>
-              <AppInput label="Person Name *" value={name} onChangeText={setName} placeholder="Enter person name" error={errors.name} />
+              <AppInput label="Lender Name *" value={name} onChangeText={setName} placeholder="Enter lender name" error={errors.name} />
               <AppInput label="Father Name (Optional)" value={fatherName} onChangeText={setFatherName} placeholder="Enter father name" />
               <AppInput label="Phone Number *" value={phoneNumber} onChangeText={setPhoneNumber} placeholder="Enter phone number" keyboardType="phone-pad" error={errors.phoneNumber} />
-              <AppInput label="Amount Given *" value={amount} onChangeText={setAmount} placeholder="Enter amount" keyboardType="numeric" error={errors.amount} />
+              <AppInput label="Amount Received *" value={amount} onChangeText={setAmount} placeholder="Enter amount" keyboardType="numeric" error={errors.amount} />
               <AppInput label="Interest Rate (%) *" value={interestRate} onChangeText={setInterestRate} placeholder="Enter interest rate" keyboardType="numeric" error={errors.interestRate} />
 
               <View style={styles.datePickerContainer}>
-                <Text style={styles.label}>Given Date *</Text>
+                <Text style={styles.label}>Received Date *</Text>
                 {Platform.OS === 'web' ? (
                   React.createElement('input', {
                     type: 'date', value: date.toISOString().split('T')[0],
@@ -322,7 +321,7 @@ export const EditPersonScreen: React.FC<Props> = ({ navigation, route }) => {
             <View style={styles.actionsContainerNeu}>
               <TouchableOpacity style={styles.actionBtnNeuPrimary} onPress={handleSave} disabled={saving} activeOpacity={0.8}>
                 <Ionicons name="save" size={20} color="#FFF" style={{marginRight: 8}}/>
-                <Text style={styles.actionBtnTextNeuPrimary}>{saving ? "Updating..." : "Update Person"}</Text>
+                <Text style={styles.actionBtnTextNeuPrimary}>{saving ? "Updating..." : "Update Lender Record"}</Text>
               </TouchableOpacity>
             </View>
 
