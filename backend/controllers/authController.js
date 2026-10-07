@@ -8,9 +8,9 @@ const generateUserId = require("../utils/generateUserId");
 
 const register = async (req, res) => {
   try {
-    const { firstName, lastName, email, phoneNumber, password } = req.body;
+    const { fullName, email, password } = req.body;
 
-    if (!firstName || !lastName || !email || !phoneNumber || !password) {
+    if (!fullName || !email || !password) {
       return res.status(400).json({
         statusCode: 400,
         status: "ERROR",
@@ -36,14 +36,7 @@ const register = async (req, res) => {
       });
     }
 
-    const existingPhone = await User.findOne({ where: { phoneNumber } });
-    if (existingPhone) {
-      return res.status(400).json({
-        statusCode: 400,
-        status: "ERROR",
-        message: "Phone number already exists"
-      });
-    }
+
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -59,10 +52,8 @@ const register = async (req, res) => {
 
     const newUser = await User.create({
       userId,
-      firstName,
-      lastName,
+      fullName,
       email,
-      phoneNumber,
       password: hashedPassword,
       role: "MEMBER",
       status: "ACTIVE"

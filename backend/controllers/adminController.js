@@ -52,8 +52,7 @@ exports.getMembers = async (req, res) => {
     
     if (search) {
       whereClause[Op.or] = [
-        { firstName: { [Op.like]: `%${search}%` } },
-        { lastName: { [Op.like]: `%${search}%` } },
+        { fullName: { [Op.like]: `%${search}%` } },
         { userId: { [Op.like]: `%${search}%` } },
         { email: { [Op.like]: `%${search}%` } },
         { phoneNumber: { [Op.like]: `%${search}%` } }

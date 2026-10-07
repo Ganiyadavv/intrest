@@ -39,8 +39,7 @@ const updateProfile = async (req, res) => {
     
     // Only extract allowed fields
     const {
-      firstName,
-      lastName,
+      fullName,
       email,
       phoneNumber,
       profileImage,
@@ -85,8 +84,7 @@ const updateProfile = async (req, res) => {
       user.phoneNumber = phoneNumber;
     }
 
-    if (firstName) user.firstName = firstName;
-    if (lastName) user.lastName = lastName;
+    if (fullName) user.fullName = fullName;
     if (profileImage !== undefined) user.profileImage = profileImage;
     if (address !== undefined) user.address = address;
     if (city !== undefined) user.city = city;
@@ -167,8 +165,7 @@ const searchUser = async (req, res) => {
       users = await User.findAll({
         where: {
           [Op.or]: [
-            { firstName: { [Op.like]: `%${searchTerm}%` } },
-            { lastName: { [Op.like]: `%${searchTerm}%` } },
+            { fullName: { [Op.like]: `%${searchTerm}%` } },
             // If they provided a generic query, it might be a partial userId
             { userId: { [Op.like]: `%${searchTerm}%` } }
           ]

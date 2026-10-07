@@ -17,10 +17,8 @@ interface Props {
 }
 
 export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   
@@ -32,10 +30,8 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
     setError('');
     setSuccess('');
     
-    if (!firstName) { setError('First Name is required'); return; }
-    if (!lastName) { setError('Last Name is required'); return; }
+    if (!fullName) { setError('Full Name is required'); return; }
     if (!email || !isValidEmail(email)) { setError('Valid email format is required'); return; }
-    if (!phoneNumber) { setError('Phone Number is required'); return; }
     if (!password) { setError('Password is required'); return; }
     if (!confirmPassword) { setError('Confirm Password is required'); return; }
     if (password !== confirmPassword) { setError('Password and Confirm Password must match'); return; }
@@ -43,10 +39,8 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
     setLoading(true);
     try {
       await authService.registerUser({
-        firstName,
-        lastName,
+        fullName,
         email,
-        phoneNumber,
         password
       });
       
@@ -95,17 +89,10 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 
               <View style={styles.cardNeu}>
                 <AppInput
-                  label="First Name"
-                  placeholder="Enter first name"
-                  value={firstName}
-                  onChangeText={setFirstName}
-                />
-                
-                <AppInput
-                  label="Last Name"
-                  placeholder="Enter last name"
-                  value={lastName}
-                  onChangeText={setLastName}
+                  label="Full Name"
+                  placeholder="Enter your full name"
+                  value={fullName}
+                  onChangeText={setFullName}
                 />
                 
                 <AppInput
@@ -116,14 +103,6 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
-                />
-                
-                <AppInput
-                  label="Phone Number"
-                  placeholder="Enter mobile number"
-                  value={phoneNumber}
-                  onChangeText={setPhoneNumber}
-                  keyboardType="phone-pad"
                 />
                 
                 <AppInput

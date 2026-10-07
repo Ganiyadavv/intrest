@@ -80,7 +80,7 @@ exports.getPersonRecords = async (req, res) => {
     const records = await PersonRecord.findAll({
       where: { ownerId },
       include: [
-        { model: User, as: 'targetUser', attributes: ['userId', 'firstName', 'lastName'] }
+        { model: User, as: 'targetUser', attributes: ['userId', 'fullName'] }
       ]
     });
 
@@ -106,7 +106,7 @@ exports.getPersonRecord = async (req, res) => {
 
     const record = await PersonRecord.findByPk(recordId, {
       include: [
-        { model: User, as: 'targetUser', attributes: ['userId', 'firstName', 'lastName'] }
+        { model: User, as: 'targetUser', attributes: ['userId', 'fullName'] }
       ]
     });
 
