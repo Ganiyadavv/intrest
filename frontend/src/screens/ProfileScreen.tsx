@@ -89,7 +89,7 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
                 <View style={styles.avatarContainerNeu}>
                   <ProfileImage uri={user.profileImage} />
                 </View>
-                <Text style={styles.profileNameNeu}>{user.firstName} {user.lastName}</Text>
+                <Text style={styles.profileNameNeu}>{user.fullName || `${user.firstName} ${user.lastName}`}</Text>
                 <View style={styles.roleBadgeNeu}>
                   <Text style={styles.roleTextNeu}>{user.role}</Text>
                 </View>
@@ -124,14 +124,6 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
                       <View style={styles.infoTextContainerNeu}>
                         <Text style={styles.infoListLabelNeu}>Email</Text>
                         <Text style={styles.infoListValueNeu}>{user.email}</Text>
-                      </View>
-                    </View>
-                    
-                    <View style={styles.infoListItemNeu}>
-                      <View style={styles.infoIconContainerNeu}><Ionicons name="call" size={20} color="#4A90E2" /></View>
-                      <View style={styles.infoTextContainerNeu}>
-                        <Text style={styles.infoListLabelNeu}>Phone</Text>
-                        <Text style={styles.infoListValueNeu}>{user.phoneNumber}</Text>
                       </View>
                     </View>
 

@@ -118,11 +118,15 @@ export const SearchUserScreen: React.FC = () => {
 
           <ErrorMessage message={error} />
 
-          <AppButton
-            title={loading ? "Searching..." : "Search User"}
+          <TouchableOpacity 
+            style={[styles.actionBtnNeuPrimary, { marginTop: 16 }]} 
             onPress={handleSearch}
+            activeOpacity={0.8}
             disabled={loading}
-          />
+          >
+            <Ionicons name="search" size={20} color="#FFF" style={{marginRight: 8}}/>
+            <Text style={styles.actionBtnTextNeuPrimary}>{loading ? "Searching..." : "Search User"}</Text>
+          </TouchableOpacity>
         </View>
 
         {searchedUsers.length > 0 && (
@@ -148,7 +152,7 @@ export const SearchUserScreen: React.FC = () => {
                     <View style={[styles.infoIconContainerNeu, { backgroundColor: 'rgba(46, 204, 113, 0.1)' }]}><Ionicons name="person" size={20} color="#2ECC71" /></View>
                     <View style={styles.infoTextContainerNeu}>
                       <Text style={styles.infoListLabelNeu}>Name</Text>
-                      <Text style={styles.infoListValueNeu}>{searchedUser.firstName} {searchedUser.lastName}</Text>
+                      <Text style={styles.infoListValueNeu}>{searchedUser.fullName || `${searchedUser.firstName || ''} ${searchedUser.lastName || ''}`.trim()}</Text>
                     </View>
                   </View>
 
@@ -160,13 +164,6 @@ export const SearchUserScreen: React.FC = () => {
                     </View>
                   </View>
 
-                  <View style={styles.infoListItemNeu}>
-                    <View style={[styles.infoIconContainerNeu, { backgroundColor: 'rgba(155, 89, 182, 0.1)' }]}><Ionicons name="call" size={20} color="#9B59B6" /></View>
-                    <View style={styles.infoTextContainerNeu}>
-                      <Text style={styles.infoListLabelNeu}>Phone</Text>
-                      <Text style={styles.infoListValueNeu}>{searchedUser.phoneNumber}</Text>
-                    </View>
-                  </View>
 
                   <View style={styles.infoListItemNeu}>
                     <View style={[styles.infoIconContainerNeu, { backgroundColor: 'rgba(52, 73, 94, 0.1)' }]}><Ionicons name="star" size={20} color="#34495E" /></View>
@@ -210,5 +207,7 @@ const styles = StyleSheet.create({
   infoListLabelNeu: { fontSize: 12, color: '#6B7A93', marginBottom: 2, fontWeight: '600' },
   infoListValueNeu: { fontSize: 15, color: '#2C3E50', fontWeight: '700' },
   actionBtnNeuDanger: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#E9EFF5', paddingVertical: 16, borderRadius: 16, borderWidth: 1, borderColor: '#FFF', shadowColor: '#FFFFFF', shadowOffset: { width: -4, height: -4 }, shadowOpacity: 0.9, shadowRadius: 6, elevation: 5, marginTop: 24 },
-  actionBtnTextNeuDanger: { color: '#E74C3C', fontSize: 16, fontWeight: '800' }
+  actionBtnTextNeuDanger: { color: '#E74C3C', fontSize: 16, fontWeight: '800' },
+  actionBtnNeuPrimary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#4A90E2', paddingVertical: 18, borderRadius: 16, shadowColor: '#4A90E2', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 8 },
+  actionBtnTextNeuPrimary: { color: '#FFF', fontSize: 16, fontWeight: '800' }
 });
