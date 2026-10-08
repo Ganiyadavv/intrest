@@ -65,13 +65,11 @@ const run = async () => {
 
     console.log("No Admin found.\n");
 
-    const firstName = await question("Enter Admin First Name: ");
-    const lastName = await question("Enter Admin Last Name: ");
+    const fullName = await question("Enter Admin Full Name: ");
     const email = await question("Enter Admin Email: ");
-    const phone = await question("Enter Admin Phone: ");
     const password = await hiddenInput("Enter Admin Password: ");
 
-    if (!firstName || !lastName || !email || !phone || !password) {
+    if (!fullName || !email || !password) {
       console.log("\nError: All fields are required.");
       process.exit(1);
     }
@@ -88,11 +86,7 @@ const run = async () => {
       process.exit(1);
     }
 
-    const existingPhone = await User.findOne({ where: { phoneNumber: phone } });
-    if (existingPhone) {
-      console.log("\nError: Phone number is already used by another user.");
-      process.exit(1);
-    }
+    // Removed phone check since phone isn't in User model anymore
 
     console.log("\nCreating Admin...");
 
@@ -110,10 +104,8 @@ const run = async () => {
 
     await User.create({
       userId,
-      firstName,
-      lastName,
+      fullName,
       email,
-      phoneNumber: phone,
       password: hashedPassword,
       role: 'ADMIN',
       status: 'ACTIVE'
