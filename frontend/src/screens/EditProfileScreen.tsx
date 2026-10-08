@@ -22,10 +22,8 @@ interface Props {
 }
 
 export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
@@ -41,10 +39,8 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
     const loadUserData = async () => {
       const user = await getUser();
       if (user) {
-        setFirstName(user.firstName || '');
-        setLastName(user.lastName || '');
+        setFullName(user.fullName || (user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : (user.firstName || user.lastName || '')));
         setEmail(user.email || '');
-        setPhoneNumber(user.phoneNumber || '');
         setAddress(user.address || '');
         setCity(user.city || '');
         setState(user.state || '');
@@ -92,18 +88,14 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
     setError('');
     setSuccess('');
     
-    if (!firstName) { setError('First Name is required'); return; }
-    if (!lastName) { setError('Last Name is required'); return; }
+    if (!fullName) { setError('Full Name is required'); return; }
     if (!email || !isValidEmail(email)) { setError('Valid email format is required'); return; }
-    if (!phoneNumber || !isValidPhone(phoneNumber)) { setError('Valid phone number is required'); return; }
 
     setLoading(true);
     try {
       const updatedUser = await userService.updateProfile({
-        firstName,
-        lastName,
+        fullName,
         email,
-        phoneNumber,
         address,
         city,
         state,
@@ -164,16 +156,10 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.bottomLightSection}>
               <View style={styles.formContainer}>
                 <AppInput
-                  label="First Name"
-                  placeholder="Enter first name"
-                  value={firstName}
-                  onChangeText={setFirstName}
-                />
-                <AppInput
-                  label="Last Name"
-                  placeholder="Enter last name"
-                  value={lastName}
-                  onChangeText={setLastName}
+                  label="Full Name"
+                  placeholder="Enter full name"
+                  value={fullName}
+                  onChangeText={setFullName}
                 />
                 <AppInput
                   label="Email"
@@ -183,13 +169,6 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
-                />
-                <AppInput
-                  label="Phone"
-                  placeholder="Enter mobile number"
-                  value={phoneNumber}
-                  onChangeText={setPhoneNumber}
-                  keyboardType="phone-pad"
                 />
                 <AppInput
                   label="Address"
