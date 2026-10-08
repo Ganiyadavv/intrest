@@ -79,6 +79,7 @@ exports.getPersonRecords = async (req, res) => {
     const ownerId = req.user.userId;
     const records = await PersonRecord.findAll({
       where: { ownerId },
+      attributes: { exclude: ['paymentScreenshot'] },
       include: [
         { model: User, as: 'targetUser', attributes: ['userId', 'fullName'] }
       ]

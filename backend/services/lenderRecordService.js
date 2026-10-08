@@ -62,8 +62,9 @@ class LenderRecordService {
           { targetUserId: ownerId }
         ]
       },
+      attributes: { exclude: ['paymentScreenshot'] },
       include: [
-        { model: User, as: 'targetUser', attributes: ['userId', 'firstName', 'lastName'] }
+        { model: User, as: 'targetUser', attributes: ['userId', 'fullName'] }
       ]
     });
 
@@ -79,7 +80,7 @@ class LenderRecordService {
   async getLenderRecordById(ownerId, recordId) {
     const record = await LenderRecord.findByPk(recordId, {
       include: [
-        { model: User, as: 'targetUser', attributes: ['userId', 'firstName', 'lastName'] }
+        { model: User, as: 'targetUser', attributes: ['userId', 'fullName'] }
       ]
     });
 
