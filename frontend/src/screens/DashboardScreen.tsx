@@ -100,7 +100,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.topDarkSection}>
             <View style={styles.headerTop}>
               <View>
-                <Text style={styles.userName}>{user?.firstName || 'User'}</Text>
+                <Text style={styles.userName}>{user?.fullName || user?.firstName || (user as any)?.name || 'User'}</Text>
               </View>
               <View style={styles.headerRight}>
                 <TouchableOpacity 
@@ -110,7 +110,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                   <Text style={styles.languageToggleText}>{language === 'en' ? 'తెలుగు' : 'English'}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.profileAvatar} onPress={() => navigation.navigate('Profile')} activeOpacity={0.8}>
-                  <Text style={styles.avatarInitials}>{user?.firstName?.[0]?.toUpperCase() || 'U'}</Text>
+                  <Text style={styles.avatarInitials}>{(user?.fullName || user?.firstName || (user as any)?.name)?.[0]?.toUpperCase() || 'U'}</Text>
                 </TouchableOpacity>
               </View>
             </View>
