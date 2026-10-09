@@ -55,7 +55,7 @@ export const AdminMembersScreen: React.FC<Props> = ({ navigation }) => {
 
   const renderItem = ({ item }: { item: AdminMember }) => (
     <View style={styles.cardNeu}>
-      <Text style={styles.cardTitle}>{item.firstName} {item.lastName}</Text>
+      <Text style={styles.cardTitle}>{item.fullName || `${item.firstName || ''} ${item.lastName || ''}`.trim() || (item as any).name || 'Unknown Name'}</Text>
       
       <View style={styles.infoRow}>
         <Text style={styles.infoLabel}>User ID:</Text>
@@ -76,7 +76,7 @@ export const AdminMembersScreen: React.FC<Props> = ({ navigation }) => {
         </Text>
       </View>
       
-      {(item.city || item.state) && (
+      {(!!item.city || !!item.state) && (
         <View style={styles.infoRow}>
            <Text style={styles.infoLabel}>Location:</Text>
            <Text style={styles.infoValue}>{[item.city, item.state].filter(Boolean).join(', ')}</Text>

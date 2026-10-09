@@ -104,7 +104,7 @@ export const AdminMemberDetailsScreen: React.FC<Props> = ({ navigation, route })
             <View style={styles.profileImageContainer}>
                <ProfileImage uri={member.profileImage} />
             </View>
-            <Text style={styles.name}>{member.firstName} {member.lastName}</Text>
+            <Text style={styles.name}>{member.fullName || `${member.firstName || ''} ${member.lastName || ''}`.trim() || (member as any).name || 'Unknown Name'}</Text>
           </View>
 
           <View style={styles.divider} />
