@@ -50,18 +50,22 @@ exports.getMembers = async (req, res) => {
     const { search } = req.query;
     const whereClause = { role: 'MEMBER' };
     
-    if (search) {
+    if (search && search.trim()) {
+      const trimmed = search.trim();
+      const likeOp = Op.iLike || Op.like;
       whereClause[Op.or] = [
-        { fullName: { [Op.like]: `%${search}%` } },
-        { userId: { [Op.like]: `%${search}%` } },
-        { email: { [Op.like]: `%${search}%` } },
-        { phoneNumber: { [Op.like]: `%${search}%` } }
+        { fullName: { [likeOp]: '%' + trimmed + '%' } },
+        { userId: { [likeOp]: '%' + trimmed + '%' } },
+        { email: { [likeOp]: '%' + trimmed + '%' } },
+        { city: { [likeOp]: '%' + trimmed + '%' } },
+        { state: { [likeOp]: '%' + trimmed + '%' } }
       ];
     }
 
     const members = await User.findAll({
       where: whereClause,
-      attributes: { exclude: ['password'] }
+      attributes: { exclude: ['password'] },
+      order: [['createdAt', 'DESC']]
     });
 
     return res.status(200).json({

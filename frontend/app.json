@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "DhanaMitra",
-    "slug": "interest-management-mobile",
+    "slug": "interest",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -18,8 +18,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "b994ff8d-29fb-4d87-b7cd-33e681a9d2a3"
+        "projectId": "6d0a59bc-1e4e-49fa-9b0f-bece28200a29"
       }
-    }
+    },
+    "owner": "ganeshyadavs-team"
   }
 }

@@ -1,18 +1,15 @@
 import React, { useState } from 'react';
-import { View, TextInput, Text, StyleSheet, TouchableOpacity, KeyboardTypeOptions } from 'react-native';
+import { View, TextInput, Text, StyleSheet, TouchableOpacity, TextInputProps } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants/colors';
 
-interface AppInputProps {
-  label: string;
+interface AppInputProps extends TextInputProps {
+  label?: string;
   value: string;
   onChangeText: (text: string) => void;
-  placeholder: string;
+  placeholder?: string;
   error?: string;
   secureTextEntry?: boolean;
-  keyboardType?: KeyboardTypeOptions;
-  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
-  autoCorrect?: boolean;
 }
 
 export const AppInput: React.FC<AppInputProps> = ({
@@ -25,13 +22,15 @@ export const AppInput: React.FC<AppInputProps> = ({
   keyboardType = 'default',
   autoCapitalize,
   autoCorrect,
+  style,
+  ...rest
 }) => {
   const [isSecure, setIsSecure] = useState(secureTextEntry);
   const [isFocused, setIsFocused] = useState(false);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
+      {Boolean(label) && <Text style={styles.label}>{label}</Text>}
       <View style={[
         styles.inputContainer,
         isFocused && styles.inputFocused,
@@ -49,6 +48,7 @@ export const AppInput: React.FC<AppInputProps> = ({
           autoCorrect={autoCorrect}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
+          {...rest}
         />
         {secureTextEntry && (
           <TouchableOpacity 

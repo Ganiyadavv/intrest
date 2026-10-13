@@ -13,9 +13,13 @@ export const adminService = {
 
   getMembers: async (search?: string): Promise<AdminMember[]> => {
     try {
-      const url = search ? `/admin/members?search=${encodeURIComponent(search)}` : '/admin/members';
+      const trimmed = search ? search.trim() : '';
+      const url = trimmed ? `/admin/members?search=${encodeURIComponent(trimmed)}` : '/admin/members';
       const response = await api.get(url);
-      return response.data.data.members || response.data.data;
+      const data = response.data?.data;
+      if (Array.isArray(data)) return data;
+      if (data && Array.isArray(data.members)) return data.members;
+      return [];
     } catch (error: any) {
       throw error.response?.data || { message: 'Failed to fetch members' };
     }

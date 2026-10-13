@@ -10,10 +10,12 @@ export interface AdminStatistics {
 export interface AdminMember {
   id: number | string;
   userId: string;
-  firstName: string;
-  lastName: string;
+  fullName?: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
-  phoneNumber: string;
+  phoneNumber?: string;
   role: string;
   status: string;
   profileImage?: string | null;

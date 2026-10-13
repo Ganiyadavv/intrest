@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -9,7 +9,6 @@ import { adminService } from '../services/adminService';
 import { AdminMember } from '../types/admin';
 import { Loading } from '../components/Loading';
 import { ErrorMessage } from '../components/ErrorMessage';
-import { AppInput } from '../components/AppInput';
 
 type AdminMembersNavigationProp = NativeStackNavigationProp<AdminStackParamList, 'AdminMembers'>;
 
@@ -20,42 +19,100 @@ interface Props {
 export const AdminMembersScreen: React.FC<Props> = ({ navigation }) => {
   const [members, setMembers] = useState<AdminMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const isInitialMount = useRef(true);
+  const latestQueryRef = useRef('');
 
-  const fetchMembers = async (query = '') => {
+  const fetchMembers = async (query = '', showFullLoader = false) => {
+    latestQueryRef.current = query;
     try {
+      if (showFullLoader) {
+        setLoading(true);
+      } else {
+        setIsSearching(true);
+      }
       setError('');
       const data = await adminService.getMembers(query);
-      setMembers(data);
+      if (latestQueryRef.current === query) {
+        setMembers(Array.isArray(data) ? data : []);
+      }
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch members');
+      if (latestQueryRef.current === query) {
+        setError(err.message || 'Failed to fetch members');
+      }
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (latestQueryRef.current === query) {
+        setLoading(false);
+        setIsSearching(false);
+        setRefreshing(false);
+      }
     }
   };
 
   useFocusEffect(
     useCallback(() => {
-      fetchMembers();
+      fetchMembers(searchQuery, members.length === 0);
     }, [])
   );
 
+  // Debounced server search when typing name/email/ID
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      fetchMembers(searchQuery, false);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const onRefresh = () => {
     setRefreshing(true);
-    fetchMembers(searchQuery);
+    fetchMembers(searchQuery, false);
   };
 
   const handleSearch = () => {
-    setLoading(true);
-    fetchMembers(searchQuery);
+    fetchMembers(searchQuery, false);
   };
+
+  const handleClear = () => {
+    setSearchQuery('');
+    fetchMembers('', false);
+  };
+
+  // Instant 0ms local client filtering over currently loaded members
+  const filteredMembers = useMemo(() => {
+    if (!searchQuery.trim()) return members;
+    const query = searchQuery.toLowerCase().trim();
+    return members.filter((item) => {
+      const name = (item.fullName || `${item.firstName || ''} ${item.lastName || ''}`.trim() || (item as any).name || '').toLowerCase();
+      const email = (item.email || '').toLowerCase();
+      const userId = (item.userId || '').toLowerCase();
+      const phone = (item.phoneNumber || '').toLowerCase();
+      const city = (item.city || '').toLowerCase();
+      const state = (item.state || '').toLowerCase();
+      return (
+        name.includes(query) ||
+        email.includes(query) ||
+        userId.includes(query) ||
+        phone.includes(query) ||
+        city.includes(query) ||
+        state.includes(query)
+      );
+    });
+  }, [members, searchQuery]);
 
   const renderItem = ({ item }: { item: AdminMember }) => (
     <View style={styles.cardNeu}>
-      <Text style={styles.cardTitle}>{item.fullName || `${item.firstName || ''} ${item.lastName || ''}`.trim() || (item as any).name || 'Unknown Name'}</Text>
+      <Text style={styles.cardTitle}>
+        {item.fullName || `${item.firstName || ''} ${item.lastName || ''}`.trim() || (item as any).name || 'Unknown Name'}
+      </Text>
       
       <View style={styles.infoRow}>
         <Text style={styles.infoLabel}>User ID:</Text>
@@ -67,7 +124,7 @@ export const AdminMembersScreen: React.FC<Props> = ({ navigation }) => {
       </View>
       <View style={styles.infoRow}>
         <Text style={styles.infoLabel}>Phone:</Text>
-        <Text style={styles.infoValue}>{item.phoneNumber}</Text>
+        <Text style={styles.infoValue}>{item.phoneNumber || 'N/A'}</Text>
       </View>
       <View style={styles.infoRow}>
         <Text style={styles.infoLabel}>Status:</Text>
@@ -102,15 +159,28 @@ export const AdminMembersScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.headerTitle}>Members</Text>
           <View style={{ width: 40 }} />
         </View>
-        <View style={styles.searchContainer}>
-          <AppInput
-            label=""
-            placeholder="Search members..."
+
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={20} color="#7F8C8D" style={styles.searchIcon} />
+          <TextInput
+            style={[styles.searchInput, { outlineStyle: 'none' } as any]}
+            placeholder="Search by name, email, user ID..."
+            placeholderTextColor="#95A5A6"
             value={searchQuery}
             onChangeText={setSearchQuery}
             onSubmitEditing={handleSearch}
             returnKeyType="search"
+            autoCapitalize="none"
+            autoCorrect={false}
           />
+          {isSearching && (
+            <ActivityIndicator size="small" color="#4D8BFF" style={styles.searchIndicator} />
+          )}
+          {searchQuery.length > 0 && !isSearching && (
+            <TouchableOpacity onPress={handleClear} style={styles.clearBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Ionicons name="close-circle" size={18} color="#95A5A6" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -119,19 +189,24 @@ export const AdminMembersScreen: React.FC<Props> = ({ navigation }) => {
       </View>
 
       <View style={styles.bottomLightSection}>
-        {loading ? (
+        {loading && members.length === 0 ? (
            <Loading />
         ) : (
            <>
              <ErrorMessage message={error} />
              <FlatList
-               data={members}
+               data={filteredMembers}
                keyExtractor={(item) => String(item.id)}
                renderItem={renderItem}
                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                contentContainerStyle={styles.listContainer}
                ListEmptyComponent={
-                 <Text style={styles.emptyText}>No members found</Text>
+                 <View style={styles.emptyContainer}>
+                   <Ionicons name="search-outline" size={44} color="#BDC3C7" style={{ marginBottom: 12 }} />
+                   <Text style={styles.emptyText}>
+                     {searchQuery ? `No members found matching "${searchQuery}"` : 'No members found'}
+                   </Text>
+                 </View>
                }
              />
            </>
@@ -147,7 +222,37 @@ const styles = StyleSheet.create({
   customHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   backButton: { padding: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20 },
   headerTitle: { color: '#FFF', fontSize: 20, fontWeight: 'bold' },
-  searchContainer: { marginTop: 8 },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    height: 48,
+    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    height: '100%',
+    color: '#1A1B2F',
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  searchIndicator: {
+    marginLeft: 8,
+  },
+  clearBtn: {
+    padding: 4,
+    marginLeft: 8,
+  },
   waveConnectorDark: { height: 40, backgroundColor: '#1A1B2F', marginTop: -1, zIndex: 1 },
   waveConnectorLightCutout: { flex: 1, backgroundColor: '#E9EFF5', borderTopLeftRadius: 80 },
   bottomLightSection: { backgroundColor: '#E9EFF5', flex: 1, marginTop: -1, paddingHorizontal: 16 },
@@ -159,5 +264,6 @@ const styles = StyleSheet.create({
   infoValue: { fontSize: 14, color: '#2C3E50', fontWeight: '700' },
   detailsBtn: { marginTop: 16, paddingVertical: 12, backgroundColor: '#4D8BFF', borderRadius: 12, alignItems: 'center' },
   detailsBtnText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
-  emptyText: { textAlign: 'center', marginTop: 40, fontSize: 16, color: '#7F8C8D' }
+  emptyContainer: { alignItems: 'center', justifyContent: 'center', marginTop: 40 },
+  emptyText: { textAlign: 'center', fontSize: 16, color: '#7F8C8D', fontWeight: '600' }
 });
