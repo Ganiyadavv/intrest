@@ -53,7 +53,7 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
     await authService.logoutUser();
     navigation.getParent()?.reset({
       index: 0,
-      routes: [{ name: 'Auth' }],
+      routes: [{ name: 'Auth', params: { screen: 'PublicHome' } }],
     });
   };
 

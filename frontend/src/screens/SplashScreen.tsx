@@ -64,10 +64,10 @@ export const SplashScreen: React.FC<Props> = ({ navigation }) => {
             navigation.replace('Main', { screen: 'Dashboard' });
           }
         } else {
-          navigation.replace('Auth', { screen: 'Login' });
+          navigation.replace('Auth', { screen: 'PublicHome' });
         }
       } catch (error) {
-        navigation.replace('Auth', { screen: 'Login' });
+        navigation.replace('Auth', { screen: 'PublicHome' });
       }
     };
 

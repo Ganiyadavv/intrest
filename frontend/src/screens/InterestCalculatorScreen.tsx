@@ -19,8 +19,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { MainStackParamList } from '../types/navigation';
 
-type InterestCalculatorScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'InterestCalculator'>;
-type InterestCalculatorScreenRouteProp = RouteProp<MainStackParamList, 'InterestCalculator'>;
+type InterestCalculatorScreenNavigationProp = NativeStackNavigationProp<any, 'InterestCalculator'>;
+type InterestCalculatorScreenRouteProp = RouteProp<any, 'InterestCalculator'>;
 
 interface Props {
   navigation: InterestCalculatorScreenNavigationProp;

@@ -17,6 +17,8 @@ import { useLanguage } from '../contexts/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
+type DashboardScreenNavigationProp = NativeStackNavigationProp<any, 'Dashboard'>;
+
 interface Props {
   navigation: DashboardScreenNavigationProp;
 }
@@ -54,7 +56,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
     await clearStorage();
     navigation.getParent()?.reset({
       index: 0,
-      routes: [{ name: 'Auth' }],
+      routes: [{ name: 'Auth', params: { screen: 'PublicHome' } }],
     });
   };
 

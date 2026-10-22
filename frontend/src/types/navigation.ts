@@ -1,10 +1,21 @@
 import { NavigatorScreenParams } from '@react-navigation/native';
 
 export type AuthStackParamList = {
-  Login: undefined;
+  PublicHome: undefined;
+  Login: { message?: string } | undefined;
   Register: undefined;
   ForgotPassword: undefined;
   ResetPassword: { email: string };
+  InterestCalculator: {
+    principal?: string;
+    rate?: string;
+    years?: string;
+    months?: string;
+    days?: string;
+    givenDate?: string;
+  } | undefined;
+  CompoundInterest: undefined;
+  RateCalculator: undefined;
 };
 
 export type AdminStackParamList = {

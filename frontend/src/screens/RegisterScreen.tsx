@@ -66,6 +66,23 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} bounces={false}>
           {/* TOP DARK SECTION */}
           <View style={styles.topDarkSection}>
+            <View style={styles.topHeaderBar}>
+              <TouchableOpacity 
+                style={styles.publicDashboardIconBtn} 
+                onPress={() => navigation.navigate('PublicHome')}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="arrow-back" size={20} color="#FFF" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.publicDashboardIconBtn} 
+                onPress={() => navigation.navigate('PublicHome')}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="log-in-outline" size={22} color="#FFF" />
+              </TouchableOpacity>
+            </View>
+
             <View style={styles.headerContainer}>
               <View style={styles.logoWrapperNeu}>
                 <Ionicons name="person-add" size={32} color="#4D8BFF" />
@@ -140,7 +157,6 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                   <Text style={styles.loginTextNeu}>Login Here</Text>
                 </TouchableOpacity>
               </View>
-
             </View>
           </View>
         </ScrollView>
@@ -163,12 +179,29 @@ const styles = StyleSheet.create({
   },
   topDarkSection: {
     backgroundColor: '#1A1B2F',
-    paddingTop: 80,
+    paddingTop: 48,
     paddingHorizontal: 24,
     paddingBottom: 40,
     borderBottomRightRadius: 80,
     zIndex: 10,
     alignItems: 'center',
+  },
+  topHeaderBar: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  publicDashboardIconBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(59, 130, 246, 0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.5)',
   },
   waveConnectorDark: {
     height: 80,
