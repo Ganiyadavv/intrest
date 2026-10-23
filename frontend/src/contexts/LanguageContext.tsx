@@ -32,6 +32,12 @@ const translations = {
     'home.createAccount': 'Create\nAccount',
     'home.login': 'Login',
     'home.register': 'Register',
+    'home.wantToManage': 'Want to manage your records?',
+    'home.wantToManageSubtitle': 'Sign in to save and track your lender & borrower details.',
+    'home.lenderRecords': 'Lender Records',
+    'home.borrowerRecords': 'Borrower Records',
+    'home.signInToAccess': 'Sign in to access',
+    'home.signInOrCreate': 'Sign In / Create Account',
   },
   te: {
     'dashboard.borrowerRecords': 'అప్పు తీసుకున్నవారి\nవివరాలు',
@@ -56,12 +62,16 @@ const translations = {
     'home.compoundInterestDesc': 'నెలవారీ, త్రైమాసిక, అర్ధ వార్షిక లేదా వార్షిక చక్రవడ్డీని లెక్కించండి.',
     'home.interestCalculatorDesc': 'తేదీలు మరియు కాలపరిమితితో తక్షణ వడ్డీ లెక్కింపు.',
     'home.rateCalculatorDesc': 'అసలు మరియు వడ్డీ ఆధారంగా ఖచ్చితమైన వడ్డీ రేటును కనుగొనండి.',
-    'home.login': 'లాగిన్',
-    'home.register': 'రిజిస్టర్',
     'home.accountTitle': 'రుణ రికార్డులను నిర్వహించండి',
     'home.accountSubtitle': 'మీ రుణగ్రహీత మరియు రుణదాత రికార్డులను భద్రంగా ట్రాక్ చేయడానికి లాగిన్ అవ్వండి.',
     'home.signInButton': 'ఖాతాలోకి లాగిన్ అవ్వండి',
     'home.createAccountButton': 'ఉచిత ఖాతాను సృష్టించండి',
+    'home.wantToManage': 'మీ రికార్డులను నిర్వహించాలనుకుంటున్నారా?',
+    'home.wantToManageSubtitle': 'మీ రుణదాత & రుణగ్రహీత వివరాలను భద్రపరచడానికి లాగిన్ అవ్వండి.',
+    'home.lenderRecords': 'రుణదాత రికార్డులు',
+    'home.borrowerRecords': 'రుణగ్రహీత రికార్డులు',
+    'home.signInToAccess': 'యాక్సెస్ చేయడానికి లాగిన్ అవ్వండి',
+    'home.signInOrCreate': 'లాగిన్ / ఖాతాను సృష్టించండి',
   }
 };
 

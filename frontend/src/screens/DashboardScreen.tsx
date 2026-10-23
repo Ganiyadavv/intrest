@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -65,25 +65,26 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
     screen: keyof MainStackParamList | 'Auth', 
     iconName: keyof typeof Ionicons.glyphMap, 
     iconColor: string,
+    iconBgColor: string,
     badgeCount?: number,
     onPress?: () => void
   ) => (
     <TouchableOpacity 
       style={styles.neuButtonWrapper}
       onPress={onPress || (() => navigation.navigate(screen as any))}
-      activeOpacity={0.6}
+      activeOpacity={0.7}
     >
-      <View style={styles.neuButtonOuter}>
-        <View style={styles.neuButtonInner}>
+      <View style={styles.neuButtonCircle}>
+        <View style={[styles.neuIconBadge, { backgroundColor: iconBgColor }]}>
           <Ionicons name={iconName} size={28} color={iconColor} />
-          {!!badgeCount && badgeCount > 0 && (
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>
-                {badgeCount > 99 ? '99+' : badgeCount}
-              </Text>
-            </View>
-          )}
         </View>
+        {!!badgeCount && badgeCount > 0 && (
+          <View style={styles.notificationBadge}>
+            <Text style={styles.notificationBadgeText}>
+              {badgeCount > 99 ? '99+' : badgeCount}
+            </Text>
+          </View>
+        )}
       </View>
       <Text style={styles.neuButtonText}>{title}</Text>
     </TouchableOpacity>
@@ -149,15 +150,15 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.bottomLightSection}>
             
             <View style={styles.neuGrid}>
-              {renderNeumorphicButton(t('dashboard.borrowerRecords'), 'PersonRecords', 'people', '#10B981')}
-              {renderNeumorphicButton(t('dashboard.lenderRecords'), 'LenderRecords', 'wallet', '#4A90E2')}
-              {renderNeumorphicButton(t('dashboard.interestCalculator'), 'InterestCalculator', 'calculator', '#F5A623')}
-              {renderNeumorphicButton(t('dashboard.compoundInterest'), 'CompoundInterest', 'trending-up', '#FF6BE7')}
-              {renderNeumorphicButton(t('dashboard.rateCalculator'), 'RateCalculator', 'pie-chart', '#FF6BE7')}
-              {renderNeumorphicButton(t('dashboard.notifications'), 'Notifications', 'notifications', '#FBBF24', unreadCount)}
-              {renderNeumorphicButton(t('dashboard.search'), 'SearchUser', 'search', '#50E3C2')}
-              {renderNeumorphicButton(t('dashboard.profile'), 'Profile', 'person', '#B865D6')}
-              {renderNeumorphicButton(t('dashboard.logout'), 'Auth', 'log-out', '#E74C3C', 0, handleLogout)}
+              {renderNeumorphicButton(t('dashboard.borrowerRecords'), 'PersonRecords', 'people', '#10B981', 'rgba(16, 185, 129, 0.12)')}
+              {renderNeumorphicButton(t('dashboard.lenderRecords'), 'LenderRecords', 'wallet', '#4A90E2', 'rgba(74, 144, 226, 0.12)')}
+              {renderNeumorphicButton(t('dashboard.interestCalculator'), 'InterestCalculator', 'calculator', '#F59E0B', 'rgba(245, 158, 11, 0.12)')}
+              {renderNeumorphicButton(t('dashboard.compoundInterest'), 'CompoundInterest', 'trending-up', '#EC4899', 'rgba(236, 72, 153, 0.12)')}
+              {renderNeumorphicButton(t('dashboard.rateCalculator'), 'RateCalculator', 'pie-chart', '#EC4899', 'rgba(236, 72, 153, 0.12)')}
+              {renderNeumorphicButton(t('dashboard.notifications'), 'Notifications', 'notifications', '#FBBF24', 'rgba(251, 191, 36, 0.12)', unreadCount)}
+              {renderNeumorphicButton(t('dashboard.search'), 'SearchUser', 'search', '#50E3C2', 'rgba(80, 227, 194, 0.12)')}
+              {renderNeumorphicButton(t('dashboard.profile'), 'Profile', 'person', '#B865D6', 'rgba(184, 101, 214, 0.12)')}
+              {renderNeumorphicButton(t('dashboard.logout'), 'Auth', 'log-out', '#E74C3C', 'rgba(231, 76, 60, 0.12)', 0, handleLogout)}
             </View>
 
           </View>
@@ -317,31 +318,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
   },
-  neuButtonOuter: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#E9EFF5',
+  neuButtonCircle: {
+    width: 74,
+    height: 74,
+    borderRadius: 37,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#FFFFFF',
-    shadowOffset: { width: -6, height: -6 },
-    shadowOpacity: 0.9,
-    shadowRadius: 8,
-    elevation: 5,
-    marginBottom: 12,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.95)',
+    shadowColor: '#475569',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.14,
+    shadowRadius: 10,
+    elevation: 6,
+    marginBottom: 8,
+    position: 'relative',
+    ...Platform.select({
+      web: {
+        boxShadow: '0 8px 18px rgba(100, 116, 139, 0.16), 0 2px 6px rgba(100, 116, 139, 0.08), 0 0 0 1px rgba(226, 232, 240, 0.8)',
+      },
+    }),
   },
-  neuButtonInner: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#E9EFF5',
+  neuIconBadge: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#A3B1C6',
-    shadowOffset: { width: 6, height: 6 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
   },
   neuButtonText: {
     fontSize: 13,
@@ -369,8 +373,8 @@ const styles = StyleSheet.create({
   },
   notificationBadge: {
     position: 'absolute',
-    top: 15,
-    right: 15,
+    top: 0,
+    right: 0,
     minWidth: 18,
     height: 18,
     borderRadius: 9,
@@ -378,6 +382,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
   },
   notificationBadgeText: {
     color: '#FFF',
