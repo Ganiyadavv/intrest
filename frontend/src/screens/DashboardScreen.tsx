@@ -152,10 +152,10 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.neuGrid}>
               {renderNeumorphicButton(t('dashboard.borrowerRecords'), 'PersonRecords', 'people', '#10B981', 'rgba(16, 185, 129, 0.12)')}
               {renderNeumorphicButton(t('dashboard.lenderRecords'), 'LenderRecords', 'wallet', '#4A90E2', 'rgba(74, 144, 226, 0.12)')}
-              {renderNeumorphicButton(t('dashboard.interestCalculator'), 'InterestCalculator', 'calculator', '#F59E0B', 'rgba(245, 158, 11, 0.12)')}
-              {renderNeumorphicButton(t('dashboard.compoundInterest'), 'CompoundInterest', 'trending-up', '#EC4899', 'rgba(236, 72, 153, 0.12)')}
-              {renderNeumorphicButton(t('dashboard.rateCalculator'), 'RateCalculator', 'pie-chart', '#EC4899', 'rgba(236, 72, 153, 0.12)')}
               {renderNeumorphicButton(t('dashboard.notifications'), 'Notifications', 'notifications', '#FBBF24', 'rgba(251, 191, 36, 0.12)', unreadCount)}
+              {renderNeumorphicButton(t('dashboard.interestCalculator'), 'InterestCalculator', 'calculator', '#F59E0B', 'rgba(245, 158, 11, 0.12)')}
+              {renderNeumorphicButton(t('dashboard.rateCalculator'), 'RateCalculator', 'pie-chart', '#EC4899', 'rgba(236, 72, 153, 0.12)')}
+              {renderNeumorphicButton(t('dashboard.compoundInterest'), 'CompoundInterest', 'trending-up', '#EC4899', 'rgba(236, 72, 153, 0.12)')}
               {renderNeumorphicButton(t('dashboard.search'), 'SearchUser', 'search', '#50E3C2', 'rgba(80, 227, 194, 0.12)')}
               {renderNeumorphicButton(t('dashboard.profile'), 'Profile', 'person', '#B865D6', 'rgba(184, 101, 214, 0.12)')}
               {renderNeumorphicButton(t('dashboard.logout'), 'Auth', 'log-out', '#E74C3C', 'rgba(231, 76, 60, 0.12)', 0, handleLogout)}
