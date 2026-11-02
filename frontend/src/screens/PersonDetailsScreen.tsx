@@ -5,6 +5,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { MainStackParamList } from '../types/navigation';
 import { PersonRecord } from '../types/personRecord';
 import { personRecordService } from '../services/personRecordService';
 import { Loading } from '../components/Loading';
@@ -97,7 +98,7 @@ export const PersonDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const calculateInterest = () => {
-    if (!person) return { totalMonths: 0, interest: 0, total: 0 };
+    if (!person) return { years: 0, months: 0, days: 0, totalMonths: 0, interest: 0, total: 0 };
     
     const d1 = new Date(person.givenDate);
     const d2 = new Date();
@@ -248,9 +249,9 @@ export const PersonDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
           onPress={() => navigation.navigate('InterestCalculator', {
             principal: person.amount.toString(),
             rate: person.interestRate.toString(),
-            years: calcResult.years.toString(),
-            months: calcResult.months.toString(),
-            days: calcResult.days.toString(),
+            years: (calcResult.years ?? 0).toString(),
+            months: (calcResult.months ?? 0).toString(),
+            days: (calcResult.days ?? 0).toString(),
             givenDate: person.givenDate
           })}
         >
@@ -270,7 +271,7 @@ export const PersonDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
 
         <View style={styles.actionsContainerNeu}>
           {person.status !== 'COMPLETED' && person.status !== 'ACCEPTED' && (
-            <TouchableOpacity style={styles.actionBtnNeuBlue} onPress={() => navigation.navigate('EditPerson', { id: person.id })}>
+            <TouchableOpacity style={styles.actionBtnNeuBlue} onPress={() => navigation.navigate('EditPerson', { id: person.id || (person as any)._id || '' })}>
               <Ionicons name="pencil" size={20} color="#FFF" style={{ marginRight: 8 }} />
               <Text style={styles.actionBtnTextNeuPrimary}>Edit Person</Text>
             </TouchableOpacity>

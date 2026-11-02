@@ -1,5 +1,6 @@
 export interface PersonRecord {
-  _id: string; // backend might use _id
+  id?: string;
+  _id?: string;
   ownerId: string;
   targetUserId?: string;
   name: string;

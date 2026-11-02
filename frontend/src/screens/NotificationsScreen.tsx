@@ -242,5 +242,8 @@ const styles = StyleSheet.create({
   cancelButton: { flex: 1, paddingVertical: 12, marginRight: 8, borderRadius: 12, backgroundColor: '#F2F4F4', alignItems: 'center' },
   cancelButtonText: { color: '#7F8C8D', fontSize: 16, fontWeight: 'bold' },
   confirmDeleteButton: { flex: 1, paddingVertical: 12, marginLeft: 8, borderRadius: 12, backgroundColor: '#E74C3C', alignItems: 'center' },
-  confirmDeleteButtonText: { color: '#FFF', fontSize: 16, fontWeight: 'bold' }
+  confirmDeleteButtonText: { color: '#FFF', fontSize: 16, fontWeight: 'bold' },
+  emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
+  emptyText: { fontSize: 18, fontWeight: 'bold', color: '#2C3E50', marginTop: 16 },
+  emptySubText: { fontSize: 14, color: '#7F8C8D', marginTop: 6 },
 });

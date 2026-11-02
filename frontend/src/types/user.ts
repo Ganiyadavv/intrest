@@ -6,7 +6,7 @@ export interface User {
   fullName?: string;
   email: string;
   phoneNumber: string;
-  role: "MEMBER";
+  role: "MEMBER" | "ADMIN";
   status: "ACTIVE" | "INACTIVE";
   profileImage: string | null;
   address: string | null;

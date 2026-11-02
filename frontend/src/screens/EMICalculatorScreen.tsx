@@ -6,6 +6,7 @@ import { AppInput } from '../components/AppInput';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { formatCurrency } from '../utils/currency';
 import { calculateEMI, EMIResult } from '../utils/emiCalculator';
+import { COLORS } from '../constants/colors';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../types/navigation';
 
@@ -158,11 +159,12 @@ export const EMICalculatorScreen: React.FC<Props> = ({ navigation }) => {
                   keyboardType="numeric"
                 />
 
-                <Text style={styles.fieldSectionLabel}>Loan Tenure</Text>
                 <View style={styles.row}>
                   <View style={styles.col}>
+                    <Text style={styles.fieldLabel} numberOfLines={1} adjustsFontSizeToFit>
+                      Loan Tenure (Years)
+                    </Text>
                     <AppInput
-                      label="Years"
                       placeholder="1"
                       value={years}
                       onChangeText={setYears}
@@ -170,8 +172,10 @@ export const EMICalculatorScreen: React.FC<Props> = ({ navigation }) => {
                     />
                   </View>
                   <View style={styles.col}>
+                    <Text style={styles.fieldLabel} numberOfLines={1} adjustsFontSizeToFit>
+                      Additional Months
+                    </Text>
                     <AppInput
-                      label="Additional Months (0–11)"
                       placeholder="0"
                       value={months}
                       onChangeText={setMonths}
@@ -351,12 +355,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FFF',
   },
-  fieldSectionLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#334155',
-    marginBottom: 8,
-    marginTop: 4,
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: COLORS.TEXT,
+    marginBottom: 6,
+    height: 18,
+    lineHeight: 18,
   },
   row: {
     flexDirection: 'row',

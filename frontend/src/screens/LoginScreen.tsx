@@ -43,7 +43,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation, route }) => {
     setLoading(true);
     try {
       const response = await authService.loginUser({ email, password });
-      const user = response.data?.user || response.user;
+      const user = response.data?.user || (response as any).user;
       
       if (user && user.role === 'ADMIN') {
         navigation.getParent()?.reset({

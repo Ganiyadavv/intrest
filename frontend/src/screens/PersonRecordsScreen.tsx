@@ -104,7 +104,7 @@ export const PersonRecordsScreen: React.FC<Props> = ({ navigation }) => {
     <TouchableOpacity
       style={styles.card}
       activeOpacity={0.7}
-      onPress={() => navigation.navigate('PersonDetails', { id: item.id })}
+      onPress={() => navigation.navigate('PersonDetails', { id: item.id || item._id || '' })}
     >
       <View style={styles.cardHeader}>
         <Text style={styles.name}>{item.name}</Text>
@@ -197,7 +197,7 @@ export const PersonRecordsScreen: React.FC<Props> = ({ navigation }) => {
                 const matchesSearch = r.name.toLowerCase().includes(searchQuery.toLowerCase());
                 return matchesTab && matchesSearch;
               })}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item) => item.id || item._id || String(Math.random())}
               renderItem={renderItem}
               refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
               contentContainerStyle={styles.listContainer}
