@@ -9,6 +9,7 @@ import { ResetPasswordScreen } from '../screens/ResetPasswordScreen';
 import { InterestCalculatorScreen } from '../screens/InterestCalculatorScreen';
 import { CompoundInterestScreen } from '../screens/CompoundInterestScreen';
 import { RateCalculatorScreen } from '../screens/RateCalculatorScreen';
+import { EMICalculatorScreen } from '../screens/EMICalculatorScreen';
 import { COLORS } from '../constants/colors';
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
@@ -30,6 +31,7 @@ export const AuthNavigator = () => {
       <Stack.Screen name="InterestCalculator" component={InterestCalculatorScreen} />
       <Stack.Screen name="CompoundInterest" component={CompoundInterestScreen} />
       <Stack.Screen name="RateCalculator" component={RateCalculatorScreen} />
+      <Stack.Screen name="EMICalculator" component={EMICalculatorScreen} />
     </Stack.Navigator>
   );
 };

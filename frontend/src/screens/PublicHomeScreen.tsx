@@ -31,10 +31,10 @@ export const PublicHomeScreen: React.FC<Props> = ({ navigation }) => {
     >
       <View style={styles.neuButtonCircle}>
         <View style={[styles.neuIconBadge, { backgroundColor: iconBgColor }]}>
-          <Ionicons name={iconName} size={28} color={iconColor} />
+          <Ionicons name={iconName} size={24} color={iconColor} />
         </View>
       </View>
-      <Text style={styles.neuButtonText}>{title}</Text>
+      <Text style={styles.neuButtonText} numberOfLines={2} adjustsFontSizeToFit>{title}</Text>
     </TouchableOpacity>
   );
 
@@ -124,6 +124,15 @@ export const PublicHomeScreen: React.FC<Props> = ({ navigation }) => {
                 'pie-chart',
                 '#EC4899',
                 'rgba(236, 72, 153, 0.12)'
+              )}
+
+              {/* 4. EMI Calculator */}
+              {renderNeumorphicButton(
+                t('home.emiCalculator'),
+                () => navigation.navigate('EMICalculator'),
+                'calendar',
+                '#10B981',
+                'rgba(16, 185, 129, 0.12)'
               )}
             </View>
 
@@ -332,13 +341,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   neuButtonWrapper: {
-    width: (width - 40 - 24) / 3,
+    width: '23%',
     alignItems: 'center',
   },
   neuButtonCircle: {
-    width: 74,
-    height: 74,
-    borderRadius: 37,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
@@ -357,14 +366,14 @@ const styles = StyleSheet.create({
     }),
   },
   neuIconBadge: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     justifyContent: 'center',
     alignItems: 'center',
   },
   neuButtonText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: '#6B7A93',
     textAlign: 'center',

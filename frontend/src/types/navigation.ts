@@ -16,6 +16,7 @@ export type AuthStackParamList = {
   } | undefined;
   CompoundInterest: undefined;
   RateCalculator: undefined;
+  EMICalculator: undefined;
 };
 
 export type AdminStackParamList = {
