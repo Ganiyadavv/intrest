@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { ProfileImage } from '../components/ProfileImage';
+import * as Clipboard from 'expo-clipboard';
 import { userService } from '../services/userService';
 import { User } from '../types/user';
 import { Loading } from '../components/Loading';
@@ -92,9 +93,13 @@ export const SearchUserScreen: React.FC = () => {
     setError('');
   };
 
-  const handleCopyUserId = (id: string) => {
-    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(id);
+  const handleCopyUserId = async (id: string) => {
+    try {
+      await Clipboard.setStringAsync(id);
+    } catch {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        navigator.clipboard.writeText(id);
+      }
     }
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);

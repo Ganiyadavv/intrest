@@ -18,6 +18,7 @@ import { User } from '../types/user';
 import { Loading } from '../components/Loading';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { ProfileImage } from '../components/ProfileImage';
+import * as Clipboard from 'expo-clipboard';
 
 type ProfileScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'Profile'>;
 
@@ -65,10 +66,14 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
     });
   };
 
-  const handleCopyUserId = () => {
+  const handleCopyUserId = async () => {
     if (!user?.userId) return;
-    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(user.userId);
+    try {
+      await Clipboard.setStringAsync(user.userId);
+    } catch {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        navigator.clipboard.writeText(user.userId);
+      }
     }
     setCopiedId(true);
     setTimeout(() => setCopiedId(false), 2000);
