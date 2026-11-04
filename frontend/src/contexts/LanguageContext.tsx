@@ -95,6 +95,13 @@ const translations = {
     'home.lenderDetailsDesc': 'Sign in to access your lender details.',
     'home.borrowerDetailsDesc': 'Sign in to access your borrower details.',
     'home.freeCalculators': 'Free calculators • Secure personal records',
+    'home.featureSecure': '100% Secure & Private',
+    'home.featureSecureDesc': 'Bank-grade encryption keeps your loan data protected.',
+    'home.featureCalculators': 'Instant Calculations',
+    'home.featureCalculatorsDesc': 'Accurate simple, compound, EMI & rate calculations.',
+    'home.featureSync': 'Sync Across Devices',
+    'home.featureSyncDesc': 'Access your records seamlessly on mobile and web.',
+    'home.trustedPlatform': 'Trusted Financial Management Platform',
   },
   te: {
     // Header & Greeting
@@ -184,6 +191,13 @@ const translations = {
     'home.lenderDetailsDesc': 'మీ రుణదాత వివరాలను చూడటానికి లాగిన్ అవ్వండి.',
     'home.borrowerDetailsDesc': 'మీ రుణగ్రహీత వివరాలను చూడటానికి లాగిన్ అవ్వండి.',
     'home.freeCalculators': 'ఉచిత కాలిక్యులేటర్లు • సురక్షితమైన రికార్డులు',
+    'home.featureSecure': '100% సురక్షితం & గోప్యమైనది',
+    'home.featureSecureDesc': 'మీ రుణ వివరాలు పూర్తిగా సురక్షితంగా ఉంటాయి.',
+    'home.featureCalculators': 'తక్షణ లెక్కింపు',
+    'home.featureCalculatorsDesc': 'ఖచ్చితమైన సాధారణ, చక్రవడ్డీ & ఈఎమ్‌ఐ లెక్కలు.',
+    'home.featureSync': 'ఎక్కడైనా సులభంగా యాక్సెస్',
+    'home.featureSyncDesc': 'మొబైల్ మరియు వెబ్‌లో ఎల్లప్పుడూ రికార్డులు అందుబాటులో ఉంటాయి.',
+    'home.trustedPlatform': 'నమ్మకమైన ఆర్థిక లెక్కల నిర్వహణ వేదిక',
   },
 };
 

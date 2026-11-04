@@ -1,6 +1,15 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -47,95 +56,301 @@ export const AdminMemberDetailsScreen: React.FC<Props> = ({ navigation, route })
 
   const toggleStatus = () => {
     if (!member) return;
-    
-    const newStatus = member.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-    const actionText = newStatus === 'ACTIVE' ? 'deactivate' : 'activate';
+
+    const isCurrentlyActive = (member.status || '').toUpperCase() === 'ACTIVE';
+    const newStatus = isCurrentlyActive ? 'INACTIVE' : 'ACTIVE';
+    const actionText = isCurrentlyActive ? 'suspend' : 'activate';
 
     Alert.alert(`Confirm Action`, `Are you sure you want to ${actionText} this member?`, [
       { text: 'Cancel', style: 'cancel' },
-      { 
-        text: 'Confirm', 
-        style: newStatus === 'ACTIVE' ? 'default' : 'destructive',
+      {
+        text: 'Confirm',
+        style: isCurrentlyActive ? 'destructive' : 'default',
         onPress: async () => {
           setProcessing(true);
           try {
             await adminService.updateMemberStatus(id, newStatus);
-            Alert.alert('Success', 'Member status updated successfully.');
+            Alert.alert('Success', `Member ${isCurrentlyActive ? 'suspended' : 'activated'} successfully.`);
             fetchMemberDetails();
           } catch (err: any) {
             Alert.alert('Error', err.response?.data?.message || 'Failed to update status');
           } finally {
             setProcessing(false);
           }
-        }
-      }
+        },
+      },
     ]);
   };
 
-  if (loading) return <SafeAreaView style={styles.container}><Loading /></SafeAreaView>;
-  if (error || !member) return <SafeAreaView style={styles.container}><ErrorMessage message={error || "Member details not available"} /></SafeAreaView>;
+  // Helper to format date with time e.g. "12 Aug 2024, 10:30 AM"
+  const formatDateTime = (dateStr?: string) => {
+    if (!dateStr) return 'N/A';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const day = d.getDate();
+      const month = months[d.getMonth()];
+      const year = d.getFullYear();
+      let hours = d.getHours();
+      const minutes = d.getMinutes().toString().padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      return `${day} ${month} ${year}, ${hours}:${minutes} ${ampm}`;
+    } catch {
+      return dateStr;
+    }
+  };
 
-  const DetailRow = ({ label, value }: { label: string, value: string | undefined | null }) => (
-    <View style={styles.detailRow}>
-      <Text style={styles.label}>{label}</Text>
-      <Text style={styles.value}>{value || 'N/A'}</Text>
-    </View>
-  );
+  // Helper to extract initials
+  const getInitials = (name?: string, email?: string) => {
+    if (name && name.trim()) {
+      const parts = name.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        return (parts[0][0] + parts[1][0]).toUpperCase();
+      }
+      return parts[0].substring(0, 2).toUpperCase();
+    }
+    if (email) {
+      return email.substring(0, 2).toUpperCase();
+    }
+    return 'MB';
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Loading />
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !member) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ErrorMessage message={error || 'Member details not available'} />
+      </SafeAreaView>
+    );
+  }
+
+  const displayName =
+    member.fullName ||
+    `${member.firstName || ''} ${member.lastName || ''}`.trim() ||
+    (member as any).name ||
+    'Member';
+  const isActive = (member.status || '').toUpperCase() === 'ACTIVE';
+  const initials = getInitials(displayName, member.email);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <StatusBar style="light" />
+
+      {/* 1. TOP GREEN APP BAR */}
       <View style={styles.topDarkSection}>
         <View style={styles.customHeader}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#FFF" />
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Member Details</Text>
-          <View style={{ width: 40 }} />
+          <View style={{ width: 38 }} />
         </View>
       </View>
 
+      {/* 2. WAVE CONNECTOR (Matching curved design) */}
       <View style={styles.waveConnectorDark}>
-         <View style={styles.waveConnectorLightCutout} />
+        <View style={styles.waveConnectorLightCutout} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} style={styles.bottomLightSection}>
-        <View style={styles.cardNeu}>
-          <View style={styles.profileHeader}>
-            <View style={styles.profileImageContainer}>
-               <ProfileImage uri={member.profileImage} />
+      {/* 3. SCROLLABLE CONTENT */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
+        {/* Main Profile Hero Card */}
+        <View style={styles.profileCard}>
+          <View style={styles.profileHeroRow}>
+            <View style={styles.avatarBorderCircle}>
+              {member.profileImage ? (
+                <ProfileImage uri={member.profileImage} />
+              ) : (
+                <View style={styles.avatarFallback}>
+                  <Text style={styles.avatarFallbackText}>{initials}</Text>
+                </View>
+              )}
             </View>
-            <Text style={styles.name}>{member.fullName || `${member.firstName || ''} ${member.lastName || ''}`.trim() || (member as any).name || 'Unknown Name'}</Text>
+
+            <View style={styles.profileMetaCol}>
+              <Text style={styles.displayName} numberOfLines={1}>
+                {displayName}
+              </Text>
+              <View style={styles.userIdChip}>
+                <Ionicons name="finger-print-outline" size={13} color="#64748B" style={{ marginRight: 4 }} />
+                <Text style={styles.userIdText}>{member.userId}</Text>
+              </View>
+              <View
+                style={[
+                  styles.statusBadgePill,
+                  isActive ? styles.statusActivePill : styles.statusSuspendedPill,
+                ]}
+              >
+                <View style={[styles.statusDot, { backgroundColor: isActive ? '#10B981' : '#EF4444' }]} />
+                <Text
+                  style={[
+                    styles.statusBadgePillText,
+                    isActive ? styles.statusActivePillText : styles.statusSuspendedPillText,
+                  ]}
+                >
+                  {isActive ? 'Active Member' : member.status || 'Suspended'}
+                </Text>
+              </View>
+            </View>
           </View>
-
-          <View style={styles.divider} />
-
-          <DetailRow label="User ID" value={member.userId} />
-          <DetailRow label="Email" value={member.email} />
-          <DetailRow label="Phone" value={member.phoneNumber} />
-          
-          <View style={styles.detailRow}>
-            <Text style={styles.label}>Status</Text>
-            <Text style={[styles.value, { color: member.status === 'ACTIVE' ? '#2ECC71' : '#E74C3C' }]}>
-              {member.status}
-            </Text>
-          </View>
-
-          <DetailRow label="Address" value={member.address} />
-          <DetailRow label="City" value={member.city} />
-          <DetailRow label="State" value={member.state} />
-          <DetailRow label="Pincode" value={member.pincode} />
-          <DetailRow label="Created" value={new Date(member.createdAt).toLocaleDateString('en-GB')} />
-          <DetailRow label="Updated" value={new Date(member.updatedAt).toLocaleDateString('en-GB')} />
-
         </View>
 
-        <TouchableOpacity 
-          style={[styles.btn, { backgroundColor: member.status === 'ACTIVE' ? '#E74C3C' : '#2ECC71' }]} 
+        {/* Contact & Activity Card */}
+        <View style={styles.infoCard}>
+          <Text style={styles.sectionHeaderTitle}>Contact & Activity</Text>
+
+          {/* Row 1: Email */}
+          <View style={styles.infoItemRow}>
+            <View style={styles.infoIconBox}>
+              <Ionicons name="mail-outline" size={18} color="#059669" />
+            </View>
+            <View style={styles.infoTextCol}>
+              <Text style={styles.infoLabel}>Email</Text>
+              <Text style={styles.infoValue}>{member.email || 'N/A'}</Text>
+            </View>
+          </View>
+
+          <View style={styles.infoDivider} />
+
+          {/* Row 2: Phone */}
+          <View style={styles.infoItemRow}>
+            <View style={styles.infoIconBox}>
+              <Ionicons name="call-outline" size={18} color="#059669" />
+            </View>
+            <View style={styles.infoTextCol}>
+              <Text style={styles.infoLabel}>Phone</Text>
+              <Text style={styles.infoValue}>{member.phoneNumber || 'N/A'}</Text>
+            </View>
+          </View>
+
+          <View style={styles.infoDivider} />
+
+          {/* Row 3: Joined On */}
+          <View style={styles.infoItemRow}>
+            <View style={styles.infoIconBox}>
+              <Ionicons name="calendar-outline" size={18} color="#059669" />
+            </View>
+            <View style={styles.infoTextCol}>
+              <Text style={styles.infoLabel}>Joined On</Text>
+              <Text style={styles.infoValue}>{formatDateTime(member.createdAt)}</Text>
+            </View>
+          </View>
+
+          <View style={styles.infoDivider} />
+
+          {/* Row 4: Last Active */}
+          <View style={styles.infoItemRow}>
+            <View style={styles.infoIconBox}>
+              <Ionicons name="time-outline" size={18} color="#059669" />
+            </View>
+            <View style={styles.infoTextCol}>
+              <Text style={styles.infoLabel}>Last Active</Text>
+              <Text style={styles.infoValue}>{formatDateTime(member.updatedAt)}</Text>
+            </View>
+          </View>
+
+          {/* Optional Location Row */}
+          {(!!member.city || !!member.state || !!member.address) && (
+            <>
+              <View style={styles.infoDivider} />
+              <View style={styles.infoItemRow}>
+                <View style={styles.infoIconBox}>
+                  <Ionicons name="location-outline" size={18} color="#059669" />
+                </View>
+                <View style={styles.infoTextCol}>
+                  <Text style={styles.infoLabel}>Location</Text>
+                  <Text style={styles.infoValue}>
+                    {[member.address, member.city, member.state, member.pincode].filter(Boolean).join(', ')}
+                  </Text>
+                </View>
+              </View>
+            </>
+          )}
+        </View>
+
+        {/* Role & Security Status Card */}
+        <View style={styles.securityCard}>
+          <Text style={styles.sectionHeaderTitle}>Account & Permissions</Text>
+
+          <View style={styles.securityRow}>
+            <View style={styles.securityItem}>
+              <Text style={styles.securityLabel}>User Role</Text>
+              <Text style={styles.securityVal}>{member.role || 'MEMBER'}</Text>
+            </View>
+            <View style={styles.securityDividerV} />
+            <View style={styles.securityItem}>
+              <Text style={styles.securityLabel}>Access Tier</Text>
+              <Text style={[styles.securityVal, { color: isActive ? '#059669' : '#EF4444' }]}>
+                {isActive ? 'Full Access' : 'Restricted'}
+              </Text>
+            </View>
+            <View style={styles.securityDividerV} />
+            <View style={styles.securityItem}>
+              <Text style={styles.securityLabel}>Verification</Text>
+              <Text style={styles.securityVal}>Verified</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Action Buttons */}
+        {/* Button 1: View Records */}
+        <TouchableOpacity
+          style={styles.viewRecordsBtn}
+          onPress={() => {
+            if (Platform.OS === 'web') {
+              window.alert?.(`Records overview for ${displayName}`);
+            } else {
+              Alert.alert('Records Overview', `Viewing all records for ${displayName}`);
+            }
+          }}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="swap-horizontal" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+          <Text style={styles.viewRecordsBtnText}>View Records</Text>
+        </TouchableOpacity>
+
+        {/* Button 2: Suspend / Activate Member */}
+        <TouchableOpacity
+          style={[
+            styles.actionToggleBtn,
+            isActive ? styles.suspendBtnBorder : styles.activateBtnBorder,
+          ]}
           onPress={toggleStatus}
           disabled={processing}
+          activeOpacity={0.85}
         >
-          <Text style={styles.btnText}>
-            {member.status === 'ACTIVE' ? 'Deactivate Member' : 'Activate Member'}
+          <Ionicons
+            name={isActive ? 'person-remove-outline' : 'checkmark-circle-outline'}
+            size={18}
+            color={isActive ? '#EF4444' : '#059669'}
+            style={{ marginRight: 8 }}
+          />
+          <Text
+            style={[
+              styles.actionToggleBtnText,
+              isActive ? styles.suspendBtnText : styles.activateBtnText,
+            ]}
+          >
+            {processing ? 'Updating...' : isActive ? 'Suspend Member' : 'Activate Member'}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -144,23 +359,327 @@ export const AdminMemberDetailsScreen: React.FC<Props> = ({ navigation, route })
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#E9EFF5' },
-  topDarkSection: { backgroundColor: '#1A1B2F', paddingTop: 20, paddingHorizontal: 24, paddingBottom: 20, borderBottomRightRadius: 80, zIndex: 10 },
-  customHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  backButton: { padding: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20 },
-  headerTitle: { color: '#FFF', fontSize: 20, fontWeight: 'bold' },
-  waveConnectorDark: { height: 40, backgroundColor: '#1A1B2F', marginTop: -1, zIndex: 1 },
-  waveConnectorLightCutout: { flex: 1, backgroundColor: '#E9EFF5', borderTopLeftRadius: 80 },
-  bottomLightSection: { backgroundColor: '#E9EFF5', flex: 1, marginTop: -1 },
-  scrollContent: { padding: 20, paddingBottom: 40 },
-  cardNeu: { backgroundColor: '#E9EFF5', borderRadius: 24, padding: 24, marginBottom: 24, shadowColor: '#FFFFFF', shadowOffset: { width: -6, height: -6 }, shadowOpacity: 0.9, shadowRadius: 8, elevation: 5, borderWidth: 1, borderColor: '#FFF' },
-  profileHeader: { alignItems: 'center', marginBottom: 16 },
-  profileImageContainer: { width: 80, height: 80, borderRadius: 40, overflow: 'hidden', marginBottom: 12, backgroundColor: '#1A1B2F' },
-  name: { fontSize: 22, fontWeight: '800', color: '#2C3E50', textAlign: 'center' },
-  detailRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-  label: { fontSize: 15, color: '#7F8C8D', fontWeight: '600' },
-  value: { fontSize: 15, color: '#2C3E50', fontWeight: '800', maxWidth: '60%', textAlign: 'right' },
-  divider: { height: 1, backgroundColor: '#FFF', marginVertical: 16 },
-  btn: { paddingVertical: 16, borderRadius: 16, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 5 },
-  btnText: { color: '#FFF', fontSize: 16, fontWeight: '800' }
+  container: {
+    flex: 1,
+    backgroundColor: '#044E28',
+  },
+  topDarkSection: {
+    backgroundColor: '#044E28',
+    paddingTop: 12,
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+    borderBottomRightRadius: 70,
+    zIndex: 10,
+  },
+  customHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  backButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  waveConnectorDark: {
+    height: 45,
+    backgroundColor: '#044E28',
+    marginTop: -1,
+    zIndex: 1,
+  },
+  waveConnectorLightCutout: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderTopLeftRadius: 65,
+  },
+  scrollView: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 16,
+    paddingTop: 6,
+    paddingBottom: 48,
+  },
+  profileCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0 3px 12px rgba(0, 0, 0, 0.05)',
+      },
+    }),
+  },
+  profileHeroRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarBorderCircle: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    borderWidth: 2.5,
+    borderColor: '#10B981',
+    overflow: 'hidden',
+    backgroundColor: '#ECFDF5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarFallback: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+  },
+  avatarFallbackText: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#056B38',
+  },
+  profileMetaCol: {
+    flex: 1,
+    paddingLeft: 16,
+    justifyContent: 'center',
+  },
+  displayName: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: 0.2,
+  },
+  userIdChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  userIdText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  statusBadgePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+    marginTop: 6,
+    gap: 5,
+  },
+  statusActivePill: {
+    backgroundColor: '#ECFDF5',
+  },
+  statusSuspendedPill: {
+    backgroundColor: '#FEE2E2',
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  statusBadgePillText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+  },
+  statusActivePillText: {
+    color: '#059669',
+  },
+  statusSuspendedPillText: {
+    color: '#DC2626',
+  },
+  infoCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 18,
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0 3px 10px rgba(0, 0, 0, 0.04)',
+      },
+    }),
+  },
+  sectionHeaderTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 12,
+  },
+  infoItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  infoIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#ECFDF5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  infoTextCol: {
+    flex: 1,
+  },
+  infoLabel: {
+    fontSize: 11.5,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  infoValue: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginTop: 2,
+  },
+  infoDivider: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
+    marginVertical: 4,
+  },
+  securityCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 18,
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
+      },
+    }),
+  },
+  securityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 4,
+  },
+  securityItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  securityLabel: {
+    fontSize: 11.5,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  securityVal: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginTop: 4,
+  },
+  securityDividerV: {
+    width: 1,
+    height: 28,
+    backgroundColor: '#F1F5F9',
+  },
+  viewRecordsBtn: {
+    backgroundColor: '#056B38',
+    borderRadius: 18,
+    paddingVertical: 15,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 18,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#056B38',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 3,
+      },
+      web: {
+        boxShadow: '0 3px 10px rgba(5, 107, 56, 0.25)',
+      },
+    }),
+  },
+  viewRecordsBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  actionToggleBtn: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 12,
+    borderWidth: 1.5,
+  },
+  suspendBtnBorder: {
+    borderColor: '#EF4444',
+  },
+  activateBtnBorder: {
+    borderColor: '#059669',
+  },
+  actionToggleBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  suspendBtnText: {
+    color: '#EF4444',
+  },
+  activateBtnText: {
+    color: '#059669',
+  },
 });

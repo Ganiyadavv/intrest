@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -25,6 +25,7 @@ export const SearchUserScreen: React.FC = () => {
   const [searchedUsers, setSearchedUsers] = useState<User[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isInputFocused, setIsInputFocused] = useState(false);
+  const inputRef = useRef<TextInput>(null);
 
   const validateUserId = (id: string) => {
     const regex = /^USR-[A-Z0-9]{8}$/;
@@ -136,6 +137,7 @@ export const SearchUserScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         {/* 2. SEARCH INPUT CARD */}
         <View style={styles.searchCard}>
@@ -145,17 +147,21 @@ export const SearchUserScreen: React.FC = () => {
           </Text>
 
           <View style={[styles.inputContainer, isInputFocused && styles.inputContainerFocused]}>
-            <Ionicons
-              name="search-outline"
-              size={20}
-              color={isInputFocused ? '#056B38' : '#94A3B8'}
-              style={styles.inputIcon}
-            />
+            <TouchableOpacity
+              onPress={() => inputRef.current?.focus()}
+              activeOpacity={0.7}
+              style={styles.inputIconTouch}
+            >
+              <Ionicons
+                name="search-outline"
+                size={20}
+                color={isInputFocused ? '#056B38' : '#94A3B8'}
+                style={styles.inputIcon}
+              />
+            </TouchableOpacity>
             <TextInput
-              style={[
-                styles.textInput,
-                { outlineStyle: 'none' } as any,
-              ]}
+              ref={inputRef}
+              style={styles.textInput}
               placeholder="e.g. Ganesh or USR-7K4M9X2Q"
               placeholderTextColor="#94A3B8"
               value={searchQuery}
@@ -475,37 +481,38 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
     borderRadius: 12,
     paddingHorizontal: 12,
-    height: 48,
+    height: 50,
     marginBottom: 12,
   },
   inputContainerFocused: {
     borderColor: '#056B38',
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#056B38',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+  },
+  inputIconTouch: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+    height: '100%',
   },
   inputIcon: {
-    marginRight: 8,
+    marginRight: 0,
   },
   textInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 15,
     color: '#1E293B',
+    height: '100%',
     paddingVertical: 0,
-    ...(Platform.OS === 'web'
-      ? ({
-          outlineStyle: 'none',
-          borderWidth: 0,
-        } as any)
-      : {}),
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+        borderWidth: 0,
+      } as any,
+    }),
   },
   clearInputBtn: {
     padding: 4,

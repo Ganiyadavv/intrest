@@ -77,7 +77,18 @@ export const LoginScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      {/* Top navigation / Back to Public Dashboard (Fixed at the top) */}
+      <View style={styles.topNavRow}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.navigate('PublicHome')}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={22} color="#1E293B" />
+        </TouchableOpacity>
+      </View>
+
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -87,23 +98,12 @@ export const LoginScreen: React.FC<Props> = ({ navigation, route }) => {
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          {/* Top navigation / Back to Public Dashboard */}
-          <View style={styles.topNavRow}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.navigate('PublicHome')}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="arrow-back" size={22} color="#1E293B" />
-            </TouchableOpacity>
-          </View>
-
-          {/* BRAND HEADER: DhanaMitra */}
+          {/* BRAND HEADER: DhanaMitra (Rupee icon first, DhanaMitra name below) */}
           <View style={styles.brandContainer}>
             <View style={styles.logoCircle}>
               <Text style={styles.rupeeSymbol}>₹</Text>
               <View style={styles.leafIconContainer}>
-                <Ionicons name="leaf" size={12} color="#056B38" />
+                <Ionicons name="leaf" size={13} color="#056B38" />
               </View>
             </View>
             <View style={styles.brandTextGroup}>
@@ -241,53 +241,72 @@ const styles = StyleSheet.create({
     width: '100%',
     flexDirection: 'row',
     justifyContent: 'flex-start',
-    marginBottom: 8,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 8,
+    maxWidth: 420,
+    alignSelf: 'center',
   },
   backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
   },
   brandContainer: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 32,
-    marginTop: 8,
+    marginBottom: 24,
+    marginTop: 4,
   },
   logoCircle: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    borderWidth: 1.8,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 2,
     borderColor: '#056B38',
     backgroundColor: '#F4FAF6',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginBottom: 10,
     position: 'relative',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#056B38',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.12,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 3,
+      },
+      web: {
+        boxShadow: '0 3px 10px rgba(5, 107, 56, 0.12)',
+      },
+    }),
   },
   rupeeSymbol: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '800',
     color: '#056B38',
   },
   leafIconContainer: {
     position: 'absolute',
-    bottom: 4,
-    right: 4,
+    bottom: 5,
+    right: 5,
   },
   brandTextGroup: {
-    justifyContent: 'center',
+    alignItems: 'center',
   },
   brandTitle: {
     fontSize: 26,
     fontWeight: '800',
     color: '#0F472B',
-    letterSpacing: 0.2,
+    letterSpacing: 0.3,
+    textAlign: 'center',
   },
   brandSubtitle: {
     fontSize: 20,

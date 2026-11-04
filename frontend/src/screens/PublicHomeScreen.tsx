@@ -106,7 +106,7 @@ export const PublicHomeScreen: React.FC<Props> = ({ navigation }) => {
               activeOpacity={0.7}
             >
               <View style={[styles.toolIconBox, { backgroundColor: '#FFF7ED' }]}>
-                <Ionicons name="sunny" size={24} color="#F97316" />
+                <Ionicons name="sunny" size={28} color="#F97316" />
               </View>
               <Text style={styles.toolLabel} numberOfLines={2}>
                 {t('tools.simpleInterest')}
@@ -120,7 +120,7 @@ export const PublicHomeScreen: React.FC<Props> = ({ navigation }) => {
               activeOpacity={0.7}
             >
               <View style={[styles.toolIconBox, { backgroundColor: '#ECFDF5' }]}>
-                <Ionicons name="trending-up" size={24} color="#10B981" />
+                <Ionicons name="trending-up" size={28} color="#10B981" />
               </View>
               <Text style={styles.toolLabel} numberOfLines={2}>
                 {t('tools.compoundInterest')}
@@ -134,7 +134,7 @@ export const PublicHomeScreen: React.FC<Props> = ({ navigation }) => {
               activeOpacity={0.7}
             >
               <View style={[styles.toolIconBox, { backgroundColor: '#EEF2FF' }]}>
-                <Ionicons name="calculator" size={24} color="#2563EB" />
+                <Ionicons name="calculator" size={28} color="#2563EB" />
               </View>
               <Text style={styles.toolLabel} numberOfLines={2}>
                 {t('tools.emiCalculator')}
@@ -148,7 +148,7 @@ export const PublicHomeScreen: React.FC<Props> = ({ navigation }) => {
               activeOpacity={0.7}
             >
               <View style={[styles.toolIconBox, { backgroundColor: '#F5F3FF' }]}>
-                <Ionicons name="pie-chart" size={23} color="#7C3AED" />
+                <Ionicons name="pie-chart" size={26} color="#7C3AED" />
               </View>
               <Text style={styles.toolLabel} numberOfLines={2}>
                 {t('tools.rateCalculator')}
@@ -161,7 +161,7 @@ export const PublicHomeScreen: React.FC<Props> = ({ navigation }) => {
         <View style={styles.manageCard}>
           {/* Floating Top Lock Badge */}
           <View style={styles.floatingLockBadge}>
-            <Ionicons name="lock-closed" size={22} color="#FFFFFF" />
+            <Ionicons name="lock-closed" size={25} color="#FFFFFF" />
           </View>
 
           {/* Card Title & Subtitle */}
@@ -177,12 +177,12 @@ export const PublicHomeScreen: React.FC<Props> = ({ navigation }) => {
               activeOpacity={0.7}
             >
               <View style={styles.miniIconCircleBlue}>
-                <Ionicons name="person" size={16} color="#FFFFFF" />
+                <Ionicons name="person" size={19} color="#FFFFFF" />
               </View>
               <Text style={styles.miniCardText} numberOfLines={2}>
                 {t('home.lenderRecords')}
               </Text>
-              <Ionicons name="chevron-forward" size={14} color="#94A3B8" style={{ marginLeft: 'auto' }} />
+              <Ionicons name="chevron-forward" size={15} color="#94A3B8" style={{ marginLeft: 'auto' }} />
             </TouchableOpacity>
 
             {/* Borrower Records */}
@@ -192,12 +192,12 @@ export const PublicHomeScreen: React.FC<Props> = ({ navigation }) => {
               activeOpacity={0.7}
             >
               <View style={styles.miniIconCircleGreen}>
-                <Ionicons name="people" size={16} color="#FFFFFF" />
+                <Ionicons name="people" size={19} color="#FFFFFF" />
               </View>
               <Text style={styles.miniCardText} numberOfLines={2}>
                 {t('home.borrowerRecords')}
               </Text>
-              <Ionicons name="chevron-forward" size={14} color="#94A3B8" style={{ marginLeft: 'auto' }} />
+              <Ionicons name="chevron-forward" size={15} color="#94A3B8" style={{ marginLeft: 'auto' }} />
             </TouchableOpacity>
           </View>
 
@@ -207,9 +207,55 @@ export const PublicHomeScreen: React.FC<Props> = ({ navigation }) => {
             onPress={() => navigation.navigate('Login')}
             activeOpacity={0.85}
           >
-            <Ionicons name="log-in-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Ionicons name="log-in-outline" size={22} color="#FFFFFF" style={{ marginRight: 8 }} />
             <Text style={styles.signInButtonText}>{t('home.signInOrCreate')}</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* 5. WHY DHANAMITRA / TRUST & FEATURE HIGHLIGHTS */}
+        <View style={styles.featuresCard}>
+          {/* Feature 1: 100% Secure & Private */}
+          <View style={styles.featureItem}>
+            <View style={[styles.featureIconBadge, { backgroundColor: 'rgba(16, 185, 129, 0.16)' }]}>
+              <Ionicons name="shield-checkmark" size={20} color="#10B981" />
+            </View>
+            <View style={styles.featureTextCol}>
+              <Text style={styles.featureTitle}>{t('home.featureSecure')}</Text>
+              <Text style={styles.featureDesc}>{t('home.featureSecureDesc')}</Text>
+            </View>
+          </View>
+
+          <View style={styles.featureDivider} />
+
+          {/* Feature 2: Instant Calculations */}
+          <View style={styles.featureItem}>
+            <View style={[styles.featureIconBadge, { backgroundColor: 'rgba(245, 158, 11, 0.16)' }]}>
+              <Ionicons name="flash" size={20} color="#F59E0B" />
+            </View>
+            <View style={styles.featureTextCol}>
+              <Text style={styles.featureTitle}>{t('home.featureCalculators')}</Text>
+              <Text style={styles.featureDesc}>{t('home.featureCalculatorsDesc')}</Text>
+            </View>
+          </View>
+
+          <View style={styles.featureDivider} />
+
+          {/* Feature 3: Sync Across Devices */}
+          <View style={styles.featureItem}>
+            <View style={[styles.featureIconBadge, { backgroundColor: 'rgba(59, 130, 246, 0.16)' }]}>
+              <Ionicons name="cloud-done" size={20} color="#3B82F6" />
+            </View>
+            <View style={styles.featureTextCol}>
+              <Text style={styles.featureTitle}>{t('home.featureSync')}</Text>
+              <Text style={styles.featureDesc}>{t('home.featureSyncDesc')}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* 6. SUBTLE FOOTER TRUST BADGE */}
+        <View style={styles.footerNote}>
+          <Ionicons name="shield-checkmark-outline" size={14} color="rgba(255, 255, 255, 0.65)" />
+          <Text style={styles.footerText}>{t('home.trustedPlatform')}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -324,7 +370,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 14,
     paddingBottom: 28,
   },
   heroCard: {
@@ -333,7 +379,8 @@ const styles = StyleSheet.create({
     padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 14,
+    marginTop: 4,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.16)',
     ...Platform.select({
@@ -377,9 +424,9 @@ const styles = StyleSheet.create({
   },
   toolsCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    paddingVertical: 18,
-    paddingHorizontal: 6,
+    borderRadius: 24,
+    paddingVertical: 20,
+    paddingHorizontal: 8,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -409,27 +456,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   toolIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
+    width: 56,
+    height: 56,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
   },
   toolLabel: {
-    fontSize: 11.5,
+    fontSize: 12.5,
     fontWeight: '700',
     color: '#1E293B',
     textAlign: 'center',
-    lineHeight: 15,
+    lineHeight: 16,
   },
   manageCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 18,
-    paddingTop: 32,
-    marginTop: 22,
-    marginBottom: 12,
+    borderRadius: 26,
+    padding: 22,
+    paddingTop: 36,
+    marginTop: 28,
+    marginBottom: 16,
     position: 'relative',
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -450,11 +497,11 @@ const styles = StyleSheet.create({
   },
   floatingLockBadge: {
     position: 'absolute',
-    top: -24,
+    top: -27,
     alignSelf: 'center',
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     backgroundColor: '#056B38',
     borderWidth: 3.5,
     borderColor: '#FFFFFF',
@@ -476,32 +523,32 @@ const styles = StyleSheet.create({
     }),
   },
   manageTitle: {
-    fontSize: 17,
+    fontSize: 19,
     fontWeight: '800',
     color: '#0F172A',
     textAlign: 'center',
     letterSpacing: 0.1,
   },
   manageSubtitle: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#64748B',
     textAlign: 'center',
-    marginTop: 5,
-    marginBottom: 16,
-    lineHeight: 17,
+    marginTop: 6,
+    marginBottom: 18,
+    lineHeight: 18,
     paddingHorizontal: 8,
   },
   miniCardsRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 16,
+    gap: 12,
+    marginBottom: 18,
   },
   miniCardLender: {
     flex: 1,
     backgroundColor: '#EFF6FF',
-    borderRadius: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
+    borderRadius: 16,
+    paddingVertical: 13,
+    paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
@@ -510,43 +557,43 @@ const styles = StyleSheet.create({
   miniCardBorrower: {
     flex: 1,
     backgroundColor: '#ECFDF5',
-    borderRadius: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
+    borderRadius: 16,
+    paddingVertical: 13,
+    paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#D1FAE5',
   },
   miniIconCircleBlue: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: '#3B82F6',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
+    marginRight: 9,
   },
   miniIconCircleGreen: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: '#10B981',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
+    marginRight: 9,
   },
   miniCardText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
     color: '#1E293B',
     flexShrink: 1,
-    lineHeight: 16,
+    lineHeight: 17,
   },
   signInButton: {
     backgroundColor: '#056B38',
-    borderRadius: 14,
-    paddingVertical: 14,
+    borderRadius: 16,
+    paddingVertical: 16,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
@@ -567,8 +614,77 @@ const styles = StyleSheet.create({
   },
   signInButtonText: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  featuresCard: {
+    backgroundColor: 'rgba(2, 60, 32, 0.72)',
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.14)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 3,
+      },
+      web: {
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12)',
+      },
+    }),
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  featureIconBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  featureTextCol: {
+    flex: 1,
+  },
+  featureTitle: {
+    color: '#FFFFFF',
+    fontSize: 13.5,
     fontWeight: '700',
     letterSpacing: 0.2,
+  },
+  featureDesc: {
+    color: 'rgba(255, 255, 255, 0.75)',
+    fontSize: 11.5,
+    lineHeight: 16,
+    marginTop: 2,
+  },
+  featureDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    marginVertical: 4,
+  },
+  footerNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingBottom: 20,
+    opacity: 0.85,
+  },
+  footerText: {
+    color: 'rgba(255, 255, 255, 0.65)',
+    fontSize: 12,
+    fontWeight: '500',
   },
 });

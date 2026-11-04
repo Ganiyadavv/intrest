@@ -1,6 +1,17 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, TextInput, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  RefreshControl,
+  TextInput,
+  ActivityIndicator,
+  Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AdminStackParamList } from '../types/navigation';
@@ -23,6 +34,7 @@ export const AdminMembersScreen: React.FC<Props> = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'SUSPENDED'>('ALL');
   const isInitialMount = useRef(true);
   const latestQueryRef = useRef('');
 
@@ -86,12 +98,39 @@ export const AdminMembersScreen: React.FC<Props> = ({ navigation }) => {
     fetchMembers('', false);
   };
 
-  // Instant 0ms local client filtering over currently loaded members
+  // Helper to extract initials
+  const getInitials = (name?: string, email?: string) => {
+    if (name && name.trim()) {
+      const parts = name.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        return (parts[0][0] + parts[1][0]).toUpperCase();
+      }
+      return parts[0].substring(0, 2).toUpperCase();
+    }
+    if (email) {
+      return email.substring(0, 2).toUpperCase();
+    }
+    return 'MB';
+  };
+
+  // Instant local client filtering by search query AND status pill
   const filteredMembers = useMemo(() => {
-    if (!searchQuery.trim()) return members;
+    let list = members;
+    if (statusFilter === 'ACTIVE') {
+      list = list.filter((m) => (m.status || '').toUpperCase() === 'ACTIVE');
+    } else if (statusFilter === 'SUSPENDED') {
+      list = list.filter((m) => (m.status || '').toUpperCase() !== 'ACTIVE');
+    }
+
+    if (!searchQuery.trim()) return list;
     const query = searchQuery.toLowerCase().trim();
-    return members.filter((item) => {
-      const name = (item.fullName || `${item.firstName || ''} ${item.lastName || ''}`.trim() || (item as any).name || '').toLowerCase();
+    return list.filter((item) => {
+      const name = (
+        item.fullName ||
+        `${item.firstName || ''} ${item.lastName || ''}`.trim() ||
+        (item as any).name ||
+        ''
+      ).toLowerCase();
       const email = (item.email || '').toLowerCase();
       const userId = (item.userId || '').toLowerCase();
       const phone = (item.phoneNumber || '').toLowerCase();
@@ -106,66 +145,99 @@ export const AdminMembersScreen: React.FC<Props> = ({ navigation }) => {
         state.includes(query)
       );
     });
-  }, [members, searchQuery]);
+  }, [members, searchQuery, statusFilter]);
 
-  const renderItem = ({ item }: { item: AdminMember }) => (
-    <View style={styles.cardNeu}>
-      <Text style={styles.cardTitle}>
-        {item.fullName || `${item.firstName || ''} ${item.lastName || ''}`.trim() || (item as any).name || 'Unknown Name'}
-      </Text>
-      
-      <View style={styles.infoRow}>
-        <Text style={styles.infoLabel}>User ID:</Text>
-        <Text style={styles.infoValue}>{item.userId}</Text>
-      </View>
-      <View style={styles.infoRow}>
-        <Text style={styles.infoLabel}>Email:</Text>
-        <Text style={styles.infoValue}>{item.email}</Text>
-      </View>
-      <View style={styles.infoRow}>
-        <Text style={styles.infoLabel}>Phone:</Text>
-        <Text style={styles.infoValue}>{item.phoneNumber || 'N/A'}</Text>
-      </View>
-      <View style={styles.infoRow}>
-        <Text style={styles.infoLabel}>Status:</Text>
-        <Text style={[styles.infoValue, { color: item.status === 'ACTIVE' ? '#2ECC71' : '#E74C3C' }]}>
-          {item.status}
-        </Text>
-      </View>
-      
-      {(!!item.city || !!item.state) && (
-        <View style={styles.infoRow}>
-           <Text style={styles.infoLabel}>Location:</Text>
-           <Text style={styles.infoValue}>{[item.city, item.state].filter(Boolean).join(', ')}</Text>
+  const renderItem = ({ item }: { item: AdminMember }) => {
+    const displayName =
+      item.fullName ||
+      `${item.firstName || ''} ${item.lastName || ''}`.trim() ||
+      (item as any).name ||
+      'Member';
+    const initials = getInitials(displayName, item.email);
+    const isActive = (item.status || '').toUpperCase() === 'ACTIVE';
+
+    return (
+      <View style={styles.memberCard}>
+        {/* Left: Initials Avatar Circle */}
+        <View style={styles.avatarCircle}>
+          <Text style={styles.avatarText}>{initials}</Text>
         </View>
-      )}
 
-      <TouchableOpacity 
-        style={styles.detailsBtn} 
-        onPress={() => navigation.navigate('AdminMemberDetails', { id: item.id })}
-      >
-        <Text style={styles.detailsBtnText}>View Details</Text>
-      </TouchableOpacity>
-    </View>
-  );
+        {/* Center: Member Info */}
+        <View style={styles.memberInfoCol}>
+          <Text style={styles.memberName} numberOfLines={1}>
+            {displayName}
+          </Text>
+          <Text style={styles.memberEmail} numberOfLines={1}>
+            {item.email}
+          </Text>
+          <Text style={styles.memberUserId} numberOfLines={1}>
+            {item.userId}
+          </Text>
+        </View>
+
+        {/* Right: Status Pill & View Details Button */}
+        <View style={styles.memberActionCol}>
+          <View
+            style={[
+              styles.statusBadge,
+              isActive ? styles.statusActiveBadge : styles.statusSuspendedBadge,
+            ]}
+          >
+            <Text
+              style={[
+                styles.statusBadgeText,
+                isActive ? styles.statusActiveText : styles.statusSuspendedText,
+              ]}
+            >
+              {isActive ? 'Active' : item.status || 'Suspended'}
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.viewDetailsBtn}
+            onPress={() => navigation.navigate('AdminMemberDetails', { id: item.id })}
+            activeOpacity={0.75}
+          >
+            <Text style={styles.viewDetailsBtnText}>View Details</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <StatusBar style="light" />
+
+      {/* 1. TOP GREEN APP BAR */}
       <View style={styles.topDarkSection}>
+        {/* Top Header Bar */}
         <View style={styles.customHeader}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#FFF" />
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Members</Text>
-          <View style={{ width: 40 }} />
+          <Text style={styles.headerTitle}>Manage Members</Text>
+          <TouchableOpacity
+            style={styles.headerAddBtn}
+            onPress={onRefresh}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="add" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
 
+        {/* Search Bar */}
         <View style={styles.searchBar}>
-          <Ionicons name="search" size={20} color="#7F8C8D" style={styles.searchIcon} />
+          <Ionicons name="search" size={19} color="#64748B" style={styles.searchIcon} />
           <TextInput
             style={[styles.searchInput, { outlineStyle: 'none' } as any]}
-            placeholder="Search by name, email, user ID..."
-            placeholderTextColor="#95A5A6"
+            placeholder="Search name, email, user ID..."
+            placeholderTextColor="#94A3B8"
             value={searchQuery}
             onChangeText={setSearchQuery}
             onSubmitEditing={handleSearch}
@@ -174,42 +246,101 @@ export const AdminMembersScreen: React.FC<Props> = ({ navigation }) => {
             autoCorrect={false}
           />
           {isSearching && (
-            <ActivityIndicator size="small" color="#4D8BFF" style={styles.searchIndicator} />
+            <ActivityIndicator size="small" color="#056B38" style={styles.searchIndicator} />
           )}
           {searchQuery.length > 0 && !isSearching && (
-            <TouchableOpacity onPress={handleClear} style={styles.clearBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Ionicons name="close-circle" size={18} color="#95A5A6" />
+            <TouchableOpacity
+              onPress={handleClear}
+              style={styles.clearBtn}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="close-circle" size={18} color="#94A3B8" />
             </TouchableOpacity>
           )}
         </View>
       </View>
 
+      {/* 2. WAVE CONNECTOR (Matching curved design) */}
       <View style={styles.waveConnectorDark}>
-         <View style={styles.waveConnectorLightCutout} />
+        <View style={styles.waveConnectorLightCutout} />
       </View>
 
+      {/* 3. BODY CONTENT */}
       <View style={styles.bottomLightSection}>
+        {/* Status Filter Chips: All, Active, Suspended */}
+        <View style={styles.filterPillsRow}>
+          <TouchableOpacity
+            style={[styles.filterPill, statusFilter === 'ALL' && styles.filterPillActive]}
+            onPress={() => setStatusFilter('ALL')}
+            activeOpacity={0.75}
+          >
+            <Text
+              style={[
+                styles.filterPillText,
+                statusFilter === 'ALL' && styles.filterPillTextActive,
+              ]}
+            >
+              All
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.filterPill, statusFilter === 'ACTIVE' && styles.filterPillActive]}
+            onPress={() => setStatusFilter('ACTIVE')}
+            activeOpacity={0.75}
+          >
+            <Text
+              style={[
+                styles.filterPillText,
+                statusFilter === 'ACTIVE' && styles.filterPillTextActive,
+              ]}
+            >
+              Active
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.filterPill, statusFilter === 'SUSPENDED' && styles.filterPillActive]}
+            onPress={() => setStatusFilter('SUSPENDED')}
+            activeOpacity={0.75}
+          >
+            <Text
+              style={[
+                styles.filterPillText,
+                statusFilter === 'SUSPENDED' && styles.filterPillTextActive,
+              ]}
+            >
+              Suspended
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {loading && members.length === 0 ? (
-           <Loading />
+          <Loading />
         ) : (
-           <>
-             <ErrorMessage message={error} />
-             <FlatList
-               data={filteredMembers}
-               keyExtractor={(item) => String(item.id)}
-               renderItem={renderItem}
-               refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-               contentContainerStyle={styles.listContainer}
-               ListEmptyComponent={
-                 <View style={styles.emptyContainer}>
-                   <Ionicons name="search-outline" size={44} color="#BDC3C7" style={{ marginBottom: 12 }} />
-                   <Text style={styles.emptyText}>
-                     {searchQuery ? `No members found matching "${searchQuery}"` : 'No members found'}
-                   </Text>
-                 </View>
-               }
-             />
-           </>
+          <>
+            <ErrorMessage message={error} />
+            <FlatList
+              data={filteredMembers}
+              keyExtractor={(item) => String(item.id)}
+              renderItem={renderItem}
+              refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#056B38']} />
+              }
+              contentContainerStyle={styles.listContainer}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="search-outline" size={44} color="#CBD5E1" style={{ marginBottom: 12 }} />
+                  <Text style={styles.emptyText}>
+                    {searchQuery
+                      ? `No members found matching "${searchQuery}"`
+                      : 'No members found'}
+                  </Text>
+                </View>
+              }
+            />
+          </>
         )}
       </View>
     </SafeAreaView>
@@ -217,24 +348,67 @@ export const AdminMembersScreen: React.FC<Props> = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#E9EFF5' },
-  topDarkSection: { backgroundColor: '#1A1B2F', paddingTop: 20, paddingHorizontal: 24, paddingBottom: 20, borderBottomRightRadius: 80, zIndex: 10 },
-  customHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  backButton: { padding: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20 },
-  headerTitle: { color: '#FFF', fontSize: 20, fontWeight: 'bold' },
+  container: {
+    flex: 1,
+    backgroundColor: '#044E28',
+  },
+  topDarkSection: {
+    backgroundColor: '#044E28',
+    paddingTop: 12,
+    paddingHorizontal: 16,
+    paddingBottom: 18,
+    borderBottomRightRadius: 70,
+    zIndex: 10,
+  },
+  customHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  backButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  headerAddBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 16,
     paddingHorizontal: 14,
-    height: 48,
-    marginTop: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
+    height: 46,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.12,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+      web: {
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
+      },
+    }),
   },
   searchIcon: {
     marginRight: 8,
@@ -242,8 +416,8 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     height: '100%',
-    color: '#1A1B2F',
-    fontSize: 15,
+    color: '#0F172A',
+    fontSize: 14,
     fontWeight: '500',
   },
   searchIndicator: {
@@ -253,17 +427,159 @@ const styles = StyleSheet.create({
     padding: 4,
     marginLeft: 8,
   },
-  waveConnectorDark: { height: 40, backgroundColor: '#1A1B2F', marginTop: -1, zIndex: 1 },
-  waveConnectorLightCutout: { flex: 1, backgroundColor: '#E9EFF5', borderTopLeftRadius: 80 },
-  bottomLightSection: { backgroundColor: '#E9EFF5', flex: 1, marginTop: -1, paddingHorizontal: 16 },
-  listContainer: { paddingBottom: 40, paddingTop: 10 },
-  cardNeu: { backgroundColor: '#E9EFF5', borderRadius: 16, padding: 20, marginBottom: 16, shadowColor: '#FFF', shadowOffset: { width: -6, height: -6 }, shadowOpacity: 0.9, shadowRadius: 8, elevation: 5, borderWidth: 1, borderColor: '#FFF' },
-  cardTitle: { fontSize: 20, fontWeight: '800', color: '#2C3E50', marginBottom: 12 },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  infoLabel: { fontSize: 14, color: '#7F8C8D', fontWeight: '600' },
-  infoValue: { fontSize: 14, color: '#2C3E50', fontWeight: '700' },
-  detailsBtn: { marginTop: 16, paddingVertical: 12, backgroundColor: '#4D8BFF', borderRadius: 12, alignItems: 'center' },
-  detailsBtnText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
-  emptyContainer: { alignItems: 'center', justifyContent: 'center', marginTop: 40 },
-  emptyText: { textAlign: 'center', fontSize: 16, color: '#7F8C8D', fontWeight: '600' }
+  waveConnectorDark: {
+    height: 40,
+    backgroundColor: '#044E28',
+    marginTop: -1,
+    zIndex: 1,
+  },
+  waveConnectorLightCutout: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderTopLeftRadius: 65,
+  },
+  bottomLightSection: {
+    backgroundColor: '#F8FAFC',
+    flex: 1,
+    marginTop: -1,
+    paddingHorizontal: 16,
+  },
+  filterPillsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingVertical: 12,
+  },
+  filterPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  filterPillActive: {
+    backgroundColor: '#056B38',
+    borderColor: '#056B38',
+  },
+  filterPillText: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  filterPillTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  listContainer: {
+    paddingBottom: 40,
+    paddingTop: 4,
+  },
+  memberCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0 3px 10px rgba(0, 0, 0, 0.04)',
+      },
+    }),
+  },
+  avatarCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#ECFDF5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#056B38',
+  },
+  memberInfoCol: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  memberName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  memberEmail: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  memberUserId: {
+    fontSize: 11.5,
+    color: '#94A3B8',
+    marginTop: 3,
+    fontWeight: '600',
+  },
+  memberActionCol: {
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  statusActiveBadge: {
+    backgroundColor: '#ECFDF5',
+  },
+  statusSuspendedBadge: {
+    backgroundColor: '#F1F5F9',
+  },
+  statusBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  statusActiveText: {
+    color: '#059669',
+  },
+  statusSuspendedText: {
+    color: '#64748B',
+  },
+  viewDetailsBtn: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingHorizontal: 11,
+    paddingVertical: 5.5,
+    marginTop: 8,
+  },
+  viewDetailsBtnText: {
+    color: '#056B38',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 48,
+  },
+  emptyText: {
+    textAlign: 'center',
+    fontSize: 15,
+    color: '#64748B',
+    fontWeight: '600',
+  },
 });

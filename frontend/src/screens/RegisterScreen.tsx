@@ -93,7 +93,18 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      {/* Top Back Navigation Button (Fixed at the top) */}
+      <View style={styles.topNavRow}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.navigate('Login')}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={22} color="#1E293B" />
+        </TouchableOpacity>
+      </View>
+
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -103,17 +114,6 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          {/* Top Back Navigation Button */}
-          <View style={styles.topNavRow}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.navigate('Login')}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="arrow-back" size={22} color="#1E293B" />
-            </TouchableOpacity>
-          </View>
-
           {/* Title Header */}
           <View style={styles.headerContainer}>
             <Text style={styles.title}>Create Account</Text>
@@ -303,12 +303,16 @@ const styles = StyleSheet.create({
     width: '100%',
     flexDirection: 'row',
     justifyContent: 'flex-start',
-    marginBottom: 16,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 8,
+    maxWidth: 420,
+    alignSelf: 'center',
   },
   backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
