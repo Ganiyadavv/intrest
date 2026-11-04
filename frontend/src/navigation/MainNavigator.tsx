@@ -9,6 +9,7 @@ import { PaymentsScreen } from '../screens/PaymentsScreen';
 import { InterestCalculatorScreen } from '../screens/InterestCalculatorScreen';
 import { CompoundInterestScreen } from '../screens/CompoundInterestScreen';
 import { RateCalculatorScreen } from '../screens/RateCalculatorScreen';
+import { EMICalculatorScreen } from '../screens/EMICalculatorScreen';
 import { SearchUserScreen } from '../screens/SearchUserScreen';
 import { PersonRecordsScreen } from '../screens/PersonRecordsScreen';
 import { AddPersonScreen } from '../screens/AddPersonScreen';
@@ -72,6 +73,11 @@ export const MainNavigator = () => {
       <Stack.Screen 
         name="RateCalculator" 
         component={RateCalculatorScreen} 
+        options={{ headerShown: false }} 
+      />
+      <Stack.Screen 
+        name="EMICalculator" 
+        component={EMICalculatorScreen} 
         options={{ headerShown: false }} 
       />
       <Stack.Screen 

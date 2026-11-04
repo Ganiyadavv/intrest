@@ -1,15 +1,24 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Image,
+  Alert,
+  Platform,
+  KeyboardAvoidingView,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { MainStackParamList } from '../types/navigation';
-import { AppInput } from '../components/AppInput';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { SuccessMessage } from '../components/SuccessMessage';
 import { lenderRecordService } from '../services/lenderRecordService';
-import { COLORS } from '../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 
 type AddLenderRecordNavigationProp = NativeStackNavigationProp<MainStackParamList, 'AddLenderRecord'>;
@@ -37,7 +46,7 @@ export const AddLenderRecordScreen: React.FC<Props> = ({ navigation }) => {
   const [amount, setAmount] = useState('');
   const [interestRate, setInterestRate] = useState('');
   const [notes, setNotes] = useState('');
-  
+
   // Date State
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -47,6 +56,7 @@ export const AddLenderRecordScreen: React.FC<Props> = ({ navigation }) => {
 
   // Image State
   const [paymentScreenshot, setPaymentScreenshot] = useState<string | null>(null);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
@@ -82,8 +92,8 @@ export const AddLenderRecordScreen: React.FC<Props> = ({ navigation }) => {
       newErrors.userId = 'Invalid User ID format. Example: USR-7K4M9X2Q';
     }
 
-    if (!name.trim()) newErrors.name = 'Name is required.';
-    
+    if (!name.trim()) newErrors.name = 'Lender name is required.';
+
     const phoneRegex = /^\d{10}$/;
     if (!phoneNumber.trim()) {
       newErrors.phoneNumber = 'Phone number is required.';
@@ -106,13 +116,7 @@ export const AddLenderRecordScreen: React.FC<Props> = ({ navigation }) => {
     }
 
     setErrors(newErrors);
-    
-    const isValid = Object.keys(newErrors).length === 0;
-    if (!isValid) {
-      Alert.alert('Validation Error', 'Please check the required fields.');
-    }
-    
-    return isValid;
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSave = async () => {
@@ -124,12 +128,12 @@ export const AddLenderRecordScreen: React.FC<Props> = ({ navigation }) => {
 
     try {
       const formData = new FormData();
-      
+
       let formattedUserId = userId.trim().toUpperCase();
       if (formattedUserId) {
         formData.append('userId', formattedUserId);
       }
-      
+
       formData.append('name', name);
       formData.append('phoneNumber', phoneNumber);
       formData.append('amount', amount);
@@ -154,7 +158,7 @@ export const AddLenderRecordScreen: React.FC<Props> = ({ navigation }) => {
           const filename = paymentScreenshot.split('/').pop() || 'screenshot.jpg';
           const match = /\.(\w+)$/.exec(filename);
           const type = match ? `image/${match[1]}` : `image/jpeg`;
-          
+
           formData.append('paymentScreenshot', {
             uri: paymentScreenshot,
             name: filename,
@@ -165,11 +169,11 @@ export const AddLenderRecordScreen: React.FC<Props> = ({ navigation }) => {
 
       await lenderRecordService.createLenderRecord(formData);
       setSuccess('Lender record created successfully!');
-      
+
       setTimeout(() => {
         navigation.goBack();
       }, 1500);
-      
+
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to save record.');
     } finally {
@@ -178,251 +182,701 @@ export const AddLenderRecordScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} bounces={false}>
-        {/* TOP DARK SECTION */}
-        <View style={styles.topDarkSection}>
-          <View style={styles.customHeader}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-              <View style={styles.backButtonInner}>
-                <Ionicons name="arrow-back" size={20} color="#FFF" />
-              </View>
-            </TouchableOpacity>
-            <View>
-              <Text style={styles.headerTitle}>Add Lender Record</Text>
-              <Text style={styles.headerSubTitle}>Store details of the person who gave you money</Text>
-            </View>
-            <View style={{ width: 40 }} />
-          </View>
-        </View>
+    <SafeAreaView style={styles.safeContainer} edges={['top', 'left', 'right']}>
+      {/* 1. TOP HEADER */}
+      <View style={styles.topHeader}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="chevron-back" size={24} color="#1E293B" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Add Lender Record</Text>
+        <View style={styles.headerSpacer} />
+      </View>
 
-        {/* THE WAVE CONNECTOR */}
-        <View style={styles.waveConnectorDark}>
-           <View style={styles.waveConnectorLightCutout} />
-        </View>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          {error ? <ErrorMessage message={error} /> : null}
+          {success ? <SuccessMessage message={success} /> : null}
 
-        {/* BOTTOM LIGHT SECTION */}
-        <View style={styles.bottomLightSection}>
-          <View style={styles.content}>
-            
-            {error ? <ErrorMessage message={error} /> : null}
-            {success ? <SuccessMessage message={success} /> : null}
-
-            <View style={styles.cardNeu}>
-              <Text style={styles.sectionTitle}>Link User (Optional)</Text>
-              <AppInput
-                label="User ID (Optional)"
-                value={userId}
-                onChangeText={(text) => setUserId(text.toUpperCase())}
-                placeholder="USR-XXXXXXXX"
-                error={errors.userId}
-              />
-              <Text style={styles.helperText}>If provided, a notification will be sent to this user.</Text>
-            </View>
-
-            {/* REQUIRED INFO NEU CARD */}
-            <View style={styles.cardNeu}>
-              <Text style={styles.sectionTitle}>Required Information</Text>
-              <AppInput
-                label="Lender Name *"
-                value={name}
-                onChangeText={setName}
-                placeholder="Enter lender name"
-                error={errors.name}
-              />
-              <AppInput
-                label="Father Name (Optional)"
-                value={fatherName}
-                onChangeText={setFatherName}
-                placeholder="Enter father name"
-              />
-              <AppInput
-                label="Phone Number *"
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
-                placeholder="Enter phone number"
-                keyboardType="phone-pad"
-                error={errors.phoneNumber}
-              />
-              <AppInput
-                label="Amount Received *"
-                value={amount}
-                onChangeText={setAmount}
-                placeholder="Enter amount"
-                keyboardType="numeric"
-                error={errors.amount}
-              />
-              <AppInput
-                label="Interest Rate (%) *"
-                value={interestRate}
-                onChangeText={setInterestRate}
-                placeholder="Enter interest rate"
-                keyboardType="numeric"
-                error={errors.interestRate}
-              />
-
-              <View style={styles.datePickerContainer}>
-                <Text style={styles.label}>Received Date *</Text>
-                {Platform.OS === 'web' ? (
-                  React.createElement('input', {
-                    type: 'date',
-                    value: date.toISOString().split('T')[0],
-                    onChange: (e: any) => {
-                      if (e.target.value) {
-                        const newDate = new Date(e.target.value);
-                        if (!isNaN(newDate.getTime())) setDate(newDate);
-                      }
-                    },
-                    style: {
-                      height: 52, borderRadius: 12, borderWidth: 1, borderColor: COLORS.BORDER,
-                      backgroundColor: COLORS.INPUT_BACKGROUND, paddingLeft: 16, paddingRight: 16,
-                      fontSize: 15, color: COLORS.TEXT, outline: 'none', width: '100%', boxSizing: 'border-box',
-                    }
-                  })
-                ) : (
-                  <>
-                    <TouchableOpacity style={styles.datePickerButton} onPress={() => setShowDatePicker(true)}>
-                      <Text style={styles.dateText}>{date.toISOString().split('T')[0]}</Text>
-                    </TouchableOpacity>
-                    {showDatePicker && (
-                      <DateTimePicker value={date} mode="date" display="default" onChange={handleDateChange} />
-                    )}
-                  </>
-                )}
-              </View>
-            </View>
-
-            {/* OPTIONAL INFO NEU CARD */}
-            <View style={styles.cardNeu}>
-              <TouchableOpacity 
-                style={styles.optionalHeader} 
-                onPress={() => setShowOptionalInfo(!showOptionalInfo)}
-                activeOpacity={0.7}
+          {/* FORM FIELDS CARD */}
+          <View style={styles.formCard}>
+            {/* Lender Name */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Lender Name *</Text>
+              <View
+                style={[
+                  styles.inputBox,
+                  focusedField === 'name' && styles.inputBoxFocused,
+                  errors.name ? styles.inputBoxError : null,
+                ]}
               >
-                <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Optional Information</Text>
-                <Ionicons name={showOptionalInfo ? "chevron-up" : "chevron-down"} size={24} color="#2C3E50" />
-              </TouchableOpacity>
-              
-              {showOptionalInfo && (
-                <View style={styles.optionalContent}>
-                  <AppInput label="Village" value={village} onChangeText={setVillage} placeholder="Enter village" />
-                  <AppInput label="Mandal" value={mandal} onChangeText={setMandal} placeholder="Enter mandal" />
-                  <AppInput label="Pincode" value={pincode} onChangeText={setPincode} placeholder="Enter pincode" keyboardType="number-pad" />
-                  <AppInput label="District" value={district} onChangeText={setDistrict} placeholder="Enter district" />
-                  <AppInput label="State" value={state} onChangeText={setState} placeholder="Enter state" />
-                  <AppInput label="Country" value={country} onChangeText={setCountry} placeholder="Enter country" />
-                  <AppInput label="Notes" value={notes} onChangeText={setNotes} placeholder="Enter any notes" />
-                </View>
+                <Ionicons name="person-outline" size={18} color="#94A3B8" style={styles.inputIconLeft} />
+                <TextInput
+                  style={[styles.textInput, { outlineStyle: 'none' } as any]}
+                  placeholder="Enter lender name"
+                  placeholderTextColor="#94A3B8"
+                  value={name}
+                  onFocus={() => setFocusedField('name')}
+                  onBlur={() => setFocusedField(null)}
+                  onChangeText={(text) => {
+                    setName(text);
+                    if (errors.name) setErrors({ ...errors, name: '' });
+                  }}
+                />
+              </View>
+              {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : null}
+            </View>
+
+            {/* Phone Number */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Phone Number *</Text>
+              <View
+                style={[
+                  styles.inputBox,
+                  focusedField === 'phoneNumber' && styles.inputBoxFocused,
+                  errors.phoneNumber ? styles.inputBoxError : null,
+                ]}
+              >
+                <Ionicons name="call-outline" size={18} color="#94A3B8" style={styles.inputIconLeft} />
+                <TextInput
+                  style={[styles.textInput, { outlineStyle: 'none' } as any]}
+                  placeholder="Enter phone number"
+                  placeholderTextColor="#94A3B8"
+                  value={phoneNumber}
+                  onFocus={() => setFocusedField('phoneNumber')}
+                  onBlur={() => setFocusedField(null)}
+                  onChangeText={(text) => {
+                    setPhoneNumber(text);
+                    if (errors.phoneNumber) setErrors({ ...errors, phoneNumber: '' });
+                  }}
+                  keyboardType="phone-pad"
+                />
+              </View>
+              {errors.phoneNumber ? <Text style={styles.errorText}>{errors.phoneNumber}</Text> : null}
+            </View>
+
+            {/* Amount Received */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Amount Received *</Text>
+              <View
+                style={[
+                  styles.inputBox,
+                  focusedField === 'amount' && styles.inputBoxFocused,
+                  errors.amount ? styles.inputBoxError : null,
+                ]}
+              >
+                <Text style={styles.inputCurrencyLeft}>₹</Text>
+                <TextInput
+                  style={[styles.textInput, { outlineStyle: 'none' } as any]}
+                  placeholder="Enter amount"
+                  placeholderTextColor="#94A3B8"
+                  value={amount}
+                  onFocus={() => setFocusedField('amount')}
+                  onBlur={() => setFocusedField(null)}
+                  onChangeText={(text) => {
+                    setAmount(text);
+                    if (errors.amount) setErrors({ ...errors, amount: '' });
+                  }}
+                  keyboardType="numeric"
+                />
+              </View>
+              {errors.amount ? <Text style={styles.errorText}>{errors.amount}</Text> : null}
+            </View>
+
+            {/* Interest Rate (% per month) */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Interest Rate (% per month) *</Text>
+              <View
+                style={[
+                  styles.inputBox,
+                  focusedField === 'interestRate' && styles.inputBoxFocused,
+                  errors.interestRate ? styles.inputBoxError : null,
+                ]}
+              >
+                <TextInput
+                  style={[styles.textInput, { outlineStyle: 'none' } as any]}
+                  placeholder="Enter interest rate"
+                  placeholderTextColor="#94A3B8"
+                  value={interestRate}
+                  onFocus={() => setFocusedField('interestRate')}
+                  onBlur={() => setFocusedField(null)}
+                  onChangeText={(text) => {
+                    setInterestRate(text);
+                    if (errors.interestRate) setErrors({ ...errors, interestRate: '' });
+                  }}
+                  keyboardType="numeric"
+                />
+                <Text style={styles.inputSuffixRight}>%</Text>
+              </View>
+              {errors.interestRate ? <Text style={styles.errorText}>{errors.interestRate}</Text> : null}
+            </View>
+
+            {/* Received Date */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Received Date *</Text>
+              {Platform.OS === 'web' ? (
+                React.createElement('input', {
+                  type: 'date',
+                  value: date.toISOString().split('T')[0],
+                  onChange: (e: any) => {
+                    if (e.target.value) {
+                      const newDate = new Date(e.target.value);
+                      if (!isNaN(newDate.getTime())) setDate(newDate);
+                    }
+                  },
+                  style: {
+                    height: 50,
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderColor: '#E2E8F0',
+                    backgroundColor: '#FFFFFF',
+                    paddingLeft: 14,
+                    paddingRight: 14,
+                    fontSize: 14,
+                    color: '#1E293B',
+                    outlineStyle: 'none',
+                    width: '100%',
+                    boxSizing: 'border-box',
+                  },
+                })
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={styles.inputBox}
+                    onPress={() => setShowDatePicker(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="calendar-outline" size={18} color="#94A3B8" style={styles.inputIconLeft} />
+                    <Text style={styles.datePickerText}>
+                      {date.toISOString().split('T')[0]}
+                    </Text>
+                  </TouchableOpacity>
+                  {showDatePicker && (
+                    <DateTimePicker
+                      value={date}
+                      mode="date"
+                      display="default"
+                      onChange={handleDateChange}
+                    />
+                  )}
+                </>
               )}
             </View>
 
-            {/* PAYMENT SCREENSHOT NEU CARD */}
-            <View style={styles.cardNeu}>
-              <Text style={styles.sectionTitle}>Payment Screenshot</Text>
+            {/* Link User ID (Optional) */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>User ID (Optional)</Text>
+              <View
+                style={[
+                  styles.inputBox,
+                  focusedField === 'userId' && styles.inputBoxFocused,
+                  errors.userId ? styles.inputBoxError : null,
+                ]}
+              >
+                <Ionicons name="link-outline" size={18} color="#94A3B8" style={styles.inputIconLeft} />
+                <TextInput
+                  style={[styles.textInput, { outlineStyle: 'none' } as any]}
+                  placeholder="USR-XXXXXXXX"
+                  placeholderTextColor="#94A3B8"
+                  value={userId}
+                  onFocus={() => setFocusedField('userId')}
+                  onBlur={() => setFocusedField(null)}
+                  onChangeText={(text) => {
+                    setUserId(text.toUpperCase());
+                    if (errors.userId) setErrors({ ...errors, userId: '' });
+                  }}
+                  autoCapitalize="characters"
+                />
+              </View>
+              <Text style={styles.fieldHelperText}>
+                If provided, a notification will be sent to this user.
+              </Text>
+              {errors.userId ? <Text style={styles.errorText}>{errors.userId}</Text> : null}
+            </View>
+
+            {/* Notes (Optional) */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Notes (Optional)</Text>
+              <View
+                style={[
+                  styles.inputBox,
+                  styles.inputBoxMultiline,
+                  focusedField === 'notes' && styles.inputBoxFocused,
+                ]}
+              >
+                <TextInput
+                  style={[styles.textInput, styles.textInputMultiline, { outlineStyle: 'none' } as any]}
+                  placeholder="Add notes"
+                  placeholderTextColor="#94A3B8"
+                  value={notes}
+                  onFocus={() => setFocusedField('notes')}
+                  onBlur={() => setFocusedField(null)}
+                  onChangeText={setNotes}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+              </View>
+            </View>
+
+            {/* Payment Screenshot Upload */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Payment Screenshot (Optional)</Text>
+              <Text style={styles.fieldHelperText}>
+                Attach transaction proof (UPI slip, bank receipt, or cash voucher)
+              </Text>
               {paymentScreenshot ? (
-                <View style={styles.imagePreviewContainer}>
-                  <Image source={{ uri: paymentScreenshot }} style={styles.imagePreview} />
-                  <TouchableOpacity style={styles.changeImageBtn} onPress={() => setPaymentScreenshot(null)}>
-                    <Text style={[styles.changeImageText, {color: '#E74C3C'}]}>Remove Image</Text>
-                  </TouchableOpacity>
+                <View style={styles.screenshotPreviewCard}>
+                  <Image source={{ uri: paymentScreenshot }} style={styles.screenshotFullImage} />
+                  <View style={styles.screenshotBtnRow}>
+                    <TouchableOpacity style={styles.screenshotActionBtn} onPress={pickImage} activeOpacity={0.7}>
+                      <Ionicons name="camera-outline" size={16} color="#056B38" style={{ marginRight: 4 }} />
+                      <Text style={styles.screenshotActionBtnText}>Change Screenshot</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.screenshotActionBtn, styles.screenshotRemoveBtn]}
+                      onPress={() => setPaymentScreenshot(null)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="trash-outline" size={16} color="#DC2626" style={{ marginRight: 4 }} />
+                      <Text style={[styles.screenshotActionBtnText, { color: '#DC2626' }]}>Remove</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ) : (
-                <TouchableOpacity style={styles.uploadBtn} onPress={pickImage}>
-                  <Text style={styles.uploadBtnText}>Choose Image</Text>
+                <TouchableOpacity style={styles.screenshotUploadDashed} onPress={pickImage} activeOpacity={0.7}>
+                  <View style={styles.uploadIconBadge}>
+                    <Ionicons name="receipt-outline" size={24} color="#056B38" />
+                  </View>
+                  <Text style={styles.uploadPrimaryText}>Upload Payment Screenshot</Text>
+                  <Text style={styles.uploadSubText}>PNG, JPG or JPEG from your gallery</Text>
                 </TouchableOpacity>
               )}
             </View>
 
-            {/* ACTION BUTTON */}
-            <View style={styles.actionsContainerNeu}>
-              <TouchableOpacity 
-                style={styles.actionBtnNeuPrimary} 
-                onPress={handleSave} 
-                disabled={saving}
-                activeOpacity={0.8}
+            {/* Expandable: Additional Details (Father name, Address, etc.) */}
+            <View style={styles.optionalSection}>
+              <TouchableOpacity
+                style={styles.optionalHeader}
+                onPress={() => setShowOptionalInfo(!showOptionalInfo)}
+                activeOpacity={0.7}
               >
-                <Ionicons name="save" size={20} color="#FFF" style={{marginRight: 8}}/>
-                <Text style={styles.actionBtnTextNeuPrimary}>
-                  {saving ? "Saving..." : "Save Lender Record"}
-                </Text>
+                <Text style={styles.optionalHeaderTitle}>Additional Details (Optional)</Text>
+                <Ionicons
+                  name={showOptionalInfo ? 'chevron-up' : 'chevron-down'}
+                  size={20}
+                  color="#64748B"
+                />
               </TouchableOpacity>
+
+              {showOptionalInfo && (
+                <View style={styles.optionalBody}>
+                  <View style={styles.fieldGroup}>
+                    <Text style={styles.fieldLabel}>Father Name</Text>
+                    <View style={[styles.inputBox, focusedField === 'fatherName' && styles.inputBoxFocused]}>
+                      <TextInput
+                        style={[styles.textInput, { outlineStyle: 'none' } as any]}
+                        placeholder="Enter father name"
+                        placeholderTextColor="#94A3B8"
+                        value={fatherName}
+                        onFocus={() => setFocusedField('fatherName')}
+                        onBlur={() => setFocusedField(null)}
+                        onChangeText={setFatherName}
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.fieldGroup}>
+                    <Text style={styles.fieldLabel}>Village / Town</Text>
+                    <View style={[styles.inputBox, focusedField === 'village' && styles.inputBoxFocused]}>
+                      <TextInput
+                        style={[styles.textInput, { outlineStyle: 'none' } as any]}
+                        placeholder="Enter village or town"
+                        placeholderTextColor="#94A3B8"
+                        value={village}
+                        onFocus={() => setFocusedField('village')}
+                        onBlur={() => setFocusedField(null)}
+                        onChangeText={setVillage}
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.fieldGroup}>
+                    <Text style={styles.fieldLabel}>Mandal</Text>
+                    <View style={[styles.inputBox, focusedField === 'mandal' && styles.inputBoxFocused]}>
+                      <TextInput
+                        style={[styles.textInput, { outlineStyle: 'none' } as any]}
+                        placeholder="Enter mandal"
+                        placeholderTextColor="#94A3B8"
+                        value={mandal}
+                        onFocus={() => setFocusedField('mandal')}
+                        onBlur={() => setFocusedField(null)}
+                        onChangeText={setMandal}
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.fieldGroup}>
+                    <Text style={styles.fieldLabel}>Pincode</Text>
+                    <View style={[styles.inputBox, focusedField === 'pincode' && styles.inputBoxFocused]}>
+                      <TextInput
+                        style={[styles.textInput, { outlineStyle: 'none' } as any]}
+                        placeholder="Enter pincode"
+                        placeholderTextColor="#94A3B8"
+                        value={pincode}
+                        onFocus={() => setFocusedField('pincode')}
+                        onBlur={() => setFocusedField(null)}
+                        onChangeText={setPincode}
+                        keyboardType="number-pad"
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.fieldGroup}>
+                    <Text style={styles.fieldLabel}>District</Text>
+                    <View style={[styles.inputBox, focusedField === 'district' && styles.inputBoxFocused]}>
+                      <TextInput
+                        style={[styles.textInput, { outlineStyle: 'none' } as any]}
+                        placeholder="Enter district"
+                        placeholderTextColor="#94A3B8"
+                        value={district}
+                        onFocus={() => setFocusedField('district')}
+                        onBlur={() => setFocusedField(null)}
+                        onChangeText={setDistrict}
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.fieldGroup}>
+                    <Text style={styles.fieldLabel}>State</Text>
+                    <View style={[styles.inputBox, focusedField === 'state' && styles.inputBoxFocused]}>
+                      <TextInput
+                        style={[styles.textInput, { outlineStyle: 'none' } as any]}
+                        placeholder="Enter state"
+                        placeholderTextColor="#94A3B8"
+                        value={state}
+                        onFocus={() => setFocusedField('state')}
+                        onBlur={() => setFocusedField(null)}
+                        onChangeText={setState}
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.fieldGroup}>
+                    <Text style={styles.fieldLabel}>Country</Text>
+                    <View style={[styles.inputBox, focusedField === 'country' && styles.inputBoxFocused]}>
+                      <TextInput
+                        style={[styles.textInput, { outlineStyle: 'none' } as any]}
+                        placeholder="Enter country"
+                        placeholderTextColor="#94A3B8"
+                        value={country}
+                        onFocus={() => setFocusedField('country')}
+                        onBlur={() => setFocusedField(null)}
+                        onChangeText={setCountry}
+                      />
+                    </View>
+                  </View>
+                </View>
+              )}
             </View>
 
+            {/* 4. SUBMIT BUTTON */}
+            <TouchableOpacity
+              style={styles.saveBtn}
+              onPress={handleSave}
+              disabled={saving}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.saveBtnText}>
+                {saving ? 'Saving...' : 'Save Lender Record'}
+              </Text>
+            </TouchableOpacity>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#E9EFF5' },
-  topDarkSection: {
-    backgroundColor: '#1A1B2F',
-    paddingTop: 20,
-    paddingHorizontal: 24,
-    paddingBottom: 20,
-    borderBottomRightRadius: 80,
-    zIndex: 10,
-  },
-  waveConnectorDark: {
-    height: 40,
-    backgroundColor: '#1A1B2F',
-    marginTop: -1, 
-    zIndex: 1,
-  },
-  waveConnectorLightCutout: {
+  safeContainer: {
     flex: 1,
-    backgroundColor: '#E9EFF5',
-    borderTopLeftRadius: 80,
+    backgroundColor: '#FFFFFF',
   },
-  bottomLightSection: {
-    backgroundColor: '#E9EFF5',
-    flex: 1,
-    paddingHorizontal: 24,
-    marginTop: -1,
+  topHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
-  scrollView: { flex: 1, backgroundColor: '#E9EFF5' },
-  content: { paddingTop: 16, paddingBottom: 60 },
-  customHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   backButton: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.05)',
-    justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)'
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  backButtonInner: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { color: '#FFF', fontSize: 18, fontWeight: '700', textAlign: 'center' },
-  headerSubTitle: { color: 'rgba(255,255,255,0.7)', fontSize: 12, textAlign: 'center', marginTop: 4 },
-  cardNeu: {
-    backgroundColor: '#E9EFF5', borderRadius: 24, padding: 24, marginBottom: 24,
-    shadowColor: '#FFFFFF', shadowOffset: { width: -6, height: -6 }, shadowOpacity: 0.9,
-    shadowRadius: 8, elevation: 5, borderWidth: 1, borderColor: '#FFF'
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1E293B',
+    letterSpacing: 0.2,
   },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#2C3E50', marginBottom: 20 },
-  helperText: { fontSize: 12, color: '#7F8C8D', marginTop: -8, marginBottom: 8 },
-  label: { fontSize: 14, fontWeight: '600', color: '#6B7A93', marginBottom: 8 },
-  datePickerContainer: { marginBottom: 16 },
-  datePickerButton: {
-    backgroundColor: '#FFF', borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)', borderRadius: 16,
-    paddingHorizontal: 16, height: 56, justifyContent: 'center', shadowColor: '#A3B1C6',
-    shadowOffset: { width: 2, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2,
+  headerSpacer: {
+    width: 40,
   },
-  dateText: { color: '#2C3E50', fontSize: 15, fontWeight: '500' },
-  optionalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  optionalContent: { marginTop: 20 },
-  uploadBtn: {
-    backgroundColor: '#E9EFF5', borderWidth: 2, borderColor: '#FFF', borderStyle: 'dashed',
-    borderRadius: 16, height: 120, justifyContent: 'center', alignItems: 'center'
+  scrollView: {
+    flex: 1,
+    backgroundColor: '#F8FAF8',
   },
-  uploadBtnText: { color: '#4A90E2', fontWeight: '700', fontSize: 16 },
-  imagePreviewContainer: { alignItems: 'center' },
-  imagePreview: { width: '100%', height: 200, borderRadius: 16, marginBottom: 16, resizeMode: 'cover', borderWidth: 2, borderColor: '#FFF' },
-  changeImageBtn: { padding: 12, backgroundColor: 'rgba(231, 76, 60, 0.1)', borderRadius: 12 },
-  changeImageText: { color: '#E74C3C', fontWeight: '800', fontSize: 14 },
-  actionsContainerNeu: { marginTop: 8, marginBottom: 24 },
-  actionBtnNeuPrimary: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#4A90E2',
-    paddingVertical: 18, borderRadius: 16, shadowColor: '#4A90E2', shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4, shadowRadius: 12, elevation: 8
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 40,
+    maxWidth: 500,
+    width: '100%',
+    alignSelf: 'center',
   },
-  actionBtnTextNeuPrimary: { color: '#FFF', fontSize: 16, fontWeight: '800' },
+  formCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+      },
+    }),
+  },
+  fieldGroup: {
+    marginBottom: 16,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 6,
+  },
+  inputBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    height: 50,
+    paddingHorizontal: 14,
+  },
+  inputBoxFocused: {
+    borderColor: '#056B38',
+    borderWidth: 1.5,
+  },
+  inputBoxError: {
+    borderColor: '#DC2626',
+    backgroundColor: '#FEF2F2',
+  },
+  inputBoxMultiline: {
+    height: 84,
+    paddingVertical: 10,
+    alignItems: 'flex-start',
+  },
+  inputIconLeft: {
+    marginRight: 10,
+  },
+  inputCurrencyLeft: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#64748B',
+    marginRight: 8,
+  },
+  inputSuffixRight: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#64748B',
+    marginLeft: 8,
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#1E293B',
+    fontWeight: '500',
+    height: '100%',
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+        borderWidth: 0,
+      } as any,
+    }),
+  },
+  textInputMultiline: {
+    height: '100%',
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+        borderWidth: 0,
+      } as any,
+    }),
+  },
+  datePickerText: {
+    fontSize: 14,
+    color: '#1E293B',
+    fontWeight: '500',
+  },
+  fieldHelperText: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 4,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#DC2626',
+    marginTop: 4,
+    fontWeight: '600',
+  },
+  screenshotUploadDashed: {
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    borderStyle: 'dashed',
+    borderRadius: 14,
+    backgroundColor: '#F8FAFC',
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uploadIconBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#DCFCE7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  uploadPrimaryText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#056B38',
+    marginBottom: 2,
+  },
+  uploadSubText: {
+    fontSize: 11,
+    color: '#64748B',
+  },
+  screenshotPreviewCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+    overflow: 'hidden',
+    padding: 10,
+  },
+  screenshotFullImage: {
+    width: '100%',
+    height: 180,
+    borderRadius: 10,
+    resizeMode: 'contain',
+    backgroundColor: '#FFFFFF',
+    marginBottom: 10,
+  },
+  screenshotBtnRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  screenshotActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    backgroundColor: '#F0FDF4',
+  },
+  screenshotActionBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#056B38',
+  },
+  screenshotRemoveBtn: {
+    borderColor: '#FEE2E2',
+    backgroundColor: '#FEF2F2',
+  },
+  optionalSection: {
+    marginTop: 8,
+    marginBottom: 20,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    backgroundColor: '#F8FAFC',
+    overflow: 'hidden',
+  },
+  optionalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 14,
+  },
+  optionalHeaderTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  optionalBody: {
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+  },
+  saveBtn: {
+    backgroundColor: '#056B38',
+    borderRadius: 16,
+    height: 52,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#056B38',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+      web: {
+        boxShadow: '0 4px 12px rgba(5, 107, 56, 0.25)',
+      },
+    }),
+  },
+  saveBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
 });

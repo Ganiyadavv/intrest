@@ -1,16 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Modal } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Platform,
+  Modal,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { MainStackParamList } from '../types/navigation';
 import { userService } from '../services/userService';
 import { authService } from '../services/authService';
 import { User } from '../types/user';
-import { COLORS } from '../constants/colors';
 import { Loading } from '../components/Loading';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { ProfileImage } from '../components/ProfileImage';
-import { Ionicons } from '@expo/vector-icons';
 
 type ProfileScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'Profile'>;
 
@@ -23,6 +30,7 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [copiedId, setCopiedId] = useState(false);
 
   const fetchProfile = async () => {
     setLoading(true);
@@ -57,133 +65,269 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
     });
   };
 
+  const handleCopyUserId = () => {
+    if (!user?.userId) return;
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(user.userId);
+    }
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 2000);
+  };
+
+  const formattedAddress = () => {
+    if (!user) return 'Not provided';
+    const parts = [user.address, user.city, user.state].filter(Boolean);
+    if (parts.length === 0) return 'Not provided';
+    let res = parts.join(', ');
+    if (user.pincode) {
+      res += ` - ${user.pincode}`;
+    }
+    return res;
+  };
+
+  const displayName = user
+    ? user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'User'
+    : 'User';
+
   if (loading && !user) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+        <View style={styles.topAppBar}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerIconBtn}>
+            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.appBarTitle}>My Profile</Text>
+          <View style={{ width: 38 }} />
+        </View>
         <Loading fullScreen message="Loading Profile..." />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} bounces={false}>
-        
-        {/* TOP DARK SECTION */}
-        <View style={styles.topDarkSection}>
-          <View style={styles.customHeader}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-              <View style={styles.backButtonInner}>
-                <Ionicons name="arrow-back" size={20} color="#FFF" />
-              </View>
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>My Profile</Text>
-            <View style={{ width: 40 }} />
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      {/* 1. TOP APP BAR */}
+      <View style={styles.topAppBar}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.headerIconBtn}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+        </TouchableOpacity>
+
+        <View style={styles.brandCenter}>
+          <View style={styles.brandLogoCircle}>
+            <Text style={styles.brandRupeeText}>₹</Text>
+            <Ionicons name="leaf" size={10} color="#4ADE80" style={styles.brandLeafIcon} />
           </View>
-
-          <ErrorMessage message={error} />
-          
-          {user && (
-            <>
-              <View style={styles.profileHeaderNeu}>
-                <View style={styles.avatarContainerNeu}>
-                  <ProfileImage uri={user.profileImage} />
-                </View>
-                <Text style={styles.profileNameNeu}>{user.fullName || `${user.firstName} ${user.lastName}`}</Text>
-                <View style={styles.roleBadgeNeu}>
-                  <Text style={styles.roleTextNeu}>{user.role}</Text>
-                </View>
-              </View>
-
-              <View style={styles.neonFinancialCard}>
-                <Text style={styles.readOnlyLabelNeu}>User ID</Text>
-                <Text style={styles.readOnlyValueNeu}>{user.userId}</Text>
-              </View>
-            </>
-          )}
+          <View style={styles.brandTextCol}>
+            <Text style={styles.brandTitleText}>DhanaMitra</Text>
+            <Text style={styles.brandSubtitleText}>My Profile</Text>
+          </View>
         </View>
 
-        {/* THE WAVE CONNECTOR */}
-        <View style={styles.waveConnectorDark}>
-           <View style={styles.waveConnectorLightCutout} />
+        <TouchableOpacity
+          onPress={() => navigation.navigate('EditProfile')}
+          style={styles.headerIconBtn}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="create-outline" size={20} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* 2. HERO PROFILE HEADER */}
+        <View style={styles.heroSection}>
+          <TouchableOpacity
+            style={styles.avatarTouchable}
+            onPress={() => navigation.navigate('EditProfile')}
+            activeOpacity={0.85}
+          >
+            <ProfileImage
+              uri={user?.profileImage}
+              size={98}
+              name={displayName}
+              showCameraBadge={true}
+              onEdit={() => navigation.navigate('EditProfile')}
+              borderWidth={3.5}
+              borderColor="#FFFFFF"
+            />
+          </TouchableOpacity>
+
+          <Text style={styles.heroName}>{displayName}</Text>
+
+          <View style={styles.heroBadgesRow}>
+            <View style={styles.roleBadge}>
+              <Ionicons name="shield-checkmark" size={13} color="#056B38" style={{ marginRight: 4 }} />
+              <Text style={styles.roleBadgeText}>{user?.role || 'MEMBER'}</Text>
+            </View>
+
+            <View style={[styles.statusBadge, user?.status === 'ACTIVE' ? styles.statusBadgeActive : styles.statusBadgeInactive]}>
+              <View style={[styles.statusDot, user?.status === 'ACTIVE' ? styles.statusDotActive : styles.statusDotInactive]} />
+              <Text style={[styles.statusBadgeText, user?.status === 'ACTIVE' ? styles.statusTextActive : styles.statusTextInactive]}>
+                {user?.status || 'ACTIVE'}
+              </Text>
+            </View>
+          </View>
+
+          {/* USER ID CARD */}
+          <TouchableOpacity
+            style={styles.userIdCard}
+            onPress={handleCopyUserId}
+            activeOpacity={0.8}
+          >
+            <View style={styles.userIdLeft}>
+              <View style={styles.userIdIconBox}>
+                <Ionicons name="finger-print" size={18} color="#056B38" />
+              </View>
+              <View>
+                <Text style={styles.userIdLabel}>User ID</Text>
+                <Text style={styles.userIdValue}>{user?.userId || 'N/A'}</Text>
+              </View>
+            </View>
+
+            <View style={styles.copyBtnBadge}>
+              <Ionicons
+                name={copiedId ? 'checkmark-circle' : 'copy-outline'}
+                size={14}
+                color={copiedId ? '#15803D' : '#056B38'}
+              />
+              <Text style={[styles.copyBtnText, copiedId && { color: '#15803D' }]}>
+                {copiedId ? 'Copied' : 'Copy'}
+              </Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
-        {/* BOTTOM LIGHT SECTION */}
-        <View style={styles.bottomLightSection}>
-          <View style={styles.content}>
-            
-            {user && (
-              <>
-                {/* Details Card */}
-                <View style={styles.cardNeu}>
-                  <Text style={styles.cardTitleNeu}>Personal Information</Text>
-                  
-                  <View style={styles.infoListNeu}>
-                    <View style={styles.infoListItemNeu}>
-                      <View style={styles.infoIconContainerNeu}><Ionicons name="mail" size={20} color="#4A90E2" /></View>
-                      <View style={styles.infoTextContainerNeu}>
-                        <Text style={styles.infoListLabelNeu}>Email</Text>
-                        <Text style={styles.infoListValueNeu}>{user.email}</Text>
-                      </View>
-                    </View>
+        {error ? <ErrorMessage message={error} /> : null}
 
-                    <View style={styles.infoListItemNeu}>
-                      <View style={styles.infoIconContainerNeu}><Ionicons name="information-circle" size={20} color="#4A90E2" /></View>
-                      <View style={styles.infoTextContainerNeu}>
-                        <Text style={styles.infoListLabelNeu}>Status</Text>
-                        <Text style={[styles.infoListValueNeu, { color: user.status === 'ACTIVE' ? '#50E3C2' : '#E74C3C' }]}>{user.status}</Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.infoListItemNeu}>
-                      <View style={styles.infoIconContainerNeu}><Ionicons name="location" size={20} color="#4A90E2" /></View>
-                      <View style={styles.infoTextContainerNeu}>
-                        <Text style={styles.infoListLabelNeu}>Address</Text>
-                        <Text style={styles.infoListValueNeu}>
-                          {user.address ? `${user.address}, ${user.city || ''}, ${user.state || ''} - ${user.pincode || ''}` : 'Not provided'}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                </View>
-
-                {/* Actions */}
-                <View style={styles.actionsContainerNeu}>
-                  <TouchableOpacity 
-                    style={styles.actionBtnNeuPrimary} 
-                    onPress={() => navigation.navigate('EditProfile')}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons name="pencil" size={20} color="#FFF" style={{marginRight: 8}}/>
-                    <Text style={styles.actionBtnTextNeuPrimary}>Edit Profile</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity 
-                    style={[styles.actionBtnNeuPrimary, { backgroundColor: '#F39C12' }]} 
-                    onPress={() => navigation.navigate('ChangePassword')}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons name="lock-closed" size={20} color="#FFF" style={{marginRight: 8}}/>
-                    <Text style={styles.actionBtnTextNeuPrimary}>Change Password</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity 
-                    style={styles.actionBtnNeuDanger} 
-                    onPress={handleLogoutPress}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons name="log-out" size={20} color="#E74C3C" style={{marginRight: 8}}/>
-                    <Text style={styles.actionBtnTextNeuDanger}>Logout</Text>
-                  </TouchableOpacity>
-                </View>
-              </>
-            )}
-
+        {/* 3. PERSONAL INFORMATION CARD */}
+        <View style={styles.sectionCard}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardHeaderIconBox}>
+              <Ionicons name="person" size={16} color="#056B38" />
+            </View>
+            <Text style={styles.cardHeaderTitle}>Personal Information</Text>
           </View>
+
+          {/* Email */}
+          <View style={styles.infoRow}>
+            <View style={[styles.infoIconBox, { backgroundColor: '#EFF6FF' }]}>
+              <Ionicons name="mail-outline" size={18} color="#2563EB" />
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoLabel}>Email Address</Text>
+              <Text style={styles.infoValue}>{user?.email || 'Not provided'}</Text>
+            </View>
+          </View>
+
+          {/* Phone Number */}
+          <View style={styles.infoRow}>
+            <View style={[styles.infoIconBox, { backgroundColor: '#ECFDF5' }]}>
+              <Ionicons name="call-outline" size={18} color="#056B38" />
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoLabel}>Phone Number</Text>
+              <Text style={styles.infoValue}>{user?.phoneNumber || 'Not provided'}</Text>
+            </View>
+          </View>
+
+          {/* Status */}
+          <View style={styles.infoRow}>
+            <View style={[styles.infoIconBox, { backgroundColor: '#F0FDF4' }]}>
+              <Ionicons name="shield-checkmark-outline" size={18} color="#16A34A" />
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoLabel}>Account Status</Text>
+              <View style={styles.activePillSmall}>
+                <View style={styles.statusDotActive} />
+                <Text style={styles.activePillText}>{user?.status || 'ACTIVE'}</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Address */}
+          <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
+            <View style={[styles.infoIconBox, { backgroundColor: '#FFFBEB' }]}>
+              <Ionicons name="location-outline" size={18} color="#D97706" />
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoLabel}>Address</Text>
+              <Text style={styles.infoValue}>{formattedAddress()}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* 4. ACTIONS & SECURITY */}
+        <View style={styles.sectionCard}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardHeaderIconBox}>
+              <Ionicons name="settings-sharp" size={16} color="#056B38" />
+            </View>
+            <Text style={styles.cardHeaderTitle}>Account & Settings</Text>
+          </View>
+
+          {/* Edit Profile */}
+          <TouchableOpacity
+            style={styles.actionItem}
+            onPress={() => navigation.navigate('EditProfile')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.actionIconBox, { backgroundColor: '#ECFDF5' }]}>
+              <Ionicons name="pencil" size={18} color="#056B38" />
+            </View>
+            <View style={styles.actionContent}>
+              <Text style={styles.actionTitle}>Edit Profile</Text>
+              <Text style={styles.actionSubtext}>Update your personal info, photo & address</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </TouchableOpacity>
+
+          {/* Change Password */}
+          <TouchableOpacity
+            style={[styles.actionItem, { borderBottomWidth: 0 }]}
+            onPress={() => navigation.navigate('ChangePassword')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.actionIconBox, { backgroundColor: '#FFFBEB' }]}>
+              <Ionicons name="lock-closed" size={18} color="#D97706" />
+            </View>
+            <View style={styles.actionContent}>
+              <Text style={styles.actionTitle}>Change Password</Text>
+              <Text style={styles.actionSubtext}>Update and secure your account password</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </TouchableOpacity>
+        </View>
+
+        {/* 5. LOGOUT BUTTON */}
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogoutPress}
+          activeOpacity={0.8}
+        >
+          <View style={styles.logoutIconBox}>
+            <Ionicons name="log-out-outline" size={18} color="#DC2626" />
+          </View>
+          <Text style={styles.logoutButtonText}>Log Out</Text>
+        </TouchableOpacity>
+
+        {/* 6. APP VERSION FOOTER */}
+        <View style={styles.footerNote}>
+          <View style={styles.footerBrandRow}>
+            <Text style={styles.footerLeaf}>🌱</Text>
+            <Text style={styles.footerBrand}>DhanaMitra</Text>
+          </View>
+          <Text style={styles.footerVersion}>Version 1.0.0 • Secure Money Tracking</Text>
         </View>
       </ScrollView>
 
-      {/* Logout Confirmation Modal */}
+      {/* 7. LOGOUT CONFIRMATION MODAL */}
       <Modal
         visible={showLogoutModal}
         transparent={true}
@@ -192,30 +336,35 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Ionicons name="log-out-outline" size={32} color="#E74C3C" />
-              <Text style={styles.modalTitle}>Logout</Text>
+            <View style={styles.modalIconBox}>
+              <Ionicons name="log-out-outline" size={28} color="#DC2626" />
             </View>
-            <Text style={styles.modalMessage}>Are you sure you want to logout?</Text>
-            
+
+            <Text style={styles.modalTitle}>Log Out of DhanaMitra?</Text>
+            <Text style={styles.modalMessage}>
+              Are you sure you want to log out? You will need to sign in again to access your lending and borrowing records.
+            </Text>
+
             <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={styles.modalCancelBtn} 
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
                 onPress={() => setShowLogoutModal(false)}
+                activeOpacity={0.7}
               >
                 <Text style={styles.modalCancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.modalConfirmBtn} 
+
+              <TouchableOpacity
+                style={styles.modalConfirmBtn}
                 onPress={confirmLogout}
+                activeOpacity={0.8}
               >
-                <Text style={styles.modalConfirmBtnText}>Logout</Text>
+                <Text style={styles.modalConfirmBtnText}>Log Out</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
-
     </SafeAreaView>
   );
 };
@@ -223,293 +372,439 @@ export const ProfileScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E9EFF5',
+    backgroundColor: '#056B38',
   },
-  topDarkSection: {
-    backgroundColor: '#1A1B2F',
-    paddingTop: 40,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    borderBottomRightRadius: 80,
-    zIndex: 10,
-  },
-  waveConnectorDark: {
-    height: 80,
-    backgroundColor: '#1A1B2F',
-    marginTop: -1, 
-    zIndex: 1,
-  },
-  waveConnectorLightCutout: {
-    flex: 1,
-    backgroundColor: '#E9EFF5',
-    borderTopLeftRadius: 80,
-  },
-  bottomLightSection: {
-    backgroundColor: '#E9EFF5',
-    flex: 1,
-    paddingHorizontal: 24,
-    marginTop: -1,
-  },
-  scrollView: {
-    flex: 1,
-    backgroundColor: '#E9EFF5',
-  },
-  content: {
-    paddingTop: 16,
-    paddingBottom: 60,
-  },
-  customHeader: {
+  topAppBar: {
+    backgroundColor: '#056B38',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+  headerIconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
-  backButtonInner: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    color: '#FFF',
-    fontSize: 16,
+  appBarTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
     fontWeight: '700',
   },
-  profileHeaderNeu: {
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  avatarContainerNeu: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(77, 139, 255, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: '#4D8BFF',
-    shadowColor: '#4D8BFF',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.5,
-    shadowRadius: 15,
-  },
-  profileNameNeu: {
-    fontSize: 26,
-    fontWeight: '900',
-    color: '#FFF',
-    marginBottom: 8,
-  },
-  roleBadgeNeu: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  roleTextNeu: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#E0E7FF',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  neonFinancialCard: {
-    backgroundColor: 'rgba(38, 40, 69, 0.95)',
-    borderRadius: 24,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.4,
-    shadowRadius: 30,
-    elevation: 10,
-    marginBottom: 24,
-  },
-  readOnlyLabelNeu: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 13,
-    marginBottom: 4,
-  },
-  readOnlyValueNeu: {
-    color: '#4D8BFF',
-    fontSize: 24,
-    fontWeight: '900',
-    letterSpacing: 2,
-  },
-  cardNeu: {
-    backgroundColor: '#E9EFF5',
-    borderRadius: 24,
-    padding: 24,
-    marginBottom: 24,
-    shadowColor: '#FFFFFF',
-    shadowOffset: { width: -6, height: -6 },
-    shadowOpacity: 0.9,
-    shadowRadius: 8,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: '#FFF',
-  },
-  cardTitleNeu: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#2C3E50',
-    marginBottom: 20,
-  },
-  infoListNeu: {
-    gap: 16,
-  },
-  infoListItemNeu: {
+  brandCenter: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  infoIconContainerNeu: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FFF',
+  brandLogoCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1.5,
+    borderColor: '#4ADE80',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
-    shadowColor: '#A3B1C6',
-    shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 0.1,
+    marginRight: 8,
+    position: 'relative',
+  },
+  brandRupeeText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  brandLeafIcon: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+  },
+  brandTextCol: {
+    alignItems: 'flex-start',
+  },
+  brandTitleText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  brandSubtitleText: {
+    color: '#E2E8F0',
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  scrollView: {
+    flex: 1,
+    backgroundColor: '#F8FAF8',
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  heroSection: {
+    backgroundColor: '#056B38',
+    paddingTop: 12,
+    paddingBottom: 28,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  avatarTouchable: {
+    marginBottom: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroName: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '800',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  heroBadgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  roleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  roleBadgeText: {
+    color: '#056B38',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusBadgeActive: {
+    backgroundColor: '#DCFCE7',
+  },
+  statusBadgeInactive: {
+    backgroundColor: '#FEE2E2',
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 5,
+  },
+  statusDotActive: {
+    backgroundColor: '#16A34A',
+  },
+  statusDotInactive: {
+    backgroundColor: '#DC2626',
+  },
+  statusBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  statusTextActive: {
+    color: '#15803D',
+  },
+  statusTextInactive: {
+    color: '#DC2626',
+  },
+  userIdCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 2,
   },
-  infoTextContainerNeu: {
-    flex: 1,
+  userIdLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  userIdIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#ECFDF5',
     justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
   },
-  infoListLabelNeu: {
-    fontSize: 12,
-    color: '#6B7A93',
-    marginBottom: 2,
+  userIdLabel: {
+    fontSize: 10,
+    color: '#64748B',
     fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  infoListValueNeu: {
-    fontSize: 15,
-    color: '#2C3E50',
+  userIdValue: {
+    fontSize: 14,
+    color: '#1E293B',
+    fontWeight: '800',
+    letterSpacing: 0.6,
+  },
+  copyBtnBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 4,
+  },
+  copyBtnText: {
+    fontSize: 12,
+    color: '#056B38',
     fontWeight: '700',
   },
-  actionsContainerNeu: {
-    gap: 16,
-    marginTop: 8,
-  },
-  actionBtnNeuPrimary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#4A90E2',
-    paddingVertical: 18,
+  sectionCard: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    marginBottom: 16,
     borderRadius: 16,
-    shadowColor: '#4A90E2',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  actionBtnTextNeuPrimary: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  actionBtnNeuDanger: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#E9EFF5',
-    paddingVertical: 18,
-    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
-    borderColor: '#FFF',
-    shadowColor: '#FFFFFF',
-    shadowOffset: { width: -4, height: -4 },
-    shadowOpacity: 0.9,
-    shadowRadius: 6,
-    elevation: 5,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  actionBtnTextNeuDanger: {
-    color: '#E74C3C',
-    fontSize: 16,
-    fontWeight: '800',
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  cardHeaderIconBox: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#ECFDF5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  cardHeaderTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
+  },
+  infoIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  infoContent: {
+    flex: 1,
+  },
+  infoLabel: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#1E293B',
+    fontWeight: '600',
+  },
+  activePillSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+    marginTop: 2,
+  },
+  activePillText: {
+    fontSize: 11,
+    color: '#15803D',
+    fontWeight: '700',
+  },
+  actionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
+  },
+  actionIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  actionContent: {
+    flex: 1,
+  },
+  actionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 2,
+  },
+  actionSubtext: {
+    fontSize: 11,
+    color: '#64748B',
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FEF2F2',
+    marginHorizontal: 16,
+    marginTop: 4,
+    marginBottom: 16,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  logoutIconBox: {
+    marginRight: 8,
+  },
+  logoutButtonText: {
+    color: '#DC2626',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  footerNote: {
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  footerBrandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  footerLeaf: {
+    fontSize: 14,
+    marginRight: 4,
+  },
+  footerBrand: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#056B38',
+  },
+  footerVersion: {
+    fontSize: 11,
+    color: '#94A3B8',
   },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 24,
   },
   modalContent: {
-    backgroundColor: '#FFF',
-    borderRadius: 24,
-    padding: 24,
     width: '100%',
-    maxWidth: 400,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  modalHeader: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 22,
     alignItems: 'center',
-    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  modalIconBox: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#FEE2E2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 14,
   },
   modalTitle: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '800',
-    color: '#2C3E50',
-    marginTop: 12,
+    color: '#1E293B',
+    marginBottom: 8,
+    textAlign: 'center',
   },
   modalMessage: {
-    fontSize: 15,
-    color: '#7F8C8D',
+    fontSize: 13,
+    color: '#64748B',
     textAlign: 'center',
-    marginBottom: 24,
+    lineHeight: 18,
+    marginBottom: 20,
   },
   modalActions: {
     flexDirection: 'row',
     gap: 12,
+    width: '100%',
   },
   modalCancelBtn: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: '#F8F9FA',
-    borderWidth: 1,
-    borderColor: '#E0E6ED',
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
   },
   modalCancelBtnText: {
-    color: '#7F8C8D',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
+    color: '#475569',
   },
   modalConfirmBtn: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: '#E74C3C',
+    backgroundColor: '#DC2626',
     alignItems: 'center',
   },
   modalConfirmBtnText: {
-    color: '#FFF',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

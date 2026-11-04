@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  TouchableOpacity,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,7 +28,7 @@ export const ChangePasswordScreen: React.FC<Props> = ({ navigation }) => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -28,24 +36,36 @@ export const ChangePasswordScreen: React.FC<Props> = ({ navigation }) => {
   const handleChangePassword = async () => {
     setError('');
     setSuccess('');
-    
-    if (!currentPassword) { setError('Current Password is required'); return; }
-    if (!newPassword) { setError('New Password is required'); return; }
-    if (newPassword !== confirmPassword) { setError('New Passwords do not match'); return; }
+
+    if (!currentPassword) {
+      setError('Current Password is required');
+      return;
+    }
+    if (!newPassword) {
+      setError('New Password is required');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setError('New Password must be at least 6 characters');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('New Passwords do not match');
+      return;
+    }
 
     setLoading(true);
     try {
       await authService.changePassword({
         oldPassword: currentPassword,
-        newPassword
+        newPassword,
       });
-      
+
       setSuccess('Password changed successfully');
-      
+
       setTimeout(() => {
         navigation.goBack();
       }, 1500);
-      
     } catch (err: any) {
       setError(err.message || 'Error occurred while changing password');
     } finally {
@@ -54,67 +74,87 @@ export const ChangePasswordScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      {/* 1. TOP APP BAR */}
+      <View style={styles.topAppBar}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.headerIconBtn}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+        </TouchableOpacity>
+
+        <Text style={styles.appBarTitle}>Change Password</Text>
+
+        <View style={{ width: 38 }} />
+      </View>
+
+      <KeyboardAvoidingView
         style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
-          <View style={styles.mainBackground}>
-            
-            {/* TOP DARK SECTION */}
-            <View style={styles.topDarkSection}>
-              <View style={styles.headerTop}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                  <Ionicons name="arrow-back" size={28} color="#FFF" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Change Password</Text>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Security Banner Card */}
+          <View style={styles.bannerCard}>
+            <View style={styles.bannerIconBox}>
+              <Ionicons name="shield-checkmark" size={24} color="#056B38" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.bannerTitle}>Account Security</Text>
+              <Text style={styles.bannerSubtext}>
+                Choose a strong password with at least 6 characters to keep your ledger data safe.
+              </Text>
+            </View>
+          </View>
+
+          {error ? <ErrorMessage message={error} /> : null}
+          {success ? <SuccessMessage message={success} /> : null}
+
+          {/* Form Card */}
+          <View style={styles.formCard}>
+            <View style={styles.cardHeader}>
+              <View style={styles.cardHeaderIconBox}>
+                <Ionicons name="lock-closed" size={16} color="#056B38" />
               </View>
-              
-              <ErrorMessage message={error} />
-              <SuccessMessage message={success} />
+              <Text style={styles.cardHeaderTitle}>Update Password</Text>
             </View>
 
-            {/* WAVE CONNECTOR */}
-            <View style={styles.waveConnectorDark}>
-               <View style={styles.waveConnectorLightCutout} />
-            </View>
+            <AppInput
+              label="Current Password *"
+              placeholder="Enter current password"
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+              secureTextEntry
+            />
 
-            {/* BOTTOM LIGHT SECTION */}
-            <View style={styles.bottomLightSection}>
-              <View style={styles.formContainer}>
-                <AppInput
-                  label="Current Password"
-                  placeholder="Enter current password"
-                  value={currentPassword}
-                  onChangeText={setCurrentPassword}
-                  secureTextEntry
-                />
-                <AppInput
-                  label="New Password"
-                  placeholder="Enter new password"
-                  value={newPassword}
-                  onChangeText={setNewPassword}
-                  secureTextEntry
-                />
-                <AppInput
-                  label="Confirm New Password"
-                  placeholder="Confirm new password"
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry
-                />
+            <AppInput
+              label="New Password *"
+              placeholder="Enter new password"
+              value={newPassword}
+              onChangeText={setNewPassword}
+              secureTextEntry
+            />
 
-                <AppButton
-                  title={loading ? "Changing..." : "Change Password"}
-                  onPress={handleChangePassword}
-                  loading={loading}
-                  style={styles.updateButton}
-                  textStyle={styles.updateButtonText}
-                />
-              </View>
-            </View>
+            <AppInput
+              label="Confirm New Password *"
+              placeholder="Confirm new password"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+            />
 
+            <AppButton
+              title={loading ? 'Updating Password...' : 'Change Password'}
+              onPress={handleChangePassword}
+              loading={loading}
+              style={styles.updateButton}
+              textStyle={styles.updateButtonText}
+            />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -125,85 +165,115 @@ export const ChangePasswordScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E9EFF5',
+    backgroundColor: '#056B38',
+  },
+  topAppBar: {
+    backgroundColor: '#056B38',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerIconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  appBarTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
   },
   keyboardView: {
     flex: 1,
   },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  mainBackground: {
+  scrollView: {
     flex: 1,
-    backgroundColor: '#E9EFF5',
+    backgroundColor: '#F8FAF8',
   },
-  topDarkSection: {
-    backgroundColor: '#1A1B2F',
-    paddingTop: 80,
-    paddingHorizontal: 24,
-    paddingBottom: 60,
-    borderBottomRightRadius: 80,
-    zIndex: 10,
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 40,
   },
-  headerTop: {
+  bannerCard: {
+    backgroundColor: '#ECFDF5',
+    borderRadius: 16,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
   },
-  backButton: {
-    marginRight: 16,
-  },
-  headerTitle: {
-    color: '#FFF',
-    fontSize: 24,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  waveConnectorDark: {
-    height: 80,
-    backgroundColor: '#1A1B2F',
-    marginTop: -1,
-    zIndex: 1,
-  },
-  waveConnectorLightCutout: {
-    flex: 1,
-    backgroundColor: '#E9EFF5',
-    borderTopLeftRadius: 80,
-  },
-  bottomLightSection: {
-    backgroundColor: '#E9EFF5',
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingBottom: 48,
-    marginTop: -1,
-  },
-  formContainer: {
+  bannerIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#FFFFFF',
-    padding: 24,
-    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  bannerTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#056B38',
+    marginBottom: 2,
+  },
+  bannerSubtext: {
+    fontSize: 12,
+    color: '#15803D',
+    lineHeight: 16,
+  },
+  formCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 10,
-    marginTop: -40,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  cardHeaderIconBox: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#ECFDF5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  cardHeaderTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1E293B',
   },
   updateButton: {
-    marginTop: 32,
-    backgroundColor: '#F39C12',
-    borderRadius: 16,
-    paddingVertical: 18,
-    shadowColor: '#F39C12',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-    elevation: 8,
+    marginTop: 20,
+    backgroundColor: '#056B38',
+    borderRadius: 12,
+    paddingVertical: 14,
   },
   updateButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

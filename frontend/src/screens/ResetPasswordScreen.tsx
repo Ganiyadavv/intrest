@@ -1,13 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { AuthStackParamList } from '../types/navigation';
-import { AppInput } from '../components/AppInput';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { authService } from '../services/authService';
-import { Ionicons } from '@expo/vector-icons';
 
 type ResetPasswordScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'ResetPassword'>;
 type ResetPasswordScreenRouteProp = RouteProp<AuthStackParamList, 'ResetPassword'>;
@@ -19,10 +27,14 @@ interface Props {
 
 export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
   const { email } = route.params;
-  
+
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [error, setError] = useState('');
@@ -37,7 +49,6 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
   }, [cooldown]);
 
   const validatePassword = (pass: string) => {
-    // Minimum 8 characters, at least one uppercase letter, one lowercase letter and one number
     const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d\w\W]{8,}$/;
     return regex.test(pass);
   };
@@ -46,11 +57,7 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
     setError('');
     setSuccessMsg('');
 
-    if (!otp) {
-      setError('Please enter the 6-digit OTP');
-      return;
-    }
-    if (otp.length !== 6 || !/^\d+$/.test(otp)) {
+    if (!otp || otp.length !== 6 || !/^\d+$/.test(otp)) {
       setError('Please enter the 6-digit OTP');
       return;
     }
@@ -59,7 +66,9 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
       return;
     }
     if (!validatePassword(newPassword)) {
-      setError('Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one number.');
+      setError(
+        'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one number.'
+      );
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -70,7 +79,7 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
     setLoading(true);
     try {
       await authService.resetPassword(email, otp, newPassword);
-      setSuccessMsg('Password reset successfully. Please login with your new password.');
+      setSuccessMsg('Password reset successfully! Please login with your new password.');
       setOtp('');
       setNewPassword('');
       setConfirmPassword('');
@@ -91,15 +100,13 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const handleResendOtp = async () => {
     if (cooldown > 0 || resending) return;
-    
+
     setError('');
     setSuccessMsg('');
     setResending(true);
     try {
       await authService.resendResetOtp(email);
       setCooldown(60);
-      // Optional: you can show a success toast here if you have a component, 
-      // but just resetting the timer gives enough feedback.
     } catch (err: any) {
       setError(err.message || 'Unable to connect to the server. Please try again.');
     } finally {
@@ -114,106 +121,248 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
     });
   };
 
-  // Partially mask email for display
   const maskedEmail = email.replace(/(^.{1})(.*)(@.*$)/, (match, p1, p2, p3) => {
     return p1 + '*'.repeat(p2.length) + p3;
   });
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
+    <SafeAreaView style={styles.safeContainer} edges={['top', 'left', 'right']}>
+      {/* 1. TOP APP BAR */}
+      <View style={styles.topAppBar}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.headerIconBtn}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+        </TouchableOpacity>
+
+        <View style={styles.brandCenter}>
+          <View style={styles.brandLogoCircle}>
+            <Text style={styles.brandRupeeText}>₹</Text>
+            <Ionicons name="leaf" size={10} color="#4ADE80" style={styles.brandLeafIcon} />
+          </View>
+          <View style={styles.brandTextCol}>
+            <Text style={styles.brandTitleText}>DhanaMitra</Text>
+            <Text style={styles.brandSubtitleText}>Reset Password</Text>
+          </View>
+        </View>
+
+        <View style={{ width: 38 }} />
+      </View>
+
+      <KeyboardAvoidingView
         style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} bounces={false}>
-          <View style={styles.topDarkSection}>
-            <View style={styles.headerContainer}>
-              <View style={styles.logoWrapperNeu}>
-                <Ionicons name="refresh" size={32} color="#4D8BFF" />
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* 2. ICON & TITLE HEADER */}
+          <View style={styles.headerBox}>
+            <View style={styles.keyIconCircle}>
+              <Ionicons name="lock-closed" size={28} color="#056B38" />
+            </View>
+            <Text style={styles.titleText}>Reset Password</Text>
+            <Text style={styles.subtitleText}>
+              We sent a 6-digit OTP code to <Text style={styles.maskedEmailText}>{maskedEmail}</Text>
+            </Text>
+          </View>
+
+          {/* ERROR ALERT */}
+          {error ? <ErrorMessage message={error} /> : null}
+
+          {/* SUCCESS BANNER */}
+          {!!successMsg && (
+            <View style={styles.successCard}>
+              <Ionicons name="checkmark-circle" size={40} color="#16A34A" style={{ marginBottom: 12 }} />
+              <Text style={styles.successTitle}>Password Updated!</Text>
+              <Text style={styles.successText}>{successMsg}</Text>
+              <TouchableOpacity
+                style={styles.goToLoginBtn}
+                onPress={handleGoToLogin}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.goToLoginBtnText}>Go to Login</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* 3. INPUT FORM CARD */}
+          {!successMsg && (
+            <View style={styles.formCard}>
+              {/* OTP Input */}
+              <Text style={styles.fieldLabel}>6-Digit OTP *</Text>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  focusedField === 'otp' && styles.inputWrapperFocused,
+                ]}
+              >
+                <Ionicons
+                  name="shield-outline"
+                  size={20}
+                  color={focusedField === 'otp' ? '#056B38' : '#94A3B8'}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={[
+                    styles.input,
+                    styles.otpInput,
+                    { outlineStyle: 'none' } as any,
+                  ]}
+                  placeholder="123456"
+                  placeholderTextColor="#94A3B8"
+                  value={otp}
+                  onChangeText={(text) => {
+                    setOtp(text);
+                    if (error) setError('');
+                  }}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  onFocus={() => setFocusedField('otp')}
+                  onBlur={() => setFocusedField(null)}
+                />
               </View>
-              <Text style={styles.titleNeu}>Reset Password</Text>
-              <Text style={styles.subtitleNeu}>OTP sent to: {maskedEmail}</Text>
+
+              {/* New Password */}
+              <Text style={styles.fieldLabel}>New Password *</Text>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  focusedField === 'newPassword' && styles.inputWrapperFocused,
+                ]}
+              >
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={20}
+                  color={focusedField === 'newPassword' ? '#056B38' : '#94A3B8'}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={[
+                    styles.input,
+                    { outlineStyle: 'none' } as any,
+                  ]}
+                  placeholder="Enter new password"
+                  placeholderTextColor="#94A3B8"
+                  value={newPassword}
+                  onChangeText={(text) => {
+                    setNewPassword(text);
+                    if (error) setError('');
+                  }}
+                  secureTextEntry={!showNewPassword}
+                  onFocus={() => setFocusedField('newPassword')}
+                  onBlur={() => setFocusedField(null)}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowNewPassword(!showNewPassword)}
+                  style={styles.eyeBtn}
+                >
+                  <Ionicons
+                    name={showNewPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={20}
+                    color="#64748B"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Confirm Password */}
+              <Text style={styles.fieldLabel}>Confirm Password *</Text>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  focusedField === 'confirmPassword' && styles.inputWrapperFocused,
+                ]}
+              >
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={20}
+                  color={focusedField === 'confirmPassword' ? '#056B38' : '#94A3B8'}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={[
+                    styles.input,
+                    { outlineStyle: 'none' } as any,
+                  ]}
+                  placeholder="Confirm new password"
+                  placeholderTextColor="#94A3B8"
+                  value={confirmPassword}
+                  onChangeText={(text) => {
+                    setConfirmPassword(text);
+                    if (error) setError('');
+                  }}
+                  secureTextEntry={!showConfirmPassword}
+                  onFocus={() => setFocusedField('confirmPassword')}
+                  onBlur={() => setFocusedField(null)}
+                  onSubmitEditing={handleResetPassword}
+                  returnKeyType="done"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={styles.eyeBtn}
+                >
+                  <Ionicons
+                    name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={20}
+                    color="#64748B"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* RESET BUTTON */}
+              <TouchableOpacity
+                style={[styles.resetButton, loading && styles.resetButtonDisabled]}
+                onPress={handleResetPassword}
+                disabled={loading}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+                <Text style={styles.resetButtonText}>
+                  {loading ? 'Resetting Password...' : 'Reset Password'}
+                </Text>
+              </TouchableOpacity>
+
+              {/* RESEND OTP BUTTON */}
+              <TouchableOpacity
+                style={[
+                  styles.resendBtn,
+                  (cooldown > 0 || resending) && styles.resendBtnDisabled,
+                ]}
+                onPress={handleResendOtp}
+                disabled={cooldown > 0 || resending}
+              >
+                <Text
+                  style={[
+                    styles.resendText,
+                    (cooldown > 0 || resending) && styles.resendTextDisabled,
+                  ]}
+                >
+                  {resending
+                    ? 'Resending...'
+                    : cooldown > 0
+                    ? `Resend OTP in ${cooldown}s`
+                    : 'Resend OTP'}
+                </Text>
+              </TouchableOpacity>
             </View>
-          </View>
+          )}
 
-          <View style={styles.waveConnectorDark}>
-             <View style={styles.waveConnectorLightCutout} />
-          </View>
-
-          <View style={styles.bottomLightSection}>
-            <View style={styles.content}>
-              
-              <ErrorMessage message={error} />
-              {!!successMsg && (
-                <View style={styles.successContainer}>
-                  <Text style={styles.successText}>{successMsg}</Text>
-                  <TouchableOpacity style={styles.goToLoginBtn} onPress={handleGoToLogin}>
-                    <Text style={styles.goToLoginBtnText}>Go to Login</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-
-              {!successMsg && (
-                <View style={styles.cardNeu}>
-                  <AppInput
-                    label="6-digit OTP"
-                    placeholder="Enter 6-digit OTP"
-                    value={otp}
-                    onChangeText={setOtp}
-                    keyboardType="number-pad"
-                    maxLength={6}
-                  />
-
-                  <AppInput
-                    label="New Password"
-                    placeholder="Enter new password"
-                    value={newPassword}
-                    onChangeText={setNewPassword}
-                    secureTextEntry
-                  />
-
-                  <AppInput
-                    label="Confirm Password"
-                    placeholder="Confirm new password"
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                    secureTextEntry
-                  />
-
-                  <TouchableOpacity 
-                    style={styles.actionBtnNeuPrimary} 
-                    onPress={handleResetPassword} 
-                    disabled={loading}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons name="checkmark-circle" size={20} color="#FFF" style={{marginRight: 8}}/>
-                    <Text style={styles.actionBtnTextNeuPrimary}>
-                      {loading ? "Resetting Password..." : "Reset Password"}
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity 
-                    style={[styles.resendBtn, (cooldown > 0 || resending) && styles.resendBtnDisabled]} 
-                    onPress={handleResendOtp}
-                    disabled={cooldown > 0 || resending}
-                  >
-                    <Text style={[styles.resendText, (cooldown > 0 || resending) && styles.resendTextDisabled]}>
-                      {resending ? "Resending..." : cooldown > 0 ? `Resend OTP in ${cooldown}s` : "Resend OTP"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-
-              {!successMsg && (
-                <View style={styles.footerContainer}>
-                  <TouchableOpacity onPress={() => navigation.navigate('Login')} activeOpacity={0.7}>
-                    <Text style={styles.registerTextNeu}>Back to Login</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-
-            </View>
-          </View>
+          {/* 4. BACK TO LOGIN LINK */}
+          {!successMsg && (
+            <TouchableOpacity
+              style={styles.backToLoginBtn}
+              onPress={() => navigation.navigate('Login')}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="arrow-back" size={16} color="#056B38" style={{ marginRight: 6 }} />
+              <Text style={styles.backToLoginText}>Back to Login</Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -221,162 +370,261 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeContainer: {
     flex: 1,
-    backgroundColor: '#E9EFF5',
+    backgroundColor: '#056B38',
+  },
+  topAppBar: {
+    backgroundColor: '#056B38',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  headerIconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  brandCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  brandLogoCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1.5,
+    borderColor: '#4ADE80',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+    position: 'relative',
+  },
+  brandRupeeText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  brandLeafIcon: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+  },
+  brandTextCol: {
+    alignItems: 'flex-start',
+  },
+  brandTitleText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  brandSubtitleText: {
+    color: '#E2E8F0',
+    fontSize: 11,
+    fontWeight: '500',
   },
   keyboardView: {
     flex: 1,
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#E9EFF5',
+    backgroundColor: '#F8FAF8',
   },
-  topDarkSection: {
-    backgroundColor: '#1A1B2F',
-    paddingTop: 60,
-    paddingHorizontal: 24,
+  scrollContent: {
+    padding: 20,
     paddingBottom: 40,
-    borderBottomRightRadius: 80,
-    zIndex: 10,
+  },
+  headerBox: {
     alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 24,
+    paddingHorizontal: 12,
   },
-  waveConnectorDark: {
-    height: 80,
-    backgroundColor: '#1A1B2F',
-    marginTop: -1, 
-    zIndex: 1,
-  },
-  waveConnectorLightCutout: {
-    flex: 1,
-    backgroundColor: '#E9EFF5',
-    borderTopLeftRadius: 80,
-  },
-  bottomLightSection: {
-    backgroundColor: '#E9EFF5',
-    flex: 1,
-    paddingHorizontal: 24,
-    marginTop: -1,
-  },
-  content: {
-    paddingTop: 16,
-    paddingBottom: 60,
-  },
-  headerContainer: {
-    alignItems: 'center',
-    width: '100%',
-  },
-  logoWrapperNeu: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(77, 139, 255, 0.1)',
+  keyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 2,
+    borderColor: '#A7F3D0',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(77, 139, 255, 0.3)',
+    marginBottom: 16,
+    shadowColor: '#056B38',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  titleNeu: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: '#FFF',
+  titleText: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#1E293B',
     marginBottom: 8,
-    letterSpacing: 0.5,
-  },
-  subtitleNeu: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.6)',
     textAlign: 'center',
-    paddingHorizontal: 10,
   },
-  cardNeu: {
-    backgroundColor: '#E9EFF5',
-    borderRadius: 24,
-    padding: 24,
-    marginBottom: 24,
-    shadowColor: '#FFFFFF',
-    shadowOffset: { width: -6, height: -6 },
-    shadowOpacity: 0.9,
-    shadowRadius: 8,
-    elevation: 5,
+  subtitleText: {
+    fontSize: 13,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 19,
+    maxWidth: 320,
+  },
+  maskedEmailText: {
+    color: '#056B38',
+    fontWeight: '700',
+  },
+  formCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 20,
     borderWidth: 1,
-    borderColor: '#FFF',
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 3,
+    marginBottom: 20,
   },
-  actionBtnNeuPrimary: {
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#334155',
+    marginBottom: 8,
+  },
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#4D8BFF',
-    paddingVertical: 18,
-    borderRadius: 16,
-    shadowColor: '#4D8BFF',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
-    marginTop: 16,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 48,
+    marginBottom: 16,
   },
-  actionBtnTextNeuPrimary: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '800',
+  inputWrapperFocused: {
+    borderColor: '#056B38',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#056B38',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  inputIcon: {
+    marginRight: 10,
+  },
+  input: {
+    flex: 1,
+    fontSize: 14,
+    color: '#1E293B',
+    paddingVertical: 0,
+  },
+  otpInput: {
+    letterSpacing: 4,
+    fontWeight: '700',
+  },
+  eyeBtn: {
+    padding: 6,
+  },
+  resetButton: {
+    backgroundColor: '#056B38',
+    borderRadius: 12,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 8,
+    shadowColor: '#056B38',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  resetButtonDisabled: {
+    opacity: 0.65,
+  },
+  resetButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
   },
   resendBtn: {
-    marginTop: 20,
     alignItems: 'center',
+    paddingVertical: 12,
+    marginTop: 8,
   },
   resendBtnDisabled: {
     opacity: 0.6,
   },
   resendText: {
-    color: '#4D8BFF',
-    fontSize: 15,
+    color: '#056B38',
+    fontSize: 13,
     fontWeight: '700',
   },
   resendTextDisabled: {
-    color: '#95A5A6',
+    color: '#94A3B8',
   },
-  footerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 16,
-  },
-  registerTextNeu: {
-    color: '#6B7A93',
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  successContainer: {
-    backgroundColor: '#E9EFF5',
-    borderRadius: 24,
-    padding: 30,
-    marginBottom: 24,
-    shadowColor: '#FFFFFF',
-    shadowOffset: { width: -6, height: -6 },
-    shadowOpacity: 0.9,
-    shadowRadius: 8,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: '#FFF',
+  successCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 24,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  successTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1E293B',
+    marginBottom: 6,
   },
   successText: {
-    fontSize: 18,
-    color: '#2ECC71',
-    fontWeight: '700',
+    fontSize: 13,
+    color: '#64748B',
     textAlign: 'center',
-    marginBottom: 24,
+    lineHeight: 18,
+    marginBottom: 20,
   },
   goToLoginBtn: {
-    backgroundColor: '#4D8BFF',
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 16,
+    backgroundColor: '#056B38',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
   },
   goToLoginBtnText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '800',
-  }
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  backToLoginBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  backToLoginText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#056B38',
+  },
 });

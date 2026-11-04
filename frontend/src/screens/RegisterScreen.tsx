@@ -1,9 +1,17 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../types/navigation';
-import { AppInput } from '../components/AppInput';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { SuccessMessage } from '../components/SuccessMessage';
 import { authService } from '../services/authService';
@@ -21,7 +29,16 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
+  const [agreed, setAgreed] = useState(true);
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const [isNameFocused, setIsNameFocused] = useState(false);
+  const [isEmailFocused, setIsEmailFocused] = useState(false);
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
+  const [isConfirmPasswordFocused, setIsConfirmPasswordFocused] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -29,27 +46,45 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   const handleRegister = async () => {
     setError('');
     setSuccess('');
-    
-    if (!fullName) { setError('Full Name is required'); return; }
-    if (!email || !isValidEmail(email)) { setError('Valid email format is required'); return; }
-    if (!password) { setError('Password is required'); return; }
-    if (!confirmPassword) { setError('Confirm Password is required'); return; }
-    if (password !== confirmPassword) { setError('Password and Confirm Password must match'); return; }
+
+    if (!fullName) {
+      setError('Full Name is required');
+      return;
+    }
+    if (!email || !isValidEmail(email)) {
+      setError('Valid email format is required');
+      return;
+    }
+    if (!password) {
+      setError('Password is required');
+      return;
+    }
+    if (!confirmPassword) {
+      setError('Confirm Password is required');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Password and Confirm Password must match');
+      return;
+    }
+    if (!agreed) {
+      setError('Please agree to the Terms & Conditions');
+      return;
+    }
 
     setLoading(true);
     try {
       await authService.registerUser({
         fullName,
         email,
-        password
+        password,
       });
-      
+
       setSuccess('Registration successful');
-      
+
       setTimeout(() => {
         navigation.navigate('Login');
       }, 2000);
-      
     } catch (err: any) {
       setError(err.message || 'Error occurred during registration');
     } finally {
@@ -59,104 +94,185 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} bounces={false}>
-          {/* TOP DARK SECTION */}
-          <View style={styles.topDarkSection}>
-            <View style={styles.topHeaderBar}>
-              <TouchableOpacity 
-                style={styles.publicDashboardIconBtn} 
-                onPress={() => navigation.navigate('PublicHome')}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="arrow-back" size={20} color="#FFF" />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.publicDashboardIconBtn} 
-                onPress={() => navigation.navigate('PublicHome')}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="log-in-outline" size={22} color="#FFF" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.headerContainer}>
-              <View style={styles.logoWrapperNeu}>
-                <Ionicons name="person-add" size={32} color="#4D8BFF" />
-              </View>
-              <Text style={styles.titleNeu}>Create Account</Text>
-              <Text style={styles.subtitleNeu}>Register to manage your account</Text>
-            </View>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          {/* Top Back Navigation Button */}
+          <View style={styles.topNavRow}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.navigate('Login')}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="arrow-back" size={22} color="#1E293B" />
+            </TouchableOpacity>
           </View>
 
-          {/* THE WAVE CONNECTOR */}
-          <View style={styles.waveConnectorDark}>
-             <View style={styles.waveConnectorLightCutout} />
+          {/* Title Header */}
+          <View style={styles.headerContainer}>
+            <Text style={styles.title}>Create Account</Text>
+            <Text style={styles.subtitle}>Let's get you started</Text>
           </View>
 
-          {/* BOTTOM LIGHT SECTION */}
-          <View style={styles.bottomLightSection}>
-            <View style={styles.content}>
-              
-              <ErrorMessage message={error} />
-              <SuccessMessage message={success} />
+          {/* Feedback Messages */}
+          {error ? <ErrorMessage message={error} /> : null}
+          {success ? <SuccessMessage message={success} /> : null}
 
-              <View style={styles.cardNeu}>
-                <AppInput
-                  label="Full Name"
+          {/* Form Fields */}
+          <View style={styles.formContainer}>
+            {/* Full Name */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.inputLabel}>Full Name</Text>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  isNameFocused && styles.inputWrapperFocused,
+                ]}
+              >
+                <TextInput
+                  style={[styles.input, { outlineStyle: 'none' } as any]}
                   placeholder="Enter your full name"
+                  placeholderTextColor="#94A3B8"
                   value={fullName}
                   onChangeText={setFullName}
+                  onFocus={() => setIsNameFocused(true)}
+                  onBlur={() => setIsNameFocused(false)}
                 />
-                
-                <AppInput
-                  label="Email Address"
-                  placeholder="name@example.com"
+              </View>
+            </View>
+
+            {/* Email Address */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.inputLabel}>Email Address</Text>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  isEmailFocused && styles.inputWrapperFocused,
+                ]}
+              >
+                <TextInput
+                  style={[styles.input, { outlineStyle: 'none' } as any]}
+                  placeholder="Enter your email"
+                  placeholderTextColor="#94A3B8"
                   value={email}
                   onChangeText={(text) => setEmail(text.toLowerCase())}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
+                  onFocus={() => setIsEmailFocused(true)}
+                  onBlur={() => setIsEmailFocused(false)}
                 />
-                
-                <AppInput
-                  label="Password"
-                  placeholder="Enter password"
+              </View>
+            </View>
+
+            {/* Password */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.inputLabel}>Password</Text>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  isPasswordFocused && styles.inputWrapperFocused,
+                ]}
+              >
+                <TextInput
+                  style={[styles.input, { outlineStyle: 'none' } as any]}
+                  placeholder="Create a password"
+                  placeholderTextColor="#94A3B8"
                   value={password}
                   onChangeText={setPassword}
-                  secureTextEntry
+                  secureTextEntry={!showPassword}
+                  onFocus={() => setIsPasswordFocused(true)}
+                  onBlur={() => setIsPasswordFocused(false)}
                 />
-                
-                <AppInput
-                  label="Confirm Password"
-                  placeholder="Confirm password"
+                <TouchableOpacity
+                  style={styles.eyeBtn}
+                  onPress={() => setShowPassword(!showPassword)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={showPassword ? 'eye-outline' : 'eye-off-outline'}
+                    size={20}
+                    color="#94A3B8"
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Confirm Password */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.inputLabel}>Confirm Password</Text>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  isConfirmPasswordFocused && styles.inputWrapperFocused,
+                ]}
+              >
+                <TextInput
+                  style={[styles.input, { outlineStyle: 'none' } as any]}
+                  placeholder="Confirm your password"
+                  placeholderTextColor="#94A3B8"
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
-                  secureTextEntry
+                  secureTextEntry={!showConfirmPassword}
+                  onFocus={() => setIsConfirmPasswordFocused(true)}
+                  onBlur={() => setIsConfirmPasswordFocused(false)}
                 />
-
-                <TouchableOpacity 
-                  style={styles.actionBtnNeuPrimary} 
-                  onPress={handleRegister} 
-                  disabled={loading}
-                  activeOpacity={0.8}
+                <TouchableOpacity
+                  style={styles.eyeBtn}
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  activeOpacity={0.7}
                 >
-                  <Ionicons name="person-add" size={20} color="#FFF" style={{marginRight: 8}}/>
-                  <Text style={styles.actionBtnTextNeuPrimary}>
-                    {loading ? "Creating Account..." : "Register"}
-                  </Text>
+                  <Ionicons
+                    name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'}
+                    size={20}
+                    color="#94A3B8"
+                  />
                 </TouchableOpacity>
               </View>
+            </View>
 
-              <View style={styles.footerContainer}>
-                <Text style={styles.footerTextNeu}>Already have an account? </Text>
-                <TouchableOpacity onPress={() => navigation.navigate('Login')} activeOpacity={0.7}>
-                  <Text style={styles.loginTextNeu}>Login Here</Text>
-                </TouchableOpacity>
+            {/* Terms and Conditions Checkbox */}
+            <TouchableOpacity
+              style={styles.checkboxRow}
+              onPress={() => setAgreed(!agreed)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.checkboxBox, agreed && styles.checkboxBoxChecked]}>
+                {agreed && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
               </View>
+              <Text style={styles.checkboxText}>
+                I agree to the{' '}
+                <Text style={styles.termsHighlight}>Terms & Conditions</Text>
+              </Text>
+            </TouchableOpacity>
+
+            {/* Sign Up Button */}
+            <TouchableOpacity
+              style={[styles.signUpBtn, loading && styles.signUpBtnDisabled]}
+              onPress={handleRegister}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.signUpBtnText}>
+                {loading ? 'Creating Account...' : 'Sign Up'}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Footer */}
+            <View style={styles.footerRow}>
+              <Text style={styles.footerText}>Already have an account? </Text>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Login')}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.signInLink}>Sign In</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
@@ -168,132 +284,159 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E9EFF5',
+    backgroundColor: '#FFFFFF',
   },
   keyboardView: {
     flex: 1,
   },
-  scrollView: {
-    flex: 1,
-    backgroundColor: '#E9EFF5',
-  },
-  topDarkSection: {
-    backgroundColor: '#1A1B2F',
-    paddingTop: 48,
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
     paddingHorizontal: 24,
-    paddingBottom: 40,
-    borderBottomRightRadius: 80,
-    zIndex: 10,
-    alignItems: 'center',
+    paddingTop: 16,
+    paddingBottom: 36,
+    maxWidth: 420,
+    width: '100%',
+    alignSelf: 'center',
   },
-  topHeaderBar: {
+  topNavRow: {
     width: '100%',
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    justifyContent: 'flex-start',
     marginBottom: 16,
   },
-  publicDashboardIconBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(59, 130, 246, 0.25)',
+  backButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.5)',
-  },
-  waveConnectorDark: {
-    height: 80,
-    backgroundColor: '#1A1B2F',
-    marginTop: -1, 
-    zIndex: 1,
-  },
-  waveConnectorLightCutout: {
-    flex: 1,
-    backgroundColor: '#E9EFF5',
-    borderTopLeftRadius: 80,
-  },
-  bottomLightSection: {
-    backgroundColor: '#E9EFF5',
-    flex: 1,
-    paddingHorizontal: 24,
-    marginTop: -1,
-  },
-  content: {
-    paddingTop: 16,
-    paddingBottom: 60,
   },
   headerContainer: {
-    alignItems: 'center',
+    marginBottom: 24,
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#1E293B',
+    letterSpacing: 0.2,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    marginTop: 6,
+    fontWeight: '500',
+  },
+  formContainer: {
     width: '100%',
   },
-  logoWrapperNeu: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(77, 139, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(77, 139, 255, 0.3)',
+  fieldGroup: {
+    marginBottom: 16,
   },
-  titleNeu: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: '#FFF',
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1E293B',
     marginBottom: 8,
-    letterSpacing: 0.5,
   },
-  subtitleNeu: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.6)',
-  },
-  cardNeu: {
-    backgroundColor: '#E9EFF5',
-    borderRadius: 24,
-    padding: 24,
-    marginBottom: 24,
-    shadowColor: '#FFFFFF',
-    shadowOffset: { width: -6, height: -6 },
-    shadowOpacity: 0.9,
-    shadowRadius: 8,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: '#FFF',
-  },
-  actionBtnNeuPrimary: {
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#4D8BFF',
-    paddingVertical: 18,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.2,
+    borderColor: '#E2E8F0',
     borderRadius: 16,
-    shadowColor: '#4D8BFF',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
-    marginTop: 16,
+    paddingHorizontal: 16,
+    height: 52,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+      },
+    }),
   },
-  actionBtnTextNeuPrimary: {
-    color: '#FFF',
+  inputWrapperFocused: {
+    borderColor: '#056B38',
+    ...Platform.select({
+      web: {
+        boxShadow: '0 0 0 3px rgba(5, 107, 56, 0.12)',
+      },
+    }),
+  },
+  input: {
+    flex: 1,
+    height: '100%',
+    fontSize: 15,
+    color: '#1E293B',
+  },
+  eyeBtn: {
+    padding: 6,
+    marginLeft: 6,
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 14,
+  },
+  checkboxBox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  checkboxBoxChecked: {
+    backgroundColor: '#056B38',
+    borderColor: '#056B38',
+  },
+  checkboxText: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  termsHighlight: {
+    color: '#056B38',
+    fontWeight: '700',
+  },
+  signUpBtn: {
+    backgroundColor: '#056B38',
+    borderRadius: 16,
+    height: 52,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 8,
+    shadowColor: '#056B38',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  signUpBtnDisabled: {
+    opacity: 0.7,
+  },
+  signUpBtnText: {
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
-  footerContainer: {
+  footerRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 16,
+    alignItems: 'center',
+    marginTop: 24,
   },
-  footerTextNeu: {
-    color: '#6B7A93',
-    fontSize: 15,
+  footerText: {
+    fontSize: 14,
+    color: '#64748B',
   },
-  loginTextNeu: {
-    color: '#4D8BFF',
-    fontSize: 15,
-    fontWeight: '800',
+  signInLink: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#056B38',
   },
 });

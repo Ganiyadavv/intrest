@@ -1,5 +1,14 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Alert, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  RefreshControl,
+  TextInput,
+  Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -9,7 +18,6 @@ import { PersonRecord } from '../types/personRecord';
 import { personRecordService } from '../services/personRecordService';
 import { Loading } from '../components/Loading';
 import { ErrorMessage } from '../components/ErrorMessage';
-import { COLORS } from '../constants/colors';
 import { formatCurrency } from '../utils/currency';
 
 type PersonRecordsScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'PersonRecords'>;
@@ -18,19 +26,38 @@ interface Props {
   navigation: PersonRecordsScreenNavigationProp;
 }
 
+const AVATAR_COLORS = [
+  { bg: '#FEF3C7', text: '#B45309' }, // Warm amber
+  { bg: '#DBEAFE', text: '#1D4ED8' }, // Soft blue
+  { bg: '#DCFCE7', text: '#15803D' }, // Soft green
+  { bg: '#FCE7F3', text: '#BE185D' }, // Soft pink
+  { bg: '#EDE9FE', text: '#6D28D9' }, // Soft purple
+  { bg: '#CCFBF1', text: '#0F766E' }, // Soft teal
+];
+
+const getAvatarColor = (name: string) => {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % AVATAR_COLORS.length;
+  return AVATAR_COLORS[index];
+};
+
 export const PersonRecordsScreen: React.FC<Props> = ({ navigation }) => {
   const [records, setRecords] = useState<PersonRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'PENDING' | 'ACCEPTED' | 'COMPLETED'>('PENDING');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'ACCEPTED' | 'COMPLETED'>('ALL');
+  const [showFilterPills, setShowFilterPills] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const fetchRecords = async () => {
     try {
       setError('');
       const data = await personRecordService.getPersonRecords();
-      setRecords(data);
+      setRecords(Array.isArray(data) ? data : []);
     } catch (err: any) {
       setError('Failed to fetch person records.');
     } finally {
@@ -50,294 +77,472 @@ export const PersonRecordsScreen: React.FC<Props> = ({ navigation }) => {
     fetchRecords();
   };
 
-  const handleComplete = (id: string) => {
-    Alert.alert('Complete Record', 'Are you sure you want to mark this record as COMPLETED?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Complete',
-        onPress: async () => {
-          try {
-            await personRecordService.completePersonRecord(id);
-            fetchRecords();
-          } catch (err: any) {
-            Alert.alert('Error', err.response?.data?.message || 'Failed to complete record');
-          }
-        }
-      }
-    ]);
-  };
-
-  const handleDelete = (id: string) => {
-    Alert.alert('Delete Record', 'Are you sure you want to delete this person record?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await personRecordService.deletePersonRecord(id);
-            Alert.alert('Success', 'Person record deleted successfully');
-            fetchRecords();
-          } catch (err: any) {
-            Alert.alert('Error', 'Failed to delete record');
-          }
-        }
-      }
-    ]);
-  };
-
   const renderStatusBadge = (status: string) => {
-    let color = '#95A5A6';
-    if (status === 'PENDING') color = '#F39C12';
-    if (status === 'ACCEPTED') color = '#3498DB';
-    if (status === 'REJECTED') color = '#E74C3C';
-    if (status === 'COMPLETED') color = '#2ECC71';
+    let label = 'Pending';
+    let bg = '#FEF3C7';
+    let color = '#D97706';
+
+    if (status === 'ACCEPTED') {
+      label = 'Active';
+      bg = '#DCFCE7';
+      color = '#16A34A';
+    } else if (status === 'COMPLETED') {
+      label = 'Completed';
+      bg = '#DCFCE7';
+      color = '#15803D';
+    } else if (status === 'REJECTED') {
+      label = 'Rejected';
+      bg = '#FEE2E2';
+      color = '#DC2626';
+    }
 
     return (
-      <View style={[styles.badge, { backgroundColor: color }]}>
-        <Text style={styles.badgeText}>{status}</Text>
+      <View style={[styles.statusBadge, { backgroundColor: bg }]}>
+        <Text style={[styles.statusBadgeText, { color }]}>{label}</Text>
       </View>
     );
   };
 
-  const renderItem = ({ item }: { item: PersonRecord }) => (
-    <TouchableOpacity
-      style={styles.card}
-      activeOpacity={0.7}
-      onPress={() => navigation.navigate('PersonDetails', { id: item.id || item._id || '' })}
-    >
-      <View style={styles.cardHeader}>
-        <Text style={styles.name}>{item.name}</Text>
-        {renderStatusBadge(item.status)}
-      </View>
-      <View style={styles.cardBody}>
-        <View style={styles.row}>
-          <Ionicons name="call" size={16} color="#7F8C8D" />
-          <Text style={styles.infoText}>{item.phoneNumber}</Text>
-        </View>
-        <Text style={styles.amountText}>Amount: {formatCurrency(item.amount)}</Text>
-        <Text style={styles.interestText}>Interest: {item.interestRate}%</Text>
-        <Text style={styles.dateText}>Given Date: {new Date(item.givenDate).toLocaleDateString('en-GB').replace(/\//g, '-')}</Text>
-        {item.targetUserId && (
-          <Text style={styles.userIdText}>User ID: {item.targetUserId}</Text>
-        )}
-      </View>
+  const filteredRecords = records.filter((r) => {
+    const matchesStatus = statusFilter === 'ALL' || r.status === statusFilter;
+    const matchesSearch =
+      (r.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (r.phoneNumber || '').includes(searchQuery);
+    return matchesStatus && matchesSearch;
+  });
 
-    </TouchableOpacity>
-  );
+  const renderItem = ({ item }: { item: PersonRecord }) => {
+    const rawName = (item.name || 'Borrower').trim();
+    const parts = rawName.split(' ');
+    const initials =
+      parts.length > 1
+        ? `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+        : rawName.slice(0, 2).toUpperCase();
+    const avatarColor = getAvatarColor(rawName);
+
+    const rateText =
+      item.interestRate && Number(item.interestRate) > 0
+        ? `${item.interestRate}% / month`
+        : '0% (No Interest)';
+
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.7}
+        onPress={() => navigation.navigate('PersonDetails', { id: item.id || item._id || '' })}
+      >
+        {/* Left Section: Avatar + Name + Interest Rate */}
+        <View style={styles.cardLeft}>
+          <View style={[styles.avatarCircle, { backgroundColor: avatarColor.bg }]}>
+            <Text style={[styles.avatarText, { color: avatarColor.text }]}>{initials}</Text>
+          </View>
+          <View style={styles.cardInfo}>
+            <Text style={styles.nameText} numberOfLines={1}>
+              {item.name}
+            </Text>
+            <Text style={styles.rateText} numberOfLines={1}>
+              {rateText}
+            </Text>
+          </View>
+        </View>
+
+        {/* Right Section: Amount + Status Pill */}
+        <View style={styles.cardRight}>
+          <Text style={styles.amountText} numberOfLines={1}>
+            {formatCurrency(item.amount)}
+          </Text>
+          {renderStatusBadge(item.status)}
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* HEADER */}
-      <View style={styles.topDarkSection}>
-        <View style={styles.customHeader}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#FFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Borrower Records</Text>
-          <View style={{ width: 40 }} />
-        </View>
+    <SafeAreaView style={styles.safeContainer} edges={['top', 'left', 'right']}>
+      {/* 1. TOP HEADER BAR */}
+      <View style={styles.topHeader}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="chevron-back" size={24} color="#1E293B" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Borrowers</Text>
+        <View style={styles.headerSpacer} />
       </View>
 
-      {/* WAVE */}
-      <View style={styles.waveConnectorDark}>
-        <View style={styles.waveConnectorLightCutout} />
-      </View>
+      {/* 2. MAIN CONTENT AREA */}
+      <View style={styles.contentContainer}>
+        {/* Search & Filter Row */}
+        <View style={styles.searchRow}>
+          <View style={styles.searchBar}>
+            <Ionicons name="search-outline" size={18} color="#94A3B8" style={styles.searchIcon} />
+            <TextInput
+              style={[styles.searchInput, { outlineStyle: 'none' } as any]}
+              placeholder="Search borrowers..."
+              placeholderTextColor="#94A3B8"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setSearchQuery('')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close-circle" size={18} color="#94A3B8" />
+              </TouchableOpacity>
+            )}
+          </View>
 
-      <View style={styles.bottomLightSection}>
-        {/* SEARCH BAR */}
-        <View style={styles.searchContainerNeu}>
-          <Ionicons name="search" size={20} color="#95A5A6" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search by name..."
-            placeholderTextColor="#95A5A6"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color="#95A5A6" />
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              (showFilterPills || statusFilter !== 'ALL') && styles.filterButtonActive,
+            ]}
+            onPress={() => setShowFilterPills(!showFilterPills)}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="funnel-outline"
+              size={18}
+              color={showFilterPills || statusFilter !== 'ALL' ? '#056B38' : '#64748B'}
+            />
+          </TouchableOpacity>
         </View>
 
-        {/* TABS */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'PENDING' && styles.activeTab]}
-            onPress={() => setActiveTab('PENDING')}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.tabText, activeTab === 'PENDING' && styles.activeTabText]}>Pending</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'ACCEPTED' && styles.activeTab]}
-            onPress={() => setActiveTab('ACCEPTED')}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.tabText, activeTab === 'ACCEPTED' && styles.activeTabText]}>Accepted</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'COMPLETED' && styles.activeTab]}
-            onPress={() => setActiveTab('COMPLETED')}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.tabText, activeTab === 'COMPLETED' && styles.activeTabText]}>Completed</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Status Filter Pills (Toggleable) */}
+        {showFilterPills && (
+          <View style={styles.filterPillsRow}>
+            {(['ALL', 'PENDING', 'ACCEPTED', 'COMPLETED'] as const).map((status) => {
+              const label =
+                status === 'ALL'
+                  ? 'All'
+                  : status === 'PENDING'
+                  ? 'Pending'
+                  : status === 'ACCEPTED'
+                  ? 'Active'
+                  : 'Completed';
+              const isActive = statusFilter === status;
+              return (
+                <TouchableOpacity
+                  key={status}
+                  style={[styles.filterPill, isActive && styles.filterPillActive]}
+                  onPress={() => setStatusFilter(status)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.filterPillText, isActive && styles.filterPillTextActive]}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
+        {/* Error message */}
+        {error ? <ErrorMessage message={error} /> : null}
+
+        {/* 3. BORROWERS LIST */}
         {loading ? (
           <Loading />
         ) : (
-          <>
-            {error ? <ErrorMessage message={error} /> : null}
-            <FlatList
-              data={records.filter(r => {
-                const matchesTab = r.status === activeTab;
-                const matchesSearch = r.name.toLowerCase().includes(searchQuery.toLowerCase());
-                return matchesTab && matchesSearch;
-              })}
-              keyExtractor={(item) => item.id || item._id || String(Math.random())}
-              renderItem={renderItem}
-              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-              contentContainerStyle={styles.listContainer}
-              ListEmptyComponent={
-                !loading ? (
-                  <View style={styles.emptyContainer}>
-                    <View style={styles.emptyIconContainerNeu}>
-                      <Ionicons name="folder-open-outline" size={48} color="#95A5A6" />
-                    </View>
-                    <Text style={styles.emptyText}>No records found</Text>
-                    <Text style={styles.emptySubText}>Tap the + button to add one.</Text>
+          <FlatList
+            data={filteredRecords}
+            keyExtractor={(item) => item.id || item._id || String(Math.random())}
+            renderItem={renderItem}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              !loading ? (
+                <View style={styles.emptyContainer}>
+                  <View style={styles.emptyIconCircle}>
+                    <Ionicons name="people-outline" size={40} color="#94A3B8" />
                   </View>
-                ) : null
-              }
-            />
-          </>
+                  <Text style={styles.emptyTitle}>No borrowers found</Text>
+                  <Text style={styles.emptySubtitle}>
+                    {searchQuery.length > 0 || statusFilter !== 'ALL'
+                      ? 'Try clearing your search or status filter.'
+                      : 'Tap "+ Add Borrower" below to create your first borrower record.'}
+                  </Text>
+                </View>
+              ) : null
+            }
+          />
         )}
       </View>
 
-      {/* Floating Action Button */}
-      <TouchableOpacity
-        style={styles.fab}
-        activeOpacity={0.8}
-        onPress={() => navigation.navigate('AddPerson')}
-      >
-        <Ionicons name="add" size={32} color="#FFF" />
-      </TouchableOpacity>
+      {/* 4. PINNED BOTTOM ACTION BUTTON */}
+      <View style={styles.bottomBar}>
+        <TouchableOpacity
+          style={styles.addBorrowerBtn}
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate('AddPerson')}
+        >
+          <Ionicons name="add" size={20} color="#FFFFFF" style={{ marginRight: 6 }} />
+          <Text style={styles.addBorrowerBtnText}>Add Borrower</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#E9EFF5' },
-  topDarkSection: {
-    backgroundColor: '#1A1B2F',
-    paddingTop: 80,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    borderBottomRightRadius: 80,
-    zIndex: 10,
-  },
-  waveConnectorDark: {
-    height: 80,
-    backgroundColor: '#1A1B2F',
-    marginTop: -1,
-    zIndex: 1,
-  },
-  waveConnectorLightCutout: {
+  safeContainer: {
     flex: 1,
-    backgroundColor: '#E9EFF5',
-    borderTopLeftRadius: 80,
+    backgroundColor: '#FFFFFF',
   },
-  bottomLightSection: {
-    backgroundColor: '#E9EFF5',
-    flex: 1,
-    paddingHorizontal: 16,
-    marginTop: -1,
-  },
-  customHeader: {
+  topHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 40,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.05)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
-  addButton: { padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 20 },
-  headerTitle: { color: '#FFF', fontSize: 18, fontWeight: 'bold' },
-  searchContainerNeu: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#E9EFF5', borderRadius: 16, paddingHorizontal: 16, marginBottom: 20, height: 50, shadowColor: '#FFFFFF', shadowOffset: { width: -4, height: -4 }, shadowOpacity: 0.9, shadowRadius: 6, elevation: 4, borderWidth: 1, borderColor: '#FFF' },
-  searchIcon: { marginRight: 12 },
-  searchInput: { flex: 1, fontSize: 16, color: '#2C3E50', fontWeight: '600' },
-  listContainer: { paddingBottom: 40, paddingTop: 10 },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1E293B',
+    letterSpacing: 0.2,
+  },
+  headerSpacer: {
+    width: 40,
+  },
+  contentContainer: {
+    flex: 1,
+    backgroundColor: '#F8FAF8',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 14,
+  },
+  searchBar: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 12,
+    height: 46,
+    ...Platform.select({
+      web: { boxShadow: '0 1px 2px rgba(0,0,0,0.03)' },
+    }),
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#1E293B',
+    fontWeight: '500',
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+        borderWidth: 0,
+      } as any,
+    }),
+  },
+  filterButton: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Platform.select({
+      web: { boxShadow: '0 1px 2px rgba(0,0,0,0.03)' },
+    }),
+  },
+  filterButtonActive: {
+    borderColor: '#056B38',
+    backgroundColor: '#F0FDF4',
+  },
+  filterPillsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 14,
+  },
+  filterPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  filterPillActive: {
+    backgroundColor: '#056B38',
+    borderColor: '#056B38',
+  },
+  filterPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  filterPillTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  listContent: {
+    paddingBottom: 20,
+  },
   card: {
-    backgroundColor: '#E9EFF5',
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 24,
-    shadowColor: '#FFFFFF',
-    shadowOffset: { width: -6, height: -6 },
-    shadowOpacity: 0.9,
-    shadowRadius: 8,
-    elevation: 5,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#FFF',
-  },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  name: { fontSize: 18, fontWeight: 'bold', color: '#2C3E50' },
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  badgeText: { color: '#FFF', fontSize: 12, fontWeight: 'bold' },
-  cardBody: { marginBottom: 16 },
-  row: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  infoText: { marginLeft: 8, fontSize: 15, color: '#7F8C8D', fontWeight: '600' },
-  amountText: { fontSize: 24, color: '#2C3E50', fontWeight: '900', marginTop: 12, marginBottom: 4 },
-  interestText: { fontSize: 14, color: '#3498DB', marginBottom: 4, fontWeight: '700' },
-  dateText: { fontSize: 14, color: '#7F8C8D', marginBottom: 4, fontWeight: '500' },
-  userIdText: { fontSize: 13, color: '#3498DB', marginTop: 8, fontWeight: '600' },
-  actions: { flexDirection: 'row', justifyContent: 'flex-start', borderTopWidth: 1, borderTopColor: '#ECF0F1', paddingTop: 12 },
-  actionButton: { marginRight: 16, paddingVertical: 4, paddingHorizontal: 12, backgroundColor: '#F8F9FA', borderRadius: 8 },
-  actionText: { fontSize: 14, fontWeight: 'bold', color: '#3498DB' },
-  completeButton: {
-    marginTop: 12,
-    backgroundColor: '#2ECC71',
-    paddingVertical: 10,
-    borderRadius: 8,
+    borderColor: '#E2E8F0',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 1,
+      },
+      web: {
+        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+      },
+    }),
   },
-  completeButtonText: { color: '#FFF', fontWeight: 'bold' },
-  emptyContainer: { alignItems: 'center', marginTop: 80 },
-  emptyIconContainerNeu: { width: 96, height: 96, borderRadius: 48, backgroundColor: '#E9EFF5', justifyContent: 'center', alignItems: 'center', marginBottom: 24, shadowColor: '#FFFFFF', shadowOffset: { width: -6, height: -6 }, shadowOpacity: 0.9, shadowRadius: 8, elevation: 5, borderWidth: 1, borderColor: '#FFF' },
-  emptyText: { fontSize: 18, color: '#2C3E50', fontWeight: '800' },
-  emptySubText: { fontSize: 15, color: '#95A5A6', marginTop: 8, fontWeight: '500' },
-  fab: {
-    position: 'absolute',
-    bottom: 30,
-    right: 20,
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#1A1B2F',
+  cardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 12,
+  },
+  avatarCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#1A1B2F',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 8,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.1)',
+    marginRight: 12,
   },
-  tabContainer: { flexDirection: 'row', backgroundColor: '#E9EFF5', borderRadius: 16, padding: 6, marginBottom: 20, shadowColor: '#FFFFFF', shadowOffset: { width: -4, height: -4 }, shadowOpacity: 0.9, shadowRadius: 6, elevation: 4, borderWidth: 1, borderColor: '#FFF' },
-  tab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 12 },
-  activeTab: { backgroundColor: '#4A90E2', shadowColor: '#4A90E2', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 },
-  tabText: { color: '#7F8C8D', fontSize: 15, fontWeight: '700' },
-  activeTabText: { color: '#FFF', fontWeight: '800' }
+  avatarText: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  cardInfo: {
+    flex: 1,
+  },
+  nameText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 2,
+  },
+  rateText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  cardRight: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  amountText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#1E293B',
+    marginBottom: 4,
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  statusBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 24,
+  },
+  emptyIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1E293B',
+    marginBottom: 6,
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  bottomBar: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: Platform.OS === 'ios' ? 16 : 14,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  addBorrowerBtn: {
+    backgroundColor: '#056B38',
+    borderRadius: 16,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#056B38',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 4,
+      },
+      web: {
+        boxShadow: '0 4px 12px rgba(5, 107, 56, 0.25)',
+      },
+    }),
+  },
+  addBorrowerBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
 });

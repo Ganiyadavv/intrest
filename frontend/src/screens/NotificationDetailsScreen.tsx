@@ -1,13 +1,20 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  Alert,
+  Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { MainStackParamList } from '../types/navigation';
-import { Notification } from '../types/notification';
-import { PersonRecord } from '../types/personRecord';
 import { notificationService } from '../services/notificationService';
 import { personRecordService } from '../services/personRecordService';
 import { lenderRecordService } from '../services/lenderRecordService';
@@ -67,8 +74,8 @@ export const NotificationDetailsScreen: React.FC<Props> = ({ navigation, route }
   const handleReject = (recordId: string) => {
     Alert.alert('Reject Request', 'Are you sure you want to reject this request?', [
       { text: 'Cancel', style: 'cancel' },
-      { 
-        text: 'Reject', 
+      {
+        text: 'Reject',
         style: 'destructive',
         onPress: async () => {
           setProcessing(true);
@@ -84,99 +91,169 @@ export const NotificationDetailsScreen: React.FC<Props> = ({ navigation, route }
             Alert.alert('Error', err.response?.data?.message || 'Failed to reject request');
             setProcessing(false);
           }
-        }
-      }
+        },
+      },
     ]);
   };
 
-  if (loading) return <SafeAreaView style={styles.container}><Loading /></SafeAreaView>;
-  if (error || !record) return <SafeAreaView style={styles.container}><ErrorMessage message={error || "Record details not available"} /></SafeAreaView>;
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeContainer} edges={['top', 'left', 'right']}>
+        <View style={styles.topAppBar}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerIconBtn}>
+            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.appBarTitle}>Notification Details</Text>
+          <View style={{ width: 38 }} />
+        </View>
+        <Loading />
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !record) {
+    return (
+      <SafeAreaView style={styles.safeContainer} edges={['top', 'left', 'right']}>
+        <View style={styles.topAppBar}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerIconBtn}>
+            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.appBarTitle}>Notification Details</Text>
+          <View style={{ width: 38 }} />
+        </View>
+        <ErrorMessage message={error || 'Record details not available'} />
+      </SafeAreaView>
+    );
+  }
+
+  const rawName = (record.name || 'User').trim();
+  const initials = rawName.substring(0, 2).toUpperCase();
+
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case 'ACCEPTED':
+      case 'COMPLETED':
+        return { bg: '#DCFCE7', text: '#15803D', label: status };
+      case 'PENDING':
+        return { bg: '#FEF3C7', text: '#D97706', label: 'PENDING' };
+      case 'REJECTED':
+        return { bg: '#FEE2E2', text: '#DC2626', label: 'REJECTED' };
+      default:
+        return { bg: '#F1F5F9', text: '#64748B', label: status || 'PENDING' };
+    }
+  };
+
+  const statusInfo = getStatusStyle(record.status);
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* HEADER */}
-      <View style={styles.topDarkSection}>
-        <View style={styles.customHeader}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#FFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Record Details</Text>
-          <View style={{ width: 40 }} />
+    <SafeAreaView style={styles.safeContainer} edges={['top', 'left', 'right']}>
+      {/* 1. TOP APP BAR */}
+      <View style={styles.topAppBar}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.headerIconBtn}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+        </TouchableOpacity>
+
+        <Text style={styles.appBarTitle}>Request Details</Text>
+
+        <View style={{ width: 38 }} />
+      </View>
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* 2. USER CARD */}
+        <View style={styles.userCard}>
+          <View style={styles.avatarCircle}>
+            <Text style={styles.avatarText}>{initials}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.userName}>{rawName}</Text>
+            <Text style={styles.userRole}>
+              {record.recordType === 'LENDER_RECORD' ? 'Lender Request' : 'Borrower Request'}
+            </Text>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: statusInfo.bg }]}>
+            <Text style={[styles.statusText, { color: statusInfo.text }]}>{statusInfo.label}</Text>
+          </View>
         </View>
-      </View>
 
-      {/* WAVE */}
-      <View style={styles.waveConnectorDark}>
-         <View style={styles.waveConnectorLightCutout} />
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent} style={styles.bottomLightSection}>
-        <View style={styles.cardNeu}>
+        {/* 3. LOAN DETAILS CARD */}
+        <View style={styles.detailsCard}>
           <View style={styles.cardHeader}>
-            <Text style={styles.name}>{record.name}</Text>
+            <Ionicons name="cash-outline" size={18} color="#056B38" style={{ marginRight: 8 }} />
+            <Text style={styles.cardHeaderTitle}>Loan Information</Text>
           </View>
 
-          <Text style={styles.messageText}>Please check these details.</Text>
-
-          <View style={styles.divider} />
-
-          <View style={styles.detailRow}>
-            <Text style={styles.label}>Amount:</Text>
-            <Text style={[styles.value, { color: '#2ECC71', fontWeight: 'bold' }]}>{formatCurrency(record.amount)}</Text>
+          <View style={styles.row}>
+            <Text style={styles.label}>Amount</Text>
+            <Text style={styles.amountValue}>{formatCurrency(record.amount)}</Text>
           </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.label}>Interest Rate:</Text>
-            <Text style={styles.value}>{record.interestRate}%</Text>
+
+          <View style={styles.row}>
+            <Text style={styles.label}>Interest Rate</Text>
+            <Text style={styles.value}>{record.interestRate}% / month</Text>
           </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.label}>Given Date:</Text>
+
+          <View style={styles.row}>
+            <Text style={styles.label}>Date</Text>
             <Text style={styles.value}>
-              {new Date(record.recordType === 'LENDER_RECORD' ? record.receivedDate : record.givenDate).toLocaleDateString('en-GB')}
-            </Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.label}>Phone:</Text>
-            <Text style={styles.value}>{record.phoneNumber}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.label}>Notes:</Text>
-            <Text style={styles.value}>{record.notes || 'N/A'}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.label}>Status:</Text>
-            <Text style={[styles.value, { 
-              color: record.status === 'COMPLETED' ? '#2ECC71' : 
-                     record.status === 'PENDING' ? '#F39C12' : 
-                     record.status === 'REJECTED' ? '#E74C3C' : '#3498DB'
-            }]}>
-              {record.status}
+              {new Date(
+                record.recordType === 'LENDER_RECORD' ? record.receivedDate : record.givenDate
+              ).toLocaleDateString('en-GB')}
             </Text>
           </View>
 
-          {record.paymentScreenshot && (
-            <>
-              <View style={styles.divider} />
-              <Text style={styles.sectionTitle}>Payment Screenshot</Text>
-              <Image source={{ uri: record.paymentScreenshot }} style={styles.screenshot} />
-            </>
-          )}
+          <View style={styles.row}>
+            <Text style={styles.label}>Phone Number</Text>
+            <Text style={styles.value}>{record.phoneNumber || 'N/A'}</Text>
+          </View>
+
+          {record.notes ? (
+            <View style={[styles.row, { borderBottomWidth: 0 }]}>
+              <Text style={styles.label}>Notes</Text>
+              <Text style={styles.value}>{record.notes}</Text>
+            </View>
+          ) : null}
         </View>
 
+        {/* 4. PAYMENT SCREENSHOT (IF ANY) */}
+        {record.paymentScreenshot && (
+          <View style={styles.detailsCard}>
+            <View style={styles.cardHeader}>
+              <Ionicons name="image-outline" size={18} color="#056B38" style={{ marginRight: 8 }} />
+              <Text style={styles.cardHeaderTitle}>Payment Screenshot</Text>
+            </View>
+            <Image source={{ uri: record.paymentScreenshot }} style={styles.screenshotImage} />
+          </View>
+        )}
+
+        {/* 5. ACTION BUTTONS (IF PENDING) */}
         {record.status === 'PENDING' && (
-          <View style={styles.actionButtons}>
-            <TouchableOpacity 
-              style={[styles.btn, { backgroundColor: '#2ECC71', opacity: processing ? 0.7 : 1 }]} 
+          <View style={styles.actionsContainer}>
+            <TouchableOpacity
+              style={[styles.acceptBtn, processing && { opacity: 0.6 }]}
               onPress={() => handleAccept(record.id)}
               disabled={processing}
+              activeOpacity={0.85}
             >
-              <Text style={styles.btnText}>Accept</Text>
+              <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Text style={styles.acceptBtnText}>Accept Request</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.btn, { backgroundColor: '#E74C3C', opacity: processing ? 0.7 : 1 }]} 
+
+            <TouchableOpacity
+              style={[styles.rejectBtn, processing && { opacity: 0.6 }]}
               onPress={() => handleReject(record.id)}
               disabled={processing}
+              activeOpacity={0.85}
             >
-              <Text style={styles.btnText}>Reject</Text>
+              <Ionicons name="close-circle" size={20} color="#DC2626" style={{ marginRight: 6 }} />
+              <Text style={styles.rejectBtnText}>Reject Request</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -186,26 +263,216 @@ export const NotificationDetailsScreen: React.FC<Props> = ({ navigation, route }
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#E9EFF5' },
-  topDarkSection: { backgroundColor: '#1A1B2F', paddingTop: 80, paddingHorizontal: 24, paddingBottom: 60, borderBottomRightRadius: 80, zIndex: 10 },
-  customHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  backButton: { padding: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20 },
-  headerTitle: { color: '#FFF', fontSize: 20, fontWeight: 'bold' },
-  waveConnectorDark: { height: 80, backgroundColor: '#1A1B2F', marginTop: -1, zIndex: 1 },
-  waveConnectorLightCutout: { flex: 1, backgroundColor: '#E9EFF5', borderTopLeftRadius: 80 },
-  bottomLightSection: { backgroundColor: '#E9EFF5', flex: 1, marginTop: -1 },
-  scrollContent: { padding: 20, paddingBottom: 40 },
-  cardNeu: { backgroundColor: '#E9EFF5', borderRadius: 24, padding: 24, marginBottom: 24, shadowColor: '#FFFFFF', shadowOffset: { width: -6, height: -6 }, shadowOpacity: 0.9, shadowRadius: 8, elevation: 5, borderWidth: 1, borderColor: '#FFF' },
-  cardHeader: { marginBottom: 12 },
-  name: { fontSize: 22, fontWeight: '800', color: '#2C3E50', textAlign: 'center' },
-  messageText: { fontSize: 15, color: '#7F8C8D', textAlign: 'center', marginBottom: 16, fontWeight: '600' },
-  detailRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-  label: { fontSize: 15, color: '#7F8C8D', fontWeight: '600' },
-  value: { fontSize: 15, color: '#2C3E50', fontWeight: '800', maxWidth: '60%', textAlign: 'right' },
-  divider: { height: 1, backgroundColor: '#FFF', marginVertical: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#34495E', marginBottom: 12 },
-  screenshot: { width: '100%', height: 250, borderRadius: 16, resizeMode: 'cover', borderWidth: 2, borderColor: '#FFF' },
-  actionButtons: { marginTop: 24, flexDirection: 'row', justifyContent: 'space-between' },
-  btn: { flex: 1, paddingVertical: 16, borderRadius: 16, alignItems: 'center', marginHorizontal: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 5 },
-  btnText: { color: '#FFF', fontSize: 16, fontWeight: '800' }
+  safeContainer: {
+    flex: 1,
+    backgroundColor: '#056B38',
+  },
+  topAppBar: {
+    backgroundColor: '#056B38',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  headerIconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  appBarTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+  scrollView: {
+    flex: 1,
+    backgroundColor: '#F8FAF8',
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 40,
+    maxWidth: 500,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  userCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 1,
+      },
+      web: {
+        boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+      },
+    }),
+  },
+  avatarCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#DCFCE7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#056B38',
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  userRole: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  detailsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 1,
+      },
+      web: {
+        boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+      },
+    }),
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    paddingBottom: 10,
+  },
+  cardHeaderTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
+  },
+  label: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  value: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  amountValue: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#056B38',
+  },
+  screenshotImage: {
+    width: '100%',
+    height: 220,
+    borderRadius: 12,
+    resizeMode: 'cover',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  actionsContainer: {
+    gap: 10,
+    marginTop: 8,
+  },
+  acceptBtn: {
+    backgroundColor: '#056B38',
+    height: 50,
+    borderRadius: 14,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#056B38',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.2,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 3,
+      },
+      web: {
+        boxShadow: '0 3px 8px rgba(5, 107, 56, 0.2)',
+      },
+    }),
+  },
+  acceptBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  rejectBtn: {
+    backgroundColor: '#FFFFFF',
+    height: 50,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#FCA5A5',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rejectBtnText: {
+    color: '#DC2626',
+    fontSize: 15,
+    fontWeight: '700',
+  },
 });

@@ -1,14 +1,21 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { AuthStackParamList } from '../types/navigation';
-import { AppInput } from '../components/AppInput';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { authService } from '../services/authService';
 import { isValidEmail } from '../utils/validation';
-import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../constants/colors';
 
 type ForgotPasswordScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'ForgotPassword'>;
 
@@ -18,6 +25,7 @@ interface Props {
 
 export const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
   const [email, setEmail] = useState('');
+  const [isEmailFocused, setIsEmailFocused] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -36,9 +44,7 @@ export const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
     setLoading(true);
     try {
       await authService.forgotPassword(email);
-      // Backend generic message returned, proceed to reset password screen
       navigation.navigate('ResetPassword', { email });
-      // Clear email after navigation so if they come back it's empty (optional, but good practice)
       setTimeout(() => setEmail(''), 500);
     } catch (err: any) {
       setError(err.message || 'Something went wrong. Please try again.');
@@ -48,66 +54,115 @@ export const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
+    <SafeAreaView style={styles.safeContainer} edges={['top', 'left', 'right']}>
+      {/* 1. TOP APP BAR */}
+      <View style={styles.topAppBar}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.headerIconBtn}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+        </TouchableOpacity>
+
+        <View style={styles.brandCenter}>
+          <View style={styles.brandLogoCircle}>
+            <Text style={styles.brandRupeeText}>₹</Text>
+            <Ionicons name="leaf" size={10} color="#4ADE80" style={styles.brandLeafIcon} />
+          </View>
+          <View style={styles.brandTextCol}>
+            <Text style={styles.brandTitleText}>DhanaMitra</Text>
+            <Text style={styles.brandSubtitleText}>Account Recovery</Text>
+          </View>
+        </View>
+
+        <View style={{ width: 38 }} />
+      </View>
+
+      <KeyboardAvoidingView
         style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} bounces={false}>
-          {/* TOP DARK SECTION */}
-          <View style={styles.topDarkSection}>
-            <View style={styles.headerContainer}>
-              <View style={styles.logoWrapperNeu}>
-                <Ionicons name="key" size={32} color="#4D8BFF" />
-              </View>
-              <Text style={styles.titleNeu}>Forgot Password</Text>
-              <Text style={styles.subtitleNeu}>Enter your registered email address and we'll send you an OTP to reset your password.</Text>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* 2. ICON & TITLE HEADER */}
+          <View style={styles.headerBox}>
+            <View style={styles.keyIconCircle}>
+              <Ionicons name="key" size={28} color="#056B38" />
             </View>
+            <Text style={styles.titleText}>Forgot Password</Text>
+            <Text style={styles.subtitleText}>
+              Enter your registered email address and we'll send you an OTP to reset your password.
+            </Text>
           </View>
 
-          {/* THE WAVE CONNECTOR */}
-          <View style={styles.waveConnectorDark}>
-             <View style={styles.waveConnectorLightCutout} />
-          </View>
+          {/* ERROR ALERT */}
+          {error ? <ErrorMessage message={error} /> : null}
 
-          {/* BOTTOM LIGHT SECTION */}
-          <View style={styles.bottomLightSection}>
-            <View style={styles.content}>
-              
-              <ErrorMessage message={error} />
-
-              <View style={styles.cardNeu}>
-                <AppInput
-                  label="Email Address"
-                  placeholder="name@example.com"
-                  value={email}
-                  onChangeText={(text) => setEmail(text.toLowerCase())}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-
-                <TouchableOpacity 
-                  style={styles.actionBtnNeuPrimary} 
-                  onPress={handleSendOtp} 
-                  disabled={loading}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name="mail" size={20} color="#FFF" style={{marginRight: 8}}/>
-                  <Text style={styles.actionBtnTextNeuPrimary}>
-                    {loading ? "Sending OTP..." : "Send OTP"}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.footerContainer}>
-                <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-                  <Text style={styles.registerTextNeu}>Back to Login</Text>
-                </TouchableOpacity>
-              </View>
-
+          {/* 3. INPUT FORM CARD */}
+          <View style={styles.formCard}>
+            <Text style={styles.fieldLabel}>Email Address *</Text>
+            <View
+              style={[
+                styles.inputWrapper,
+                isEmailFocused && styles.inputWrapperFocused,
+              ]}
+            >
+              <Ionicons
+                name="mail-outline"
+                size={20}
+                color={isEmailFocused ? '#056B38' : '#94A3B8'}
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={[
+                  styles.input,
+                  { outlineStyle: 'none' } as any,
+                ]}
+                placeholder="name@example.com"
+                placeholderTextColor="#94A3B8"
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text.toLowerCase());
+                  if (error) setError('');
+                }}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                onFocus={() => setIsEmailFocused(true)}
+                onBlur={() => setIsEmailFocused(false)}
+                onSubmitEditing={handleSendOtp}
+                returnKeyType="done"
+              />
             </View>
+
+            {/* SEND OTP BUTTON */}
+            <TouchableOpacity
+              style={[styles.sendButton, loading && styles.sendButtonDisabled]}
+              onPress={handleSendOtp}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="mail" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.sendButtonText}>
+                {loading ? 'Sending OTP...' : 'Send OTP'}
+              </Text>
+            </TouchableOpacity>
           </View>
+
+          {/* 4. BACK TO LOGIN LINK */}
+          <TouchableOpacity
+            style={styles.backToLoginBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={16} color="#056B38" style={{ marginRight: 6 }} />
+            <Text style={styles.backToLoginText}>Back to Login</Text>
+          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -115,115 +170,195 @@ export const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeContainer: {
     flex: 1,
-    backgroundColor: '#E9EFF5',
+    backgroundColor: '#056B38',
+  },
+  topAppBar: {
+    backgroundColor: '#056B38',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  headerIconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  brandCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  brandLogoCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1.5,
+    borderColor: '#4ADE80',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+    position: 'relative',
+  },
+  brandRupeeText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  brandLeafIcon: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+  },
+  brandTextCol: {
+    alignItems: 'flex-start',
+  },
+  brandTitleText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  brandSubtitleText: {
+    color: '#E2E8F0',
+    fontSize: 11,
+    fontWeight: '500',
   },
   keyboardView: {
     flex: 1,
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#E9EFF5',
+    backgroundColor: '#F8FAF8',
   },
-  topDarkSection: {
-    backgroundColor: '#1A1B2F',
-    paddingTop: 60,
-    paddingHorizontal: 24,
+  scrollContent: {
+    padding: 20,
     paddingBottom: 40,
-    borderBottomRightRadius: 80,
-    zIndex: 10,
+  },
+  headerBox: {
     alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 24,
+    paddingHorizontal: 12,
   },
-  waveConnectorDark: {
-    height: 80,
-    backgroundColor: '#1A1B2F',
-    marginTop: -1, 
-    zIndex: 1,
-  },
-  waveConnectorLightCutout: {
-    flex: 1,
-    backgroundColor: '#E9EFF5',
-    borderTopLeftRadius: 80,
-  },
-  bottomLightSection: {
-    backgroundColor: '#E9EFF5',
-    flex: 1,
-    paddingHorizontal: 24,
-    marginTop: -1,
-  },
-  content: {
-    paddingTop: 16,
-    paddingBottom: 60,
-  },
-  headerContainer: {
-    alignItems: 'center',
-    width: '100%',
-  },
-  logoWrapperNeu: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(77, 139, 255, 0.1)',
+  keyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 2,
+    borderColor: '#A7F3D0',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(77, 139, 255, 0.3)',
+    marginBottom: 16,
+    shadowColor: '#056B38',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  titleNeu: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: '#FFF',
+  titleText: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#1E293B',
     marginBottom: 8,
-    letterSpacing: 0.5,
-  },
-  subtitleNeu: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.6)',
     textAlign: 'center',
-    paddingHorizontal: 10,
   },
-  cardNeu: {
-    backgroundColor: '#E9EFF5',
-    borderRadius: 24,
-    padding: 24,
-    marginBottom: 24,
-    shadowColor: '#FFFFFF',
-    shadowOffset: { width: -6, height: -6 },
-    shadowOpacity: 0.9,
-    shadowRadius: 8,
-    elevation: 5,
+  subtitleText: {
+    fontSize: 13,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 19,
+    maxWidth: 320,
+  },
+  formCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 20,
     borderWidth: 1,
-    borderColor: '#FFF',
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 3,
+    marginBottom: 20,
   },
-  actionBtnNeuPrimary: {
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#334155',
+    marginBottom: 8,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 48,
+    marginBottom: 20,
+  },
+  inputWrapperFocused: {
+    borderColor: '#056B38',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#056B38',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  inputIcon: {
+    marginRight: 10,
+  },
+  input: {
+    flex: 1,
+    fontSize: 14,
+    color: '#1E293B',
+    paddingVertical: 0,
+  },
+  sendButton: {
+    backgroundColor: '#056B38',
+    borderRadius: 12,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#056B38',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  sendButtonDisabled: {
+    opacity: 0.65,
+  },
+  sendButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  backToLoginBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4D8BFF',
-    paddingVertical: 18,
-    borderRadius: 16,
-    shadowColor: '#4D8BFF',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
-    marginTop: 16,
+    paddingVertical: 12,
   },
-  actionBtnTextNeuPrimary: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  footerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 16,
-  },
-  registerTextNeu: {
-    color: '#6B7A93',
-    fontSize: 15,
-    fontWeight: '800',
+  backToLoginText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#056B38',
   },
 });

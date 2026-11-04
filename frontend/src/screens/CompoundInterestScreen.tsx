@@ -1,45 +1,38 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableOpacity,
+  TextInput,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { AppInput } from '../components/AppInput';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { calculateCompoundInterest } from '../utils/compoundInterest';
 import { formatCurrency } from '../utils/currency';
-import { getUser } from '../storage/storage';
-import { User } from '../types/user';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RouteProp } from '@react-navigation/native';
-import { MainStackParamList } from '../types/navigation';
 
-type CompoundInterestScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'CompoundInterest'>;
-type CompoundInterestScreenRouteProp = RouteProp<MainStackParamList, 'CompoundInterest'>;
+type CompoundInterestScreenNavigationProp = NativeStackNavigationProp<any, 'CompoundInterest'>;
 
 interface Props {
   navigation: CompoundInterestScreenNavigationProp;
-  route: CompoundInterestScreenRouteProp;
 }
 
 export const CompoundInterestScreen: React.FC<Props> = ({ navigation }) => {
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const loadUser = async () => {
-      const u = await getUser();
-      setUser(u);
-    };
-    loadUser();
-  }, []);
-
   const [principal, setPrincipal] = useState('');
   const [ptr, setPtr] = useState('');
   const [years, setYears] = useState('0');
   const [months, setMonths] = useState('0');
   const [days, setDays] = useState('0');
   const [compoundsPerYear, setCompoundsPerYear] = useState(12);
-  
+
+  const [focusedField, setFocusedField] = useState<string | null>(null);
   const [error, setError] = useState('');
-  
+
   const [result, setResult] = useState<{
     principal: number;
     ptr: number;
@@ -51,6 +44,16 @@ export const CompoundInterestScreen: React.FC<Props> = ({ navigation }) => {
     timeInYears: number;
     compoundsPerYear: number;
   } | null>(null);
+
+  // Helper for numeric duration change
+  const handleDurationChange = (val: string, setter: (v: string) => void) => {
+    const cleaned = val.replace(/[^0-9]/g, '');
+    if (cleaned.length > 1 && cleaned.startsWith('0')) {
+      setter(cleaned.replace(/^0+/, ''));
+    } else {
+      setter(cleaned);
+    }
+  };
 
   const handleCalculate = () => {
     setError('');
@@ -75,19 +78,19 @@ export const CompoundInterestScreen: React.FC<Props> = ({ navigation }) => {
       setError('Negative duration is not allowed');
       return;
     }
-    
+
     if (y === 0 && m === 0 && d === 0) {
       setError('Please enter a valid duration.');
       return;
     }
 
     const compoundResult = calculateCompoundInterest({
-        principal: p,
-        annualRate: r,
-        years: y,
-        months: m,
-        days: d,
-        compoundsPerYear
+      principal: p,
+      annualRate: r,
+      years: y,
+      months: m,
+      days: d,
+      compoundsPerYear,
     });
 
     if (isNaN(compoundResult.totalAmount) || !isFinite(compoundResult.totalAmount)) {
@@ -104,7 +107,7 @@ export const CompoundInterestScreen: React.FC<Props> = ({ navigation }) => {
       totalAmount: compoundResult.totalAmount,
       compoundInterest: compoundResult.compoundInterest,
       timeInYears: compoundResult.timeInYears,
-      compoundsPerYear
+      compoundsPerYear,
     });
   };
 
@@ -119,204 +122,459 @@ export const CompoundInterestScreen: React.FC<Props> = ({ navigation }) => {
     setResult(null);
   };
 
-  const getFrequencyText = (val: number) => {
+  const getFrequencyLabel = (val: number) => {
     switch (val) {
-      case 1: return 'Yearly (1 time per year)';
-      case 2: return 'Half-Yearly (2 times per year)';
-      case 4: return 'Quarterly (4 times per year)';
-      case 12: return 'Monthly (12 times per year)';
-      case 365: return 'Daily (365 times per year)';
-      default: return '';
+      case 1:
+        return 'Yearly';
+      case 2:
+        return 'Half-Yearly';
+      case 4:
+        return 'Quarterly';
+      case 12:
+        return 'Monthly';
+      case 365:
+        return 'Daily';
+      default:
+        return 'Monthly';
     }
   };
 
+  const getFrequencyText = (val: number) => {
+    switch (val) {
+      case 1:
+        return 'Yearly (1 time per year)';
+      case 2:
+        return 'Half-Yearly (2 times per year)';
+      case 4:
+        return 'Quarterly (4 times per year)';
+      case 12:
+        return 'Monthly (12 times per year)';
+      case 365:
+        return 'Daily (365 times per year)';
+      default:
+        return '';
+    }
+  };
+
+  const getTimePeriodString = (y: number, m: number, d: number) => {
+    const parts: string[] = [];
+    if (y > 0) parts.push(`${y} Yr${y > 1 ? 's' : ''}`);
+    if (m > 0) parts.push(`${m} Mo${m > 1 ? 's' : ''}`);
+    if (d > 0) parts.push(`${d} Day${d > 1 ? 's' : ''}`);
+    return parts.length > 0 ? parts.join(' ') : '0 Days';
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
-        style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+    <SafeAreaView style={styles.safeContainer} edges={['top', 'left', 'right']}>
+      {/* 1. TOP APP BAR (DhanaMitra Dark Green Header matching Pic 2) */}
+      <View style={styles.topAppBar}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.headerIconBtn}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+        </TouchableOpacity>
+
+        {/* Brand Center */}
+        <View style={styles.brandCenter}>
+          <View style={styles.brandLogoCircle}>
+            <Text style={styles.brandRupeeText}>₹</Text>
+            <Ionicons name="leaf" size={10} color="#4ADE80" style={styles.brandLeafIcon} />
+          </View>
+          <View style={styles.brandTextCol}>
+            <Text style={styles.brandTitleText}>DhanaMitra</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity onPress={handleReset} style={styles.headerIconBtn} activeOpacity={0.7}>
+          <Ionicons name="reload" size={18} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
-          <View style={styles.mainBackground}>
-            
-            <View style={styles.topDarkSection}>
-              <View style={styles.customHeader}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                  <View style={styles.backButtonInner}>
-                    <Ionicons name="arrow-back" size={20} color="#FFF" />
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          {/* 2. TITLE SECTION WITH GRAPHIC ILLUSTRATION (Matching Pic 2) */}
+          <View style={styles.titleSection}>
+            <View style={styles.titleLeftCol}>
+              <Text style={styles.screenTitle}>Compound Interest</Text>
+              <Text style={styles.screenSubtitle}>
+                Calculate compound interest and growth over time
+              </Text>
+            </View>
+
+            {/* Illustration: Rupee Coin + Growth Chart / Arrow + Coins */}
+            <View style={styles.illustrationWrapper}>
+              <View style={styles.illustrationCircle}>
+                <View style={styles.leafDecor1} />
+                <View style={styles.leafDecor2} />
+
+                {/* Growth Bars & Arrow */}
+                <View style={styles.chartGraphicContainer}>
+                  <View style={[styles.chartBar, { height: 16 }]} />
+                  <View style={[styles.chartBar, { height: 26 }]} />
+                  <View style={[styles.chartBar, { height: 38 }]} />
+                  <Ionicons
+                    name="arrow-up"
+                    size={20}
+                    color="#056B38"
+                    style={styles.chartArrowIcon}
+                  />
+                </View>
+
+                {/* Stack of Coins */}
+                <View style={styles.coinStackBadge}>
+                  <View style={styles.coin1} />
+                  <View style={styles.coin2} />
+                  <View style={styles.coin3} />
+                </View>
+
+                {/* Rupee Coin Badge */}
+                <View style={styles.rupeeCoinBadge}>
+                  <Text style={styles.rupeeCoinText}>₹</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* 3. FORM CARD (Matching Pic 2 layout & preserving all fields) */}
+          <View style={styles.formCard}>
+            <Text style={styles.formSectionHeader}>Enter Details</Text>
+            {error ? <ErrorMessage message={error} /> : null}
+
+            {/* Field: Principal Amount (₹) */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Principal Amount (₹)</Text>
+              <View
+                style={[
+                  styles.inputBox,
+                  focusedField === 'principal' && styles.inputBoxFocused,
+                ]}
+              >
+                <View style={styles.inputPrefixBadge}>
+                  <Ionicons name="calculator" size={16} color="#056B38" />
+                </View>
+                <TextInput
+                  style={[
+                    styles.textInput,
+                    { outlineStyle: 'none' } as any,
+                  ]}
+                  placeholder="e.g., 10000"
+                  placeholderTextColor="#94A3B8"
+                  value={principal}
+                  onChangeText={setPrincipal}
+                  onFocus={() => setFocusedField('principal')}
+                  onBlur={() => setFocusedField(null)}
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+
+            {/* Field: Annual Interest Rate (% p.a.) */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Annual Interest Rate (% p.a.)</Text>
+              <View
+                style={[
+                  styles.inputBox,
+                  focusedField === 'rate' && styles.inputBoxFocused,
+                ]}
+              >
+                <View style={styles.inputPrefixBadge}>
+                  <Ionicons name="time-outline" size={16} color="#056B38" />
+                </View>
+                <TextInput
+                  style={[
+                    styles.textInput,
+                    { outlineStyle: 'none' } as any,
+                  ]}
+                  placeholder="e.g., 10"
+                  placeholderTextColor="#94A3B8"
+                  value={ptr}
+                  onChangeText={setPtr}
+                  onFocus={() => setFocusedField('rate')}
+                  onBlur={() => setFocusedField(null)}
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+
+            {/* Field: Time Period (Years, Months, Days) */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Time Period</Text>
+              <View style={styles.durationInputRow}>
+                {/* Years */}
+                <View style={styles.durationCol}>
+                  <Text style={styles.durationSubLabel}>Years</Text>
+                  <View
+                    style={[
+                      styles.durationBox,
+                      focusedField === 'years' && styles.durationBoxFocused,
+                    ]}
+                  >
+                    <TextInput
+                      style={[
+                        styles.durationTextInput,
+                        { outlineStyle: 'none' } as any,
+                      ]}
+                      placeholder="0"
+                      placeholderTextColor="#94A3B8"
+                      value={years}
+                      onFocus={() => {
+                        setFocusedField('years');
+                        if (years === '0') setYears('');
+                      }}
+                      onBlur={() => {
+                        setFocusedField(null);
+                        if (years === '') setYears('0');
+                      }}
+                      onChangeText={(val) => handleDurationChange(val, setYears)}
+                      keyboardType="number-pad"
+                      selectTextOnFocus
+                    />
                   </View>
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Compound Interest</Text>
-                <View style={{ width: 40 }} />
+                </View>
+
+                {/* Months */}
+                <View style={styles.durationCol}>
+                  <Text style={styles.durationSubLabel}>Months</Text>
+                  <View
+                    style={[
+                      styles.durationBox,
+                      focusedField === 'months' && styles.durationBoxFocused,
+                    ]}
+                  >
+                    <TextInput
+                      style={[
+                        styles.durationTextInput,
+                        { outlineStyle: 'none' } as any,
+                      ]}
+                      placeholder="0"
+                      placeholderTextColor="#94A3B8"
+                      value={months}
+                      onFocus={() => {
+                        setFocusedField('months');
+                        if (months === '0') setMonths('');
+                      }}
+                      onBlur={() => {
+                        setFocusedField(null);
+                        if (months === '') setMonths('0');
+                      }}
+                      onChangeText={(val) => handleDurationChange(val, setMonths)}
+                      keyboardType="number-pad"
+                      selectTextOnFocus
+                    />
+                  </View>
+                </View>
+
+                {/* Days */}
+                <View style={styles.durationCol}>
+                  <Text style={styles.durationSubLabel}>Days</Text>
+                  <View
+                    style={[
+                      styles.durationBox,
+                      focusedField === 'days' && styles.durationBoxFocused,
+                    ]}
+                  >
+                    <TextInput
+                      style={[
+                        styles.durationTextInput,
+                        { outlineStyle: 'none' } as any,
+                      ]}
+                      placeholder="0"
+                      placeholderTextColor="#94A3B8"
+                      value={days}
+                      onFocus={() => {
+                        setFocusedField('days');
+                        if (days === '0') setDays('');
+                      }}
+                      onBlur={() => {
+                        setFocusedField(null);
+                        if (days === '') setDays('0');
+                      }}
+                      onChangeText={(val) => handleDurationChange(val, setDays)}
+                      keyboardType="number-pad"
+                      selectTextOnFocus
+                    />
+                  </View>
+                </View>
               </View>
-              
-              <Text style={styles.pageTitle}>Compound Interest</Text>
-              <Text style={styles.pageSubtitle}>Calculate compounding interest dynamically</Text>
+
+              {/* Duration Preview Pill */}
+              <View style={styles.durationPreviewPill}>
+                <Ionicons name="time-outline" size={14} color="#056B38" />
+                <Text style={styles.durationPreviewText}>
+                  {(parseInt(years, 10) || 0) === 0 &&
+                  (parseInt(months, 10) || 0) === 0 &&
+                  (parseInt(days, 10) || 0) === 0
+                    ? 'Duration: 0 Years, 0 Months, 0 Days'
+                    : `Duration: ${years || 0} Yrs, ${months || 0} Mos, ${days || 0} Days`}
+                </Text>
+              </View>
             </View>
 
-            <View style={styles.waveConnectorDark}>
-               <View style={styles.waveConnectorLightCutout} />
+            {/* Field: Compounding Frequency */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Compounding Frequency</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.frequencyScroll}
+              >
+                {[
+                  { label: 'Daily', value: 365 },
+                  { label: 'Monthly', value: 12 },
+                  { label: 'Quarterly', value: 4 },
+                  { label: 'Half-Yearly', value: 2 },
+                  { label: 'Annually', value: 1 },
+                ].map((freq) => {
+                  const isActive = compoundsPerYear === freq.value;
+                  return (
+                    <TouchableOpacity
+                      key={freq.value}
+                      style={[styles.freqButton, isActive && styles.freqButtonActive]}
+                      onPress={() => setCompoundsPerYear(freq.value)}
+                      activeOpacity={0.8}
+                    >
+                      <Text
+                        style={[
+                          styles.freqButtonText,
+                          isActive && styles.freqButtonTextActive,
+                        ]}
+                      >
+                        {freq.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+              <Text style={styles.frequencyDescText}>
+                {getFrequencyText(compoundsPerYear)}
+              </Text>
             </View>
 
-            <View style={styles.bottomLightSection}>
-              <View style={styles.neuFormContainer}>
-            <ErrorMessage message={error} />
-
-            <AppInput
-              label="Principal Amount (₹)"
-              placeholder="e.g., 10000"
-              value={principal}
-              onChangeText={setPrincipal}
-              keyboardType="numeric"
-            />
-            
-            <AppInput
-              label="Annual Interest Rate (%)"
-              placeholder="e.g., 2"
-              value={ptr}
-              onChangeText={setPtr}
-              keyboardType="numeric"
-            />
-
-            <View style={styles.row}>
-              <View style={styles.col}>
-                <AppInput
-                  label="Years"
-                  placeholder="0"
-                  value={years}
-                  onChangeText={setYears}
-                  keyboardType="numeric"
-                />
-              </View>
-              <View style={styles.col}>
-                <AppInput
-                  label="Months"
-                  placeholder="0"
-                  value={months}
-                  onChangeText={setMonths}
-                  keyboardType="numeric"
-                />
-              </View>
-              <View style={styles.col}>
-                <AppInput
-                  label="Days"
-                  placeholder="0"
-                  value={days}
-                  onChangeText={setDays}
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
-
-            <View style={styles.frequencyContainer}>
-                <Text style={styles.frequencyLabel}>Compounding Frequency</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.frequencyScroll}>
-                    {[
-                        { label: 'Daily', value: 365 },
-                        { label: 'Monthly', value: 12 },
-                        { label: 'Quarterly', value: 4 },
-                        { label: 'Half-Yearly', value: 2 },
-                        { label: 'Yearly', value: 1 },
-                    ].map((freq) => (
-                        <TouchableOpacity
-                            key={freq.value}
-                            style={[styles.freqButton, compoundsPerYear === freq.value && styles.freqButtonActive]}
-                            onPress={() => setCompoundsPerYear(freq.value)}
-                        >
-                            <Text style={[styles.freqButtonText, compoundsPerYear === freq.value && styles.freqButtonTextActive]}>
-                                {freq.label}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
-                <Text style={styles.frequencyDescText}>{getFrequencyText(compoundsPerYear)}</Text>
-            </View>
-
-            <TouchableOpacity style={styles.neuCalculateBtn} onPress={handleCalculate} activeOpacity={0.8}>
-              <View style={styles.neuCalculateBtnInner}>
-                <Ionicons name="calculator" size={20} color="#FFF" style={{ marginRight: 8 }} />
-                <Text style={styles.neuCalculateBtnText}>Calculate</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.neuResetBtnLight} onPress={handleReset} activeOpacity={0.8}>
-              <Text style={styles.neuResetBtnTextLight}>Reset</Text>
+            {/* Calculate Button */}
+            <TouchableOpacity
+              style={styles.calculateBtn}
+              onPress={handleCalculate}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="calculator" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.calculateBtnText}>Calculate Compound Interest</Text>
             </TouchableOpacity>
           </View>
 
+          {/* 4. RESULT CARD (Matching Pic 2 Compound Interest Result) */}
           {result && (
-            <View style={styles.neonResultCard}>
-              <View style={styles.neonCardHeader}>
-                <View style={styles.neonIconWrapper}>
-                  <Ionicons name="analytics" size={20} color="#FF6BE7" />
+            <View style={styles.resultCard}>
+              {/* Header */}
+              <View style={styles.resultHeader}>
+                <View style={styles.resultIconCircle}>
+                  <Ionicons name="trending-up" size={18} color="#056B38" />
                 </View>
-                <Text style={styles.neonCardTitle}>Calculation Result</Text>
-              </View>
-              
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Principal Amount</Text>
-                <Text style={styles.infoValue}>{formatCurrency(result.principal)}</Text>
-              </View>
-              
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Interest Rate</Text>
-                <Text style={styles.infoValue}>{result.ptr}%</Text>
+                <Text style={styles.resultTitle}>Compound Interest Result</Text>
               </View>
 
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Duration</Text>
-                <Text style={styles.infoValue}>
-                  {result.years} Yr {result.months} Mo {result.days} D
-                </Text>
+              {/* 3 Metric Columns (Principal, Total Interest, Total Amount) */}
+              <View style={styles.statsRow}>
+                {/* Col 1: Principal */}
+                <View style={styles.statCol}>
+                  <Text style={styles.statLabel}>Principal</Text>
+                  <Text style={styles.statValueDark}>
+                    {formatCurrency(result.principal)}
+                  </Text>
+                  <View style={styles.statBadge}>
+                    <Ionicons name="person-outline" size={11} color="#056B38" style={{ marginRight: 3 }} />
+                    <Text style={styles.statBadgeText}>Invested</Text>
+                  </View>
+                </View>
+
+                <View style={styles.statDivider} />
+
+                {/* Col 2: Total Interest */}
+                <View style={styles.statCol}>
+                  <Text style={styles.statLabel}>Total Interest</Text>
+                  <Text style={styles.statValueGreen}>
+                    {formatCurrency(result.compoundInterest)}
+                  </Text>
+                  <View style={styles.statBadge}>
+                    <Ionicons name="trending-up" size={11} color="#056B38" style={{ marginRight: 3 }} />
+                    <Text style={styles.statBadgeText}>Earned</Text>
+                  </View>
+                </View>
+
+                <View style={styles.statDivider} />
+
+                {/* Col 3: Total Amount */}
+                <View style={styles.statCol}>
+                  <Text style={styles.statLabel}>Total Amount</Text>
+                  <Text style={styles.statValueDark}>
+                    {formatCurrency(result.totalAmount)}
+                  </Text>
+                  <View style={styles.statBadge}>
+                    <Ionicons name="wallet-outline" size={11} color="#056B38" style={{ marginRight: 3 }} />
+                    <Text style={styles.statBadgeText}>Maturity</Text>
+                  </View>
+                </View>
               </View>
 
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Compounding</Text>
-                <Text style={styles.infoValue}>
-                  {result.compoundsPerYear === 365 ? 'Daily' :
-                   result.compoundsPerYear === 12 ? 'Monthly' :
-                   result.compoundsPerYear === 4 ? 'Quarterly' :
-                   result.compoundsPerYear === 2 ? 'Half-Yearly' : 'Yearly'}
-                </Text>
-              </View>
+              {/* Detail Chips Row (Rate, Duration, Frequency) matching Pic 2 */}
+              <View style={styles.detailChipsRow}>
+                {/* Chip 1: Interest Rate */}
+                <View style={styles.detailChip}>
+                  <View style={styles.detailChipIconBox}>
+                    <Ionicons name="information-circle-outline" size={14} color="#056B38" />
+                  </View>
+                  <View>
+                    <Text style={styles.detailChipLabel}>Interest Rate</Text>
+                    <Text style={styles.detailChipValue}>{result.ptr}% p.a.</Text>
+                  </View>
+                </View>
 
-              <View style={styles.neonDivider} />
+                {/* Chip 2: Time Period */}
+                <View style={styles.detailChip}>
+                  <View style={styles.detailChipIconBox}>
+                    <Ionicons name="time-outline" size={14} color="#056B38" />
+                  </View>
+                  <View>
+                    <Text style={styles.detailChipLabel}>Time Period</Text>
+                    <Text style={styles.detailChipValue}>
+                      {getTimePeriodString(result.years, result.months, result.days)}
+                    </Text>
+                  </View>
+                </View>
 
-
-
-              <View style={styles.highlightRow}>
-                <Text style={styles.highlightLabel}>Compound Interest</Text>
-                <Text style={styles.highlightValue}>{formatCurrency(result.compoundInterest || 0)}</Text>
-              </View>
-
-              <View style={styles.highlightRow}>
-                <Text style={styles.highlightLabel}>Total Amount</Text>
-                <Text style={styles.highlightValueTotal}>{formatCurrency(result.totalAmount)}</Text>
+                {/* Chip 3: Frequency */}
+                <View style={styles.detailChip}>
+                  <View style={styles.detailChipIconBox}>
+                    <Ionicons name="analytics-outline" size={14} color="#056B38" />
+                  </View>
+                  <View>
+                    <Text style={styles.detailChipLabel}>Frequency</Text>
+                    <Text style={styles.detailChipValue}>
+                      {getFrequencyLabel(result.compoundsPerYear)}
+                    </Text>
+                  </View>
+                </View>
               </View>
             </View>
           )}
 
-          {/* Educational Section */}
-          <View style={styles.educationalCard}>
-             <Text style={styles.eduTitle}>What is Compound Interest?</Text>
-             <Text style={styles.eduText}>
-                Compound interest is interest calculated on the original principal and on the interest accumulated during previous periods.
-             </Text>
-             <View style={styles.eduFormulaBox}>
-                <Text style={styles.eduFormula}>A = P(1 + r/n)^(nt)</Text>
-             </View>
-             <Text style={styles.eduFormulaDesc}>
-                P = Principal{'\n'}
-                r = Annual interest rate{'\n'}
-                n = Compounding frequency{'\n'}
-                t = Time in years
-             </Text>
+          {/* 5. FORMULA NOTE CARD (Matching Pic 2 bottom green pill card) */}
+          <View style={styles.formulaCard}>
+            <Ionicons name="information-circle" size={18} color="#056B38" style={{ marginRight: 8 }} />
+            <Text style={styles.formulaText}>
+              Compound Interest Formula:{' '}
+              <Text style={styles.formulaMath}>A = P (1 + R/n)^nt</Text>
+            </Text>
           </View>
-
-            </View>
-          </View>
-
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -324,299 +582,557 @@ export const CompoundInterestScreen: React.FC<Props> = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeContainer: {
     flex: 1,
-    backgroundColor: '#E9EFF5',
+    backgroundColor: '#056B38',
   },
-  keyboardView: {
+  topAppBar: {
+    backgroundColor: '#056B38',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  headerIconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  brandCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  brandLogoCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1.5,
+    borderColor: '#4ADE80',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+    position: 'relative',
+  },
+  brandRupeeText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  brandLeafIcon: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+  },
+  brandTextCol: {
+    justifyContent: 'center',
+  },
+  brandTitleText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  brandSubtitleText: {
+    color: '#4ADE80',
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: -2,
+  },
+  scrollView: {
     flex: 1,
+    backgroundColor: '#F8FAF8',
   },
   scrollContent: {
-    flexGrow: 1,
-  },
-  mainBackground: {
-    flex: 1,
-    backgroundColor: '#E9EFF5',
-  },
-  topDarkSection: {
-    backgroundColor: '#1A1B2F',
-    paddingTop: 40,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    borderBottomRightRadius: 80,
-    zIndex: 10,
-  },
-  waveConnectorDark: {
-    height: 80,
-    backgroundColor: '#1A1B2F',
-    marginTop: -1, 
-    zIndex: 1,
-  },
-  waveConnectorLightCutout: {
-    flex: 1,
-    backgroundColor: '#E9EFF5',
-    borderTopLeftRadius: 80,
-  },
-  bottomLightSection: {
-    backgroundColor: '#E9EFF5',
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    marginTop: -1,
-  },
-  customHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  backButtonInner: {
+    paddingBottom: 36,
+    maxWidth: 500,
     width: '100%',
-    height: '100%',
+    alignSelf: 'center',
+  },
+  titleSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 14,
+  },
+  titleLeftCol: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  screenTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.3,
+  },
+  screenSubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+    lineHeight: 18,
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  illustrationWrapper: {
+    width: 90,
+    height: 80,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitle: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  pageTitle: {
-    color: '#FFF',
-    fontSize: 32,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-    marginBottom: 8,
-  },
-  pageSubtitle: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 14,
-    marginBottom: 24,
-    lineHeight: 20,
-  },
-  neuFormContainer: {
-    backgroundColor: '#E9EFF5',
-    padding: 24,
-    borderRadius: 24,
-    marginTop: 10,
-    shadowColor: '#FFFFFF',
-    shadowOffset: { width: -6, height: -6 },
-    shadowOpacity: 0.9,
-    shadowRadius: 8,
-    elevation: 5,
-    marginBottom: 30,
+  illustrationCircle: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: '#ECFDF5',
     borderWidth: 1,
-    borderColor: '#FFF',
+    borderColor: '#D1FAE5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
   },
-  row: {
+  leafDecor1: {
+    position: 'absolute',
+    top: 6,
+    right: 12,
+    width: 14,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#86EFAC',
+    transform: [{ rotate: '25deg' }],
+    opacity: 0.7,
+  },
+  leafDecor2: {
+    position: 'absolute',
+    top: 14,
+    right: 4,
+    width: 12,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#4ADE80',
+    transform: [{ rotate: '50deg' }],
+    opacity: 0.8,
+  },
+  chartGraphicContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginHorizontal: -6,
+    alignItems: 'flex-end',
+    gap: 4,
+    position: 'absolute',
+    bottom: 16,
+    right: 12,
   },
-  col: {
-    flex: 1,
-    paddingHorizontal: 6,
+  chartBar: {
+    width: 6,
+    backgroundColor: '#056B38',
+    borderRadius: 2,
   },
-  frequencyContainer: {
-    marginTop: 10,
+  chartArrowIcon: {
+    position: 'absolute',
+    top: -12,
+    right: -4,
+  },
+  coinStackBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    width: 24,
+    height: 18,
+    justifyContent: 'center',
+  },
+  coin1: {
+    width: 22,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10B981',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    marginBottom: -2,
+  },
+  coin2: {
+    width: 22,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#056B38',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    marginBottom: -2,
+  },
+  coin3: {
+    width: 22,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#044C27',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  rupeeCoinBadge: {
+    position: 'absolute',
+    top: 6,
+    left: 10,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#056B38',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  rupeeCoinText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  formCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    marginHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+      },
+    }),
+  },
+  formSectionHeader: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 14,
+  },
+  fieldGroup: {
     marginBottom: 16,
   },
-  frequencyLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#7F8C8D',
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1E293B',
     marginBottom: 8,
-    marginLeft: 4,
   },
-  frequencyScroll: {
-    paddingVertical: 4,
+  inputBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    height: 52,
+    paddingHorizontal: 12,
   },
-  freqButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#F8F9FA',
-    borderWidth: 1,
-    borderColor: '#ECF0F1',
-    borderRadius: 20,
+  inputBoxFocused: {
+    borderColor: '#056B38',
+  },
+  inputPrefixBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#DCFCE7',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 10,
   },
+  textInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#1E293B',
+    fontWeight: '500',
+    height: '100%',
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+        borderWidth: 0,
+      } as any,
+    }),
+  },
+  durationInputRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 6,
+  },
+  durationCol: {
+    flex: 1,
+  },
+  durationSubLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748B',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  durationBox: {
+    height: 50,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+  },
+  durationBoxFocused: {
+    borderColor: '#056B38',
+    backgroundColor: '#FFFFFF',
+  },
+  durationTextInput: {
+    width: '100%',
+    height: '100%',
+    textAlign: 'center',
+    fontWeight: '800',
+    fontSize: 18,
+    color: '#1E293B',
+    padding: 0,
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+        borderWidth: 0,
+      } as any,
+    }),
+  },
+  durationPreviewPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginTop: 8,
+    alignSelf: 'center',
+  },
+  durationPreviewText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  frequencyScroll: {
+    paddingVertical: 2,
+    gap: 8,
+  },
+  freqButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+  },
   freqButtonActive: {
-    backgroundColor: '#4D8BFF',
-    borderColor: '#4D8BFF',
+    backgroundColor: '#056B38',
+    borderColor: '#056B38',
   },
   freqButtonText: {
-    color: '#7F8C8D',
-    fontWeight: '600',
+    color: '#64748B',
+    fontWeight: '700',
     fontSize: 13,
   },
   freqButtonTextActive: {
-    color: '#FFF',
+    color: '#FFFFFF',
   },
   frequencyDescText: {
-    marginTop: 8,
-    fontSize: 13,
-    color: '#95A5A6',
-    marginLeft: 4,
+    marginTop: 6,
+    fontSize: 12,
+    color: '#056B38',
+    fontWeight: '600',
+    marginLeft: 2,
   },
-  neuCalculateBtn: {
-    marginTop: 16,
-    backgroundColor: '#4A90E2',
+  calculateBtn: {
+    backgroundColor: '#056B38',
     borderRadius: 16,
-    shadowColor: '#4A90E2',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  neuCalculateBtnInner: {
+    height: 52,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 16,
+    marginTop: 6,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#056B38',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+      web: {
+        boxShadow: '0 4px 12px rgba(5, 107, 56, 0.25)',
+      },
+    }),
   },
-  neuCalculateBtnText: {
-    color: '#FFF',
+  calculateBtnText: {
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '800',
-  },
-  neuResetBtnLight: {
-    marginTop: 16,
-    paddingVertical: 14,
-    borderRadius: 16,
-    alignItems: 'center',
-    backgroundColor: '#E9EFF5',
-    borderWidth: 1,
-    borderColor: '#D1D9E6',
-  },
-  neuResetBtnTextLight: {
-    color: '#7F8C8D',
-    fontSize: 15,
     fontWeight: '700',
   },
-  neonResultCard: {
-    backgroundColor: 'rgba(38, 40, 69, 0.95)',
-    borderRadius: 24,
-    padding: 24,
+  resultCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 18,
+    marginHorizontal: 16,
+    marginTop: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.4,
-    shadowRadius: 30,
-    elevation: 10,
-    marginBottom: 20,
+    borderColor: '#E2E8F0',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+      },
+    }),
   },
-  neonCardHeader: {
+  resultHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 16,
+  },
+  resultIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#DCFCE7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  resultTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#056B38',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  statCol: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  statLabel: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  statValueDark: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 4,
+  },
+  statValueGreen: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#056B38',
+    marginBottom: 4,
+  },
+  statBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statBadgeText: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  statDivider: {
+    width: 1,
+    height: 38,
+    backgroundColor: '#F1F5F9',
+  },
+  detailChipsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 14,
+  },
+  detailChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 8,
+    gap: 6,
+  },
+  detailChipIconBox: {
+    width: 26,
+    height: 26,
+    borderRadius: 6,
+    backgroundColor: '#DCFCE7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  detailChipLabel: {
+    fontSize: 9,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  detailChipValue: {
+    fontSize: 11,
+    color: '#0F172A',
+    fontWeight: '700',
+    marginTop: 1,
+  },
+  formulaCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    marginTop: 14,
     marginBottom: 24,
   },
-  neonIconWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: 'rgba(77, 139, 255, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
+  formulaText: {
+    fontSize: 12,
+    color: '#166534',
+    fontWeight: '600',
   },
-  neonCardTitle: {
-    fontSize: 20,
+  formulaMath: {
     fontWeight: '800',
-    color: '#FFF',
+    color: '#056B38',
   },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-  },
-  infoLabel: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.6)',
-  },
-  infoValue: {
-    fontSize: 15,
-    color: '#FFF',
-    fontWeight: '700',
-  },
-  neonDivider: {
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    marginVertical: 16,
-  },
-  highlightRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-  },
-  highlightLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFF',
-  },
-  highlightValue: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#FF6BE7',
-  },
-  highlightValueTotal: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#50E3C2',
-  },
-  educationalCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 20,
-    padding: 24,
-    marginBottom: 40,
-    borderWidth: 1,
-    borderColor: '#ECF0F1',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  eduTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#2C3E50',
-    marginBottom: 12,
-  },
-  eduText: {
-    fontSize: 14,
-    color: '#7F8C8D',
-    lineHeight: 20,
-    marginTop: 4,
-  },
-  eduFormulaBox: {
-    backgroundColor: '#F8F9FA',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginVertical: 12,
-    borderWidth: 1,
-    borderColor: '#E0E6ED',
-  },
-  eduFormula: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#2980B9',
-    letterSpacing: 1,
-  },
-  eduFormulaDesc: {
-    fontSize: 13,
-    color: '#95A5A6',
-    lineHeight: 20,
-  }
 });

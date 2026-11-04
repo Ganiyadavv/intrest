@@ -13,6 +13,7 @@ export type AuthStackParamList = {
     months?: string;
     days?: string;
     givenDate?: string;
+    personName?: string;
   } | undefined;
   CompoundInterest: undefined;
   RateCalculator: undefined;
@@ -38,9 +39,11 @@ export type MainStackParamList = {
     months?: string;
     days?: string;
     givenDate?: string;
+    personName?: string;
   } | undefined;
   CompoundInterest: undefined;
   RateCalculator: undefined;
+  EMICalculator: undefined;
   SearchUser: undefined;
   PersonRecords: undefined;
   AddPerson: undefined;

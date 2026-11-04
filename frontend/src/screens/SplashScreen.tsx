@@ -1,12 +1,21 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Text, Animated, Easing, Dimensions } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Text,
+  Animated,
+  Easing,
+  Dimensions,
+  Image,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../types/navigation';
 import { authService } from '../services/authService';
 import { getUser } from '../storage/storage';
-import { Ionicons } from '@expo/vector-icons';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 type SplashScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Splash'>;
 
@@ -16,11 +25,11 @@ interface Props {
 
 export const SplashScreen: React.FC<Props> = ({ navigation }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const scaleAnim = useRef(new Animated.Value(0.92)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    // Initial entrance animation
+    // Entrance animation
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -29,24 +38,24 @@ export const SplashScreen: React.FC<Props> = ({ navigation }) => {
       }),
       Animated.spring(scaleAnim, {
         toValue: 1,
-        tension: 10,
-        friction: 4,
+        tension: 12,
+        friction: 5,
         useNativeDriver: true,
       }),
     ]).start();
 
-    // Subtle pulse animation for the logo
+    // Subtle gentle breathing animation for illustration
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
-          toValue: 1.05,
-          duration: 1000,
+          toValue: 1.03,
+          duration: 1200,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
-          duration: 1000,
+          duration: 1200,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
@@ -71,104 +80,202 @@ export const SplashScreen: React.FC<Props> = ({ navigation }) => {
       }
     };
 
-    // Extended timeout to allow user to appreciate the splash screen
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       checkToken();
     }, 2500);
+
+    return () => clearTimeout(timer);
   }, [navigation, fadeAnim, scaleAnim, pulseAnim]);
 
   return (
-    <View style={styles.container}>
-      {/* Background Decorative Elements */}
-      <View style={styles.circleTopRight} />
-      <View style={styles.circleBottomLeft} />
-      
-      <Animated.View style={[styles.contentContainer, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
-        <Animated.View style={[styles.iconContainer, { transform: [{ scale: pulseAnim }] }]}>
-          <Ionicons name="wallet" size={54} color="#FFF" />
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+      {/* Background Soft Mint Ambient Elements */}
+      <View style={styles.ambientTopCircle} />
+      <View style={styles.ambientBottomCircle} />
+
+      <Animated.View
+        style={[
+          styles.contentWrapper,
+          { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
+        ]}
+      >
+        {/* 1. TOP BRAND HEADER */}
+        <View style={styles.brandRow}>
+          <View style={styles.brandLogoCircle}>
+            <Text style={styles.brandRupeeText}>₹</Text>
+            <Ionicons name="leaf" size={13} color="#056B38" style={styles.brandLeafIcon} />
+          </View>
+          <View style={styles.brandTextCol}>
+            <Text style={styles.brandTitleText}>DhanaMitra</Text>
+          </View>
+        </View>
+
+        {/* 2. CENTER HERO ILLUSTRATION */}
+        <Animated.View
+          style={[
+            styles.illustrationContainer,
+            { transform: [{ scale: pulseAnim }] },
+          ]}
+        >
+          <Image
+            source={require('../../assets/splash-hero-illustration.png')}
+            style={styles.heroImage}
+            resizeMode="contain"
+          />
         </Animated.View>
-        <Text style={styles.title}>DhanaMitra</Text>
-        <Text style={styles.subtitle}>Smart Interest Calculator{'\n'}Lender & Borrower Records</Text>
+
+        {/* 3. HEADLINE & DESCRIPTION */}
+        <View style={styles.textContainer}>
+          <Text style={styles.headlineText}>Track. Manage. Grow.</Text>
+          <Text style={styles.headlineText}>Your Money, Smartly.</Text>
+
+          <Text style={styles.descriptionText}>
+            DhanaMitra helps you manage loans,{'\n'}track repayments and grow your{'\n'}financial clarity.
+          </Text>
+        </View>
+
+        {/* 4. FOOTER PROGRESS INDICATOR */}
+        <View style={styles.footerContainer}>
+          <View style={styles.progressBarTrack}>
+            <Animated.View
+              style={[
+                styles.progressBarFill,
+                { opacity: pulseAnim },
+              ]}
+            />
+          </View>
+        </View>
       </Animated.View>
-      
-      <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
-        <Text style={styles.footerText}>SECURE • RELIABLE • FAST</Text>
-      </Animated.View>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A', // Dark modern slate background
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: '#F8FAF8',
     overflow: 'hidden',
   },
-  circleTopRight: {
+  ambientTopCircle: {
     position: 'absolute',
-    top: -height * 0.15,
-    right: -width * 0.25,
-    width: width * 0.9,
-    height: width * 0.9,
-    borderRadius: width * 0.45,
-    backgroundColor: '#3B82F6', // Blue tint
-    opacity: 0.12,
+    top: -80,
+    right: -80,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: '#DCFCE7',
+    opacity: 0.45,
   },
-  circleBottomLeft: {
+  ambientBottomCircle: {
     position: 'absolute',
-    bottom: -height * 0.15,
-    left: -width * 0.2,
-    width: width * 0.8,
-    height: width * 0.8,
-    borderRadius: width * 0.4,
-    backgroundColor: '#10B981', // Emerald tint
-    opacity: 0.12,
+    bottom: -100,
+    left: -100,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: '#ECFDF5',
+    opacity: 0.6,
   },
-  contentContainer: {
+  contentWrapper: {
+    flex: 1,
+    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 28,
+    paddingBottom: 24,
     zIndex: 10,
   },
-  iconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(59, 130, 246, 0.25)',
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  brandLogoCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: '#056B38',
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 28,
-    borderWidth: 2,
-    borderColor: 'rgba(59, 130, 246, 0.6)',
-    shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.8,
-    shadowRadius: 20,
-    elevation: 12,
+    marginRight: 12,
+    position: 'relative',
+    shadowColor: '#056B38',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
+    elevation: 3,
   },
-  title: {
-    fontSize: 46,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    marginBottom: 10,
-    letterSpacing: 1,
+  brandRupeeText: {
+    color: '#056B38',
+    fontSize: 24,
+    fontWeight: '800',
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#94A3B8',
-    fontWeight: '500',
-    letterSpacing: 0.8,
-    textAlign: 'center',
-    paddingHorizontal: 20,
-  },
-  footer: {
+  brandLeafIcon: {
     position: 'absolute',
-    bottom: 40,
+    bottom: 4,
+    right: 4,
   },
-  footerText: {
-    color: '#64748B',
-    fontSize: 12,
+  brandTextCol: {
+    alignItems: 'flex-start',
+  },
+  brandTitleText: {
+    color: '#056B38',
+    fontSize: 26,
+    fontWeight: '900',
+    letterSpacing: 0.4,
+  },
+  brandTeluguText: {
+    color: '#056B38',
+    fontSize: 18,
     fontWeight: '700',
-    letterSpacing: 3,
+    marginTop: -2,
+  },
+  illustrationContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    marginVertical: 12,
+  },
+  heroImage: {
+    width: Math.min(width * 0.78, 280),
+    height: Math.min(width * 0.78 * (175 / 288), 180),
+  },
+  textContainer: {
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    marginBottom: 16,
+  },
+  headlineText: {
+    fontSize: 23,
+    fontWeight: '900',
+    color: '#1E293B',
+    textAlign: 'center',
+    lineHeight: 29,
+  },
+  descriptionText: {
+    fontSize: 13.5,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginTop: 12,
+  },
+  footerContainer: {
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  progressBarTrack: {
+    width: 100,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#E2E8F0',
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#056B38',
+    borderRadius: 2,
   },
 });

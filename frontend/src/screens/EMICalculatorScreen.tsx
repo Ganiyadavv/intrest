@@ -1,16 +1,22 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableOpacity,
+  TextInput,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { AppInput } from '../components/AppInput';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { formatCurrency } from '../utils/currency';
 import { calculateEMI, EMIResult } from '../utils/emiCalculator';
-import { COLORS } from '../constants/colors';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AuthStackParamList } from '../types/navigation';
 
-type EMICalculatorScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'EMICalculator'>;
+type EMICalculatorScreenNavigationProp = NativeStackNavigationProp<any, 'EMICalculator'>;
 
 interface Props {
   navigation: EMICalculatorScreenNavigationProp;
@@ -22,6 +28,7 @@ export const EMICalculatorScreen: React.FC<Props> = ({ navigation }) => {
   const [years, setYears] = useState('1');
   const [months, setMonths] = useState('0');
 
+  const [focusedField, setFocusedField] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [result, setResult] = useState<EMIResult | null>(null);
 
@@ -89,8 +96,7 @@ export const EMICalculatorScreen: React.FC<Props> = ({ navigation }) => {
     setResult(null);
   };
 
-  // Helper for tenure display string
-  const getTenureString = (res: EMIResult) => {
+  const getTenureBreakdown = (res: EMIResult) => {
     const parts: string[] = [];
     if (res.years > 0) {
       parts.push(`${res.years} Yr${res.years > 1 ? 's' : ''}`);
@@ -98,160 +104,331 @@ export const EMICalculatorScreen: React.FC<Props> = ({ navigation }) => {
     if (res.additionalMonths > 0) {
       parts.push(`${res.additionalMonths} Mo${res.additionalMonths > 1 ? 's' : ''}`);
     }
-    const breakdown = parts.length > 0 ? ` (${parts.join(' ')})` : '';
-    return `${res.totalMonths} Month${res.totalMonths > 1 ? 's' : ''}${breakdown}`;
+    return parts.length > 0 ? parts.join(' ') : '0 Mos';
   };
 
-  const principalRatio = result && result.totalRepayment > 0 
-    ? Math.round((result.principal / result.totalRepayment) * 100) 
-    : 100;
+  const principalRatio =
+    result && result.totalRepayment > 0
+      ? Math.round((result.principal / result.totalRepayment) * 100)
+      : 100;
   const interestRatio = 100 - principalRatio;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeContainer} edges={['top', 'left', 'right']}>
+      {/* 1. TOP APP BAR (DhanaMitra Dark Green Header) */}
+      <View style={styles.topAppBar}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.headerIconBtn}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+        </TouchableOpacity>
+
+        {/* Brand Center */}
+        <View style={styles.brandCenter}>
+          <View style={styles.brandLogoCircle}>
+            <Text style={styles.brandRupeeText}>₹</Text>
+            <Ionicons name="leaf" size={10} color="#4ADE80" style={styles.brandLeafIcon} />
+          </View>
+          <View style={styles.brandTextCol}>
+            <Text style={styles.brandTitleText}>DhanaMitra</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity onPress={handleReset} style={styles.headerIconBtn} activeOpacity={0.7}>
+          <Ionicons name="reload" size={18} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+
       <KeyboardAvoidingView
-        style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
-          <View style={styles.mainBackground}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          {/* 2. TITLE SECTION WITH ILLUSTRATION */}
+          <View style={styles.titleSection}>
+            <View style={styles.titleLeftCol}>
+              <Text style={styles.screenTitle}>EMI Calculator</Text>
+              <Text style={styles.screenSubtitle}>
+                Calculate monthly loan EMI, interest, and total repayment
+              </Text>
+            </View>
 
-            {/* TOP DARK SECTION */}
-            <View style={styles.topDarkSection}>
-              <View style={styles.customHeader}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                  <View style={styles.backButtonInner}>
-                    <Ionicons name="arrow-back" size={20} color="#FFF" />
-                  </View>
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>EMI Calculator</Text>
-                <View style={{ width: 40 }} />
+            {/* Illustration matching Pic 1 (Clipboard + Calculator + Rupee) */}
+            <View style={styles.illustrationWrapper}>
+              {/* Soft decorative background circle */}
+              <View style={styles.illustrationCircle}>
+                {/* Decorative leaves */}
+                <View style={styles.leaf1} />
+                <View style={styles.leaf2} />
+
+                {/* Clipboard */}
+                <View style={styles.clipboardCard}>
+                  <View style={styles.clipboardClip} />
+                  <View style={styles.clipboardLine1} />
+                  <View style={styles.clipboardLine2} />
+                  <View style={styles.clipboardLine3} />
+                </View>
+
+                {/* Rupee coin badge */}
+                <View style={styles.rupeeCoinBadge}>
+                  <Text style={styles.rupeeCoinText}>₹</Text>
+                </View>
+
+                {/* Calculator icon badge */}
+                <View style={styles.calcBadge}>
+                  <Ionicons name="calculator" size={22} color="#056B38" />
+                </View>
               </View>
-
-              <Text style={styles.pageTitle}>EMI Calculator</Text>
-              <Text style={styles.pageSubtitle}>Calculate monthly loan EMI, interest, and total repayment</Text>
             </View>
+          </View>
 
-            {/* THE WAVE CONNECTOR */}
-            <View style={styles.waveConnectorDark}>
-              <View style={styles.waveConnectorLightCutout} />
-            </View>
+          {/* 3. INPUT FORM CARD */}
+          <View style={styles.formCard}>
+            {error ? <ErrorMessage message={error} /> : null}
 
-            {/* BOTTOM LIGHT SECTION */}
-            <View style={styles.bottomLightSection}>
-              <View style={styles.neuFormContainer}>
-                <ErrorMessage message={error} />
-
-                <AppInput
-                  label="Loan Amount (₹)"
+            {/* Field: Loan Amount (₹) */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Loan Amount (₹)</Text>
+              <View
+                style={[
+                  styles.inputBox,
+                  focusedField === 'amount' && styles.inputBoxFocused,
+                ]}
+              >
+                <View style={styles.inputPrefixBadge}>
+                  <Text style={styles.inputPrefixBadgeText}>₹</Text>
+                </View>
+                <TextInput
+                  style={[
+                    styles.textInput,
+                    { outlineStyle: 'none' } as any,
+                  ]}
                   placeholder="e.g., 500000"
+                  placeholderTextColor="#94A3B8"
                   value={loanAmount}
                   onChangeText={setLoanAmount}
+                  onFocus={() => setFocusedField('amount')}
+                  onBlur={() => setFocusedField(null)}
                   keyboardType="numeric"
                 />
+              </View>
+            </View>
 
-                <AppInput
-                  label="Annual Interest Rate (% p.a.)"
+            {/* Field: Annual Interest Rate (% p.a.) */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Annual Interest Rate (% p.a.)</Text>
+              <View
+                style={[
+                  styles.inputBox,
+                  focusedField === 'rate' && styles.inputBoxFocused,
+                ]}
+              >
+                <View style={styles.inputPrefixBadge}>
+                  <Text style={styles.inputPrefixBadgeText}>%</Text>
+                </View>
+                <TextInput
+                  style={[
+                    styles.textInput,
+                    { outlineStyle: 'none' } as any,
+                  ]}
                   placeholder="e.g., 8.5"
+                  placeholderTextColor="#94A3B8"
                   value={interestRate}
                   onChangeText={setInterestRate}
+                  onFocus={() => setFocusedField('rate')}
+                  onBlur={() => setFocusedField(null)}
                   keyboardType="numeric"
                 />
+              </View>
+            </View>
 
-                <View style={styles.row}>
-                  <View style={styles.col}>
-                    <Text style={styles.fieldLabel} numberOfLines={1} adjustsFontSizeToFit>
-                      Loan Tenure (Years)
-                    </Text>
-                    <AppInput
-                      placeholder="1"
-                      value={years}
-                      onChangeText={setYears}
-                      keyboardType="numeric"
-                    />
-                  </View>
-                  <View style={styles.col}>
-                    <Text style={styles.fieldLabel} numberOfLines={1} adjustsFontSizeToFit>
-                      Additional Months
-                    </Text>
-                    <AppInput
-                      placeholder="0"
-                      value={months}
-                      onChangeText={setMonths}
-                      keyboardType="numeric"
-                    />
-                  </View>
+            {/* Tenure Row (2 columns: Years & Additional Months) */}
+            <View style={styles.tenureRow}>
+              <View style={styles.tenureCol}>
+                <Text style={styles.fieldLabel}>Loan Tenure (Years)</Text>
+                <View
+                  style={[
+                    styles.inputBox,
+                    focusedField === 'years' && styles.inputBoxFocused,
+                  ]}
+                >
+                  <Ionicons
+                    name="calendar-outline"
+                    size={18}
+                    color="#056B38"
+                    style={styles.inputIconLeft}
+                  />
+                  <TextInput
+                    style={[
+                      styles.textInput,
+                      styles.tenureInput,
+                      { outlineStyle: 'none' } as any,
+                    ]}
+                    placeholder="1"
+                    placeholderTextColor="#94A3B8"
+                    value={years}
+                    onChangeText={setYears}
+                    onFocus={() => setFocusedField('years')}
+                    onBlur={() => setFocusedField(null)}
+                    keyboardType="numeric"
+                  />
                 </View>
-
-                <TouchableOpacity style={styles.neuCalculateBtn} onPress={handleCalculate} activeOpacity={0.8}>
-                  <View style={styles.neuCalculateBtnInner}>
-                    <Ionicons name="calculator" size={20} color="#FFF" style={{ marginRight: 8 }} />
-                    <Text style={styles.neuCalculateBtnText}>Calculate EMI</Text>
-                  </View>
-                </TouchableOpacity>
               </View>
 
-              {result && (
-                <View style={styles.neonResultCard}>
-                  <View style={styles.neonCardHeader}>
-                    <View style={styles.neonIconWrapper}>
-                      <Ionicons name="calendar" size={20} color="#4D8BFF" />
-                    </View>
-                    <Text style={styles.neonCardTitle}>EMI Calculation Result</Text>
-                  </View>
-
-                  {/* Monthly EMI Hero Box */}
-                  <View style={styles.emiHighlightBox}>
-                    <Text style={styles.emiHighlightLabel}>Monthly EMI</Text>
-                    <Text style={styles.emiHighlightAmount}>{formatCurrency(result.monthlyEMI)}</Text>
-                    <Text style={styles.emiHighlightSub}>Per month for {result.totalMonths} instalments</Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Principal Amount</Text>
-                    <Text style={styles.infoValue}>{formatCurrency(result.principal)}</Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Total Interest Payable</Text>
-                    <Text style={styles.interestValue}>{formatCurrency(result.totalInterest)}</Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Total Repayment Amount</Text>
-                    <Text style={styles.repaymentValue}>{formatCurrency(result.totalRepayment)}</Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Loan Tenure</Text>
-                    <Text style={styles.infoValue}>{getTenureString(result)}</Text>
-                  </View>
-
-                  {/* Ratio bar */}
-                  <View style={styles.barContainer}>
-                    <View style={styles.barLabelsRow}>
-                      <View style={styles.barLegendItem}>
-                        <View style={[styles.legendDot, { backgroundColor: '#4A90E2' }]} />
-                        <Text style={styles.legendText}>Principal: {principalRatio}%</Text>
-                      </View>
-                      <View style={styles.barLegendItem}>
-                        <View style={[styles.legendDot, { backgroundColor: '#FF6BE7' }]} />
-                        <Text style={styles.legendText}>Interest: {interestRatio}%</Text>
-                      </View>
-                    </View>
-                    <View style={styles.progressBarTrack}>
-                      <View style={[styles.progressBarPrincipal, { width: `${principalRatio}%` }]} />
-                      <View style={[styles.progressBarInterest, { width: `${interestRatio}%` }]} />
-                    </View>
-                  </View>
-
-                  <TouchableOpacity style={styles.neuResetBtn} onPress={handleReset} activeOpacity={0.8}>
-                    <Text style={styles.neuResetBtnText}>Clear</Text>
-                  </TouchableOpacity>
+              <View style={styles.tenureCol}>
+                <Text style={styles.fieldLabel}>Additional Months</Text>
+                <View
+                  style={[
+                    styles.inputBox,
+                    focusedField === 'months' && styles.inputBoxFocused,
+                  ]}
+                >
+                  <Ionicons
+                    name="calendar-outline"
+                    size={18}
+                    color="#056B38"
+                    style={styles.inputIconLeft}
+                  />
+                  <TextInput
+                    style={[
+                      styles.textInput,
+                      styles.tenureInput,
+                      { outlineStyle: 'none' } as any,
+                    ]}
+                    placeholder="0"
+                    placeholderTextColor="#94A3B8"
+                    value={months}
+                    onChangeText={setMonths}
+                    onFocus={() => setFocusedField('months')}
+                    onBlur={() => setFocusedField(null)}
+                    keyboardType="numeric"
+                  />
                 </View>
-              )}
+              </View>
+            </View>
 
+            {/* Calculate Button */}
+            <TouchableOpacity
+              style={styles.calculateBtn}
+              onPress={handleCalculate}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="calculator" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.calculateBtnText}>Calculate EMI</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* 4. RESULT CARD (Your EMI Preview) */}
+          {result && (
+            <View style={styles.previewCard}>
+              {/* Header */}
+              <View style={styles.previewHeader}>
+                <View style={styles.previewIconCircle}>
+                  <Ionicons name="stats-chart" size={18} color="#056B38" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.previewTitle}>Your EMI Preview</Text>
+                  <Text style={styles.previewSubtitle}>Results are estimated based on your inputs</Text>
+                </View>
+              </View>
+
+              {/* Hero Monthly EMI Feature Box */}
+              <View style={styles.heroEmiBox}>
+                <View style={styles.heroEmiHeader}>
+                  <Text style={styles.heroEmiLabel}>MONTHLY EMI</Text>
+                  <View style={styles.heroEmiBadge}>
+                    <Ionicons name="calendar-outline" size={12} color="#056B38" style={{ marginRight: 4 }} />
+                    <Text style={styles.heroEmiBadgeText}>Per month</Text>
+                  </View>
+                </View>
+                <Text style={styles.heroEmiAmount}>{formatCurrency(result.monthlyEMI)}</Text>
+                <Text style={styles.heroEmiSub}>
+                  Payable for {result.totalMonths} instalments ({getTenureBreakdown(result)})
+                </Text>
+              </View>
+
+              {/* 2-Column Clean Breakdown: Total Interest & Total Repayment */}
+              <View style={styles.breakdownRow}>
+                {/* Total Interest Card */}
+                <View style={styles.breakdownCard}>
+                  <View style={styles.breakdownCardHeader}>
+                    <Ionicons name="pie-chart-outline" size={14} color="#D97706" style={{ marginRight: 5 }} />
+                    <Text style={styles.breakdownLabel}>Total Interest</Text>
+                  </View>
+                  <Text style={styles.breakdownValue}>{formatCurrency(result.totalInterest)}</Text>
+                  <Text style={styles.breakdownSub}>Payable ({interestRatio}%)</Text>
+                </View>
+
+                {/* Total Repayment Card */}
+                <View style={styles.breakdownCard}>
+                  <View style={styles.breakdownCardHeader}>
+                    <Ionicons name="cash-outline" size={14} color="#056B38" style={{ marginRight: 5 }} />
+                    <Text style={styles.breakdownLabel}>Total Repayment</Text>
+                  </View>
+                  <Text style={styles.breakdownValue}>{formatCurrency(result.totalRepayment)}</Text>
+                  <Text style={styles.breakdownSub}>Principal + Interest</Text>
+                </View>
+              </View>
+
+              {/* Visual Ratio Progress Bar */}
+              <View style={styles.ratioBarContainer}>
+                <View style={styles.ratioBarTrack}>
+                  <View style={[styles.ratioBarPrincipal, { width: `${principalRatio}%` }]} />
+                  <View style={[styles.ratioBarInterest, { width: `${interestRatio}%` }]} />
+                </View>
+                <View style={styles.ratioLabelsRow}>
+                  <View style={styles.ratioLegendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: '#056B38' }]} />
+                    <Text style={styles.legendText}>Principal: {principalRatio}%</Text>
+                  </View>
+                  <View style={styles.ratioLegendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: '#F59E0B' }]} />
+                    <Text style={styles.legendText}>Interest: {interestRatio}%</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Bottom Info Strip: Total Tenure & Verified Badge */}
+              <View style={styles.previewFooterRow}>
+                <View style={styles.tenureFooterLeft}>
+                  <View style={styles.tenureFooterIconBox}>
+                    <Ionicons name="calendar" size={16} color="#056B38" />
+                  </View>
+                  <View>
+                    <Text style={styles.tenureFooterLabel}>Total Tenure</Text>
+                    <Text style={styles.tenureFooterValue}>
+                      {result.totalMonths} Months ({getTenureBreakdown(result)})
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.ratioBadge}>
+                  <Ionicons name="shield-checkmark" size={14} color="#056B38" style={{ marginRight: 4 }} />
+                  <Text style={styles.ratioBadgeText}>Verified</Text>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* 5. DISCLAIMER / NOTE CARD */}
+          <View style={styles.disclaimerCard}>
+            <View style={styles.disclaimerIconCircle}>
+              <Ionicons name="bulb" size={18} color="#D97706" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.disclaimerTitle}>
+                EMI is calculated on a reducing balance basis.
+              </Text>
+              <Text style={styles.disclaimerSubtitle}>
+                Actual amounts may vary slightly due to rounding.
+              </Text>
             </View>
           </View>
         </ScrollView>
@@ -261,233 +438,503 @@ export const EMICalculatorScreen: React.FC<Props> = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeContainer: {
     flex: 1,
-    backgroundColor: '#E9EFF5',
+    backgroundColor: '#056B38',
   },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  mainBackground: {
-    flex: 1,
-    backgroundColor: '#E9EFF5',
-  },
-  topDarkSection: {
-    backgroundColor: '#1A1B2F',
-    paddingTop: 40,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    borderBottomRightRadius: 80,
-    zIndex: 10,
-  },
-  waveConnectorDark: {
-    height: 80,
-    backgroundColor: '#1A1B2F',
-    marginTop: -1,
-    zIndex: 1,
-  },
-  waveConnectorLightCutout: {
-    flex: 1,
-    backgroundColor: '#E9EFF5',
-    borderTopLeftRadius: 80,
-  },
-  bottomLightSection: {
-    backgroundColor: '#E9EFF5',
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    marginTop: -1,
-  },
-  customHeader: {
+  topAppBar: {
+    backgroundColor: '#056B38',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 40,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+  headerIconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
-  backButtonInner: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
+  brandCenter: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  headerTitle: {
-    color: '#FFF',
-    fontSize: 16,
+  brandLogoCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1.5,
+    borderColor: '#4ADE80',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+    position: 'relative',
+  },
+  brandRupeeText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  brandLeafIcon: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+  },
+  brandTextCol: {
+    justifyContent: 'center',
+  },
+  brandTitleText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  brandSubtitleText: {
+    color: '#4ADE80',
+    fontSize: 11,
     fontWeight: '700',
+    marginTop: -2,
   },
-  pageTitle: {
-    color: '#FFF',
-    fontSize: 32,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-    marginBottom: 8,
+  scrollView: {
+    flex: 1,
+    backgroundColor: '#F8FAF8',
   },
-  pageSubtitle: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 14,
-    marginBottom: 24,
-    lineHeight: 20,
+  scrollContent: {
+    paddingBottom: 36,
+    maxWidth: 500,
+    width: '100%',
+    alignSelf: 'center',
   },
-  neuFormContainer: {
-    backgroundColor: '#E9EFF5',
-    padding: 24,
-    borderRadius: 24,
-    marginTop: 10,
-    shadowColor: '#FFFFFF',
-    shadowOffset: { width: -6, height: -6 },
-    shadowOpacity: 0.9,
-    shadowRadius: 8,
-    elevation: 5,
-    marginBottom: 30,
+  titleSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 14,
+  },
+  titleLeftCol: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  screenTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.3,
+  },
+  screenSubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+    lineHeight: 18,
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  illustrationWrapper: {
+    width: 90,
+    height: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  illustrationCircle: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: '#ECFDF5',
     borderWidth: 1,
-    borderColor: '#FFF',
+    borderColor: '#D1FAE5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  leaf1: {
+    position: 'absolute',
+    top: 6,
+    right: 10,
+    width: 14,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#86EFAC',
+    transform: [{ rotate: '30deg' }],
+    opacity: 0.7,
+  },
+  leaf2: {
+    position: 'absolute',
+    top: 14,
+    right: 4,
+    width: 12,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#4ADE80',
+    transform: [{ rotate: '55deg' }],
+    opacity: 0.8,
+  },
+  clipboardCard: {
+    width: 38,
+    height: 48,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: '#056B38',
+    padding: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  clipboardClip: {
+    width: 14,
+    height: 4,
+    backgroundColor: '#056B38',
+    borderRadius: 2,
+    position: 'absolute',
+    top: -3,
+  },
+  clipboardLine1: {
+    width: 24,
+    height: 2.5,
+    backgroundColor: '#CBD5E1',
+    borderRadius: 1.5,
+    marginVertical: 2,
+  },
+  clipboardLine2: {
+    width: 18,
+    height: 2.5,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 1.5,
+    marginVertical: 2,
+  },
+  clipboardLine3: {
+    width: 20,
+    height: 2.5,
+    backgroundColor: '#CBD5E1',
+    borderRadius: 1.5,
+    marginVertical: 2,
+  },
+  rupeeCoinBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#056B38',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  rupeeCoinText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  calcBadge: {
+    position: 'absolute',
+    bottom: 4,
+    right: 2,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#056B38',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  formCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    marginHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+      },
+    }),
+  },
+  fieldGroup: {
+    marginBottom: 16,
   },
   fieldLabel: {
     fontSize: 13,
-    fontWeight: '500',
-    color: COLORS.TEXT,
-    marginBottom: 6,
-    height: 18,
-    lineHeight: 18,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 8,
   },
-  row: {
+  inputBox: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginHorizontal: -6,
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    height: 52,
+    paddingHorizontal: 12,
   },
-  col: {
+  inputBoxFocused: {
+    borderColor: '#056B38',
+  },
+  inputPrefixBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#DCFCE7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  inputPrefixBadgeText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#056B38',
+  },
+  inputIconLeft: {
+    marginRight: 10,
+  },
+  textInput: {
     flex: 1,
-    paddingHorizontal: 6,
+    fontSize: 15,
+    color: '#1E293B',
+    fontWeight: '500',
+    height: '100%',
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+        borderWidth: 0,
+      } as any,
+    }),
   },
-  neuCalculateBtn: {
-    marginTop: 16,
-    backgroundColor: '#4A90E2',
+  tenureRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  tenureCol: {
+    flex: 1,
+  },
+  tenureInput: {
+    fontWeight: '600',
+  },
+  calculateBtn: {
+    backgroundColor: '#056B38',
     borderRadius: 16,
-    shadowColor: '#4A90E2',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  neuCalculateBtnInner: {
+    height: 52,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 16,
+    marginTop: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#056B38',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+      web: {
+        boxShadow: '0 4px 12px rgba(5, 107, 56, 0.25)',
+      },
+    }),
   },
-  neuCalculateBtnText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  neonResultCard: {
-    backgroundColor: 'rgba(38, 40, 69, 0.95)',
-    borderRadius: 24,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.4,
-    shadowRadius: 30,
-    elevation: 10,
-    marginBottom: 20,
-  },
-  neonCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  neonIconWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: 'rgba(77, 139, 255, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  neonCardTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#FFF',
-  },
-  emiHighlightBox: {
-    backgroundColor: 'rgba(80, 227, 194, 0.12)',
-    borderRadius: 16,
-    padding: 18,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(80, 227, 194, 0.3)',
-    marginBottom: 20,
-  },
-  emiHighlightLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#50E3C2',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  emiHighlightAmount: {
-    fontSize: 30,
-    fontWeight: '900',
-    color: '#50E3C2',
-    marginBottom: 4,
-  },
-  emiHighlightSub: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
-  },
-  infoLabel: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.6)',
-  },
-  infoValue: {
-    fontSize: 15,
-    color: '#FFF',
-    fontWeight: '700',
-  },
-  interestValue: {
-    fontSize: 15,
-    color: '#FF6BE7',
-    fontWeight: '800',
-  },
-  repaymentValue: {
-    fontSize: 16,
+  calculateBtnText: {
     color: '#FFFFFF',
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '700',
   },
-  barContainer: {
-    marginTop: 20,
+  previewCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 18,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+      },
+    }),
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  previewIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#DCFCE7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  previewTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  previewSubtitle: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+    marginTop: 1,
+  },
+  heroEmiBox: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#DCFCE7',
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  heroEmiHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 4,
+  },
+  heroEmiLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#15803D',
+    letterSpacing: 0.5,
+  },
+  heroEmiBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  heroEmiBadgeText: {
+    fontSize: 11,
+    color: '#056B38',
+    fontWeight: '700',
+  },
+  heroEmiAmount: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#056B38',
+    marginVertical: 4,
+    letterSpacing: -0.5,
+  },
+  heroEmiSub: {
+    fontSize: 12,
+    color: '#166534',
+    fontWeight: '600',
+  },
+  breakdownRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 14,
+  },
+  breakdownCard: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 12,
+  },
+  breakdownCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  breakdownLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  breakdownValue: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 2,
+  },
+  breakdownSub: {
+    fontSize: 11,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  ratioBarContainer: {
+    marginBottom: 14,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  ratioBarTrack: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#E2E8F0',
+    flexDirection: 'row',
+    overflow: 'hidden',
     marginBottom: 8,
   },
-  barLabelsRow: {
+  ratioBarPrincipal: {
+    height: '100%',
+    backgroundColor: '#056B38',
+  },
+  ratioBarInterest: {
+    height: '100%',
+    backgroundColor: '#F59E0B',
+  },
+  ratioLabelsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    alignItems: 'center',
   },
-  barLegendItem: {
+  ratioLegendItem: {
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -498,38 +945,86 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   legendText: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
+    color: '#64748B',
   },
-  progressBarTrack: {
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  previewFooterRow: {
     flexDirection: 'row',
-    overflow: 'hidden',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 4,
   },
-  progressBarPrincipal: {
-    height: '100%',
-    backgroundColor: '#4A90E2',
+  tenureFooterLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
   },
-  progressBarInterest: {
-    height: '100%',
-    backgroundColor: '#FF6BE7',
-  },
-  neuResetBtn: {
-    marginTop: 20,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    paddingVertical: 14,
-    borderRadius: 12,
+  tenureFooterIconBox: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  neuResetBtnText: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 15,
+  tenureFooterLabel: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  tenureFooterValue: {
+    fontSize: 13,
     fontWeight: '700',
+    color: '#0F172A',
+    marginTop: 1,
+  },
+  ratioBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DCFCE7',
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  ratioBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#056B38',
+  },
+  disclaimerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FEF3C7',
+    borderRadius: 14,
+    padding: 14,
+    marginHorizontal: 16,
+    marginTop: 14,
+    marginBottom: 20,
+    gap: 12,
+  },
+  disclaimerIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FEF3C7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  disclaimerTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  disclaimerSubtitle: {
+    fontSize: 11,
+    color: '#B45309',
+    marginTop: 2,
+    fontWeight: '500',
   },
 });
-

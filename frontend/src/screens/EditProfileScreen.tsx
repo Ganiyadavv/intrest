@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  TouchableOpacity,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
@@ -12,8 +20,8 @@ import { SuccessMessage } from '../components/SuccessMessage';
 import { ProfileImage } from '../components/ProfileImage';
 import { userService } from '../services/userService';
 import { getUser, saveUser } from '../storage/storage';
-import { isValidEmail, isValidPhone } from '../utils/validation';
-import { COLORS } from '../constants/colors';
+import { isValidEmail } from '../utils/validation';
+import { Loading } from '../components/Loading';
 
 type EditProfileScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'EditProfile'>;
 
@@ -29,7 +37,7 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
   const [state, setState] = useState('');
   const [pincode, setPincode] = useState('');
   const [profileImage, setProfileImage] = useState<string | null>(null);
-  
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -39,7 +47,12 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
     const loadUserData = async () => {
       const user = await getUser();
       if (user) {
-        setFullName(user.fullName || (user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : (user.firstName || user.lastName || '')));
+        setFullName(
+          user.fullName ||
+            (user.firstName && user.lastName
+              ? `${user.firstName} ${user.lastName}`
+              : user.firstName || user.lastName || '')
+        );
         setEmail(user.email || '');
         setAddress(user.address || '');
         setCity(user.city || '');
@@ -87,9 +100,15 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
   const handleUpdate = async () => {
     setError('');
     setSuccess('');
-    
-    if (!fullName) { setError('Full Name is required'); return; }
-    if (!email || !isValidEmail(email)) { setError('Valid email format is required'); return; }
+
+    if (!fullName) {
+      setError('Full Name is required');
+      return;
+    }
+    if (!email || !isValidEmail(email)) {
+      setError('Valid email format is required');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -100,16 +119,15 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
         city,
         state,
         pincode,
-        profileImage
+        profileImage,
       });
-      
-      await saveUser(updatedUser); // Update local storage
+
+      await saveUser(updatedUser);
       setSuccess('Profile updated successfully');
-      
+
       setTimeout(() => {
         navigation.goBack();
       }, 1500);
-      
     } catch (err: any) {
       setError(err.message || 'Error occurred while updating profile');
     } finally {
@@ -118,94 +136,136 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   if (initialLoading) {
-    return <View style={styles.container} />; // Or a loader
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+        <Loading fullScreen message="Loading Profile Data..." />
+      </SafeAreaView>
+    );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      {/* 1. TOP APP BAR */}
+      <View style={styles.topAppBar}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.headerIconBtn}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+        </TouchableOpacity>
+
+        <Text style={styles.appBarTitle}>Edit Profile</Text>
+
+        <View style={{ width: 38 }} />
+      </View>
+
+      <KeyboardAvoidingView
         style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
-          <View style={styles.mainBackground}>
-            
-            {/* TOP DARK SECTION */}
-            <View style={styles.topDarkSection}>
-              <View style={styles.headerTop}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                  <Ionicons name="arrow-back" size={28} color="#FFF" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Edit Profile</Text>
-              </View>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* 2. AVATAR CARD */}
+          <View style={styles.avatarCard}>
+            <TouchableOpacity onPress={pickImage} activeOpacity={0.85} style={styles.avatarWrapper}>
+              <ProfileImage
+                uri={profileImage}
+                size={100}
+                name={fullName}
+                showCameraBadge={true}
+                onEdit={pickImage}
+                borderWidth={3.5}
+                borderColor="#056B38"
+              />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.changePhotoBtn} onPress={pickImage} activeOpacity={0.8}>
+              <Ionicons name="camera" size={15} color="#056B38" style={{ marginRight: 6 }} />
+              <Text style={styles.changePhotoText}>Change Profile Photo</Text>
+            </TouchableOpacity>
+          </View>
 
-              <View style={styles.profileSection}>
-                <ProfileImage uri={profileImage} onEdit={pickImage} />
+          {error ? <ErrorMessage message={error} /> : null}
+          {success ? <SuccessMessage message={success} /> : null}
+
+          {/* 3. INPUT FORM CARD */}
+          <View style={styles.formCard}>
+            <View style={styles.cardHeader}>
+              <View style={styles.cardHeaderIconBox}>
+                <Ionicons name="person" size={16} color="#056B38" />
               </View>
-              
-              <ErrorMessage message={error} />
-              <SuccessMessage message={success} />
+              <Text style={styles.cardHeaderTitle}>Personal Details</Text>
             </View>
 
-            {/* WAVE CONNECTOR */}
-            <View style={styles.waveConnectorDark}>
-               <View style={styles.waveConnectorLightCutout} />
+            <AppInput
+              label="Full Name *"
+              placeholder="Enter full name"
+              value={fullName}
+              onChangeText={setFullName}
+            />
+
+            <AppInput
+              label="Email Address *"
+              placeholder="Enter email address"
+              value={email}
+              onChangeText={(text) => setEmail(text.toLowerCase())}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+
+            <View style={[styles.cardHeader, { marginTop: 14 }]}>
+              <View style={styles.cardHeaderIconBox}>
+                <Ionicons name="location" size={16} color="#056B38" />
+              </View>
+              <Text style={styles.cardHeaderTitle}>Address Information</Text>
             </View>
 
-            {/* BOTTOM LIGHT SECTION */}
-            <View style={styles.bottomLightSection}>
-              <View style={styles.formContainer}>
-                <AppInput
-                  label="Full Name"
-                  placeholder="Enter full name"
-                  value={fullName}
-                  onChangeText={setFullName}
-                />
-                <AppInput
-                  label="Email"
-                  placeholder="Enter email address"
-                  value={email}
-                  onChangeText={(text) => setEmail(text.toLowerCase())}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-                <AppInput
-                  label="Address"
-                  placeholder="Enter address"
-                  value={address}
-                  onChangeText={setAddress}
-                />
+            <AppInput
+              label="Address"
+              placeholder="Enter street / house address"
+              value={address}
+              onChangeText={setAddress}
+            />
+
+            <View style={styles.rowTwoCols}>
+              <View style={{ flex: 1, marginRight: 8 }}>
                 <AppInput
                   label="City"
                   placeholder="Enter city"
                   value={city}
                   onChangeText={setCity}
                 />
+              </View>
+              <View style={{ flex: 1, marginLeft: 8 }}>
                 <AppInput
                   label="State"
                   placeholder="Enter state"
                   value={state}
                   onChangeText={setState}
                 />
-                <AppInput
-                  label="Pincode"
-                  placeholder="Enter pincode"
-                  value={pincode}
-                  onChangeText={setPincode}
-                  keyboardType="numeric"
-                />
-
-                <AppButton
-                  title={loading ? "Updating Profile..." : "Save Changes"}
-                  onPress={handleUpdate}
-                  loading={loading}
-                  style={styles.updateButton}
-                  textStyle={styles.updateButtonText}
-                />
               </View>
             </View>
 
+            <AppInput
+              label="Pincode"
+              placeholder="Enter 6-digit pincode"
+              value={pincode}
+              onChangeText={setPincode}
+              keyboardType="numeric"
+              maxLength={6}
+            />
+
+            <AppButton
+              title={loading ? 'Saving Changes...' : 'Save Changes'}
+              onPress={handleUpdate}
+              loading={loading}
+              style={styles.updateButton}
+              textStyle={styles.updateButtonText}
+            />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -216,89 +276,120 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E9EFF5',
+    backgroundColor: '#056B38',
+  },
+  topAppBar: {
+    backgroundColor: '#056B38',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerIconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  appBarTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
   },
   keyboardView: {
     flex: 1,
   },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  mainBackground: {
+  scrollView: {
     flex: 1,
-    backgroundColor: '#E9EFF5',
+    backgroundColor: '#F8FAF8',
   },
-  topDarkSection: {
-    backgroundColor: '#1A1B2F',
-    paddingTop: 20,
-    paddingHorizontal: 24,
-    paddingBottom: 20,
-    borderBottomRightRadius: 80,
-    zIndex: 10,
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 40,
   },
-  headerTop: {
+  avatarCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 20,
+    alignItems: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  avatarWrapper: {
+    marginBottom: 8,
+  },
+  changePhotoBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 30,
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
   },
-  backButton: {
-    marginRight: 16,
+  changePhotoText: {
+    fontSize: 13,
+    color: '#056B38',
+    fontWeight: '700',
   },
-  headerTitle: {
-    color: '#FFF',
-    fontSize: 24,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  profileSection: {
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  waveConnectorDark: {
-    height: 80,
-    backgroundColor: '#1A1B2F',
-    marginTop: -1,
-    zIndex: 1,
-  },
-  waveConnectorLightCutout: {
-    flex: 1,
-    backgroundColor: '#E9EFF5',
-    borderTopLeftRadius: 80,
-  },
-  bottomLightSection: {
-    backgroundColor: '#E9EFF5',
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingBottom: 48,
-    marginTop: -1,
-  },
-  formContainer: {
+  formCard: {
     backgroundColor: '#FFFFFF',
-    padding: 24,
-    borderRadius: 24,
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 10,
-    marginTop: -20,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  cardHeaderIconBox: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#ECFDF5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  cardHeaderTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  rowTwoCols: {
+    flexDirection: 'row',
   },
   updateButton: {
-    marginTop: 32,
-    backgroundColor: '#1A1B2F',
-    borderRadius: 16,
-    paddingVertical: 18,
-    shadowColor: '#1A1B2F',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-    elevation: 8,
+    marginTop: 20,
+    backgroundColor: '#056B38',
+    borderRadius: 12,
+    paddingVertical: 14,
   },
   updateButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });
