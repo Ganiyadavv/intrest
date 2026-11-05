@@ -19,6 +19,7 @@ import { lenderRecordService } from '../services/lenderRecordService';
 import { Loading } from '../components/Loading';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { formatCurrency } from '../utils/currency';
+import { getUser } from '../storage/storage';
 
 type LenderRecordsScreenNavigationProp = NativeStackNavigationProp<MainStackParamList, 'LenderRecords'>;
 
@@ -56,8 +57,24 @@ export const LenderRecordsScreen: React.FC<Props> = ({ navigation }) => {
   const fetchRecords = async () => {
     try {
       setError('');
-      const data = await lenderRecordService.getLenderRecords();
-      setRecords(Array.isArray(data) ? data : []);
+      const [data, currentUser] = await Promise.all([
+        lenderRecordService.getLenderRecords(),
+        getUser(),
+      ]);
+
+      const list = Array.isArray(data) ? data : [];
+      // Do not display incoming requests that are pending in the recipient's records
+      const filtered = list.filter((r: any) => {
+        const isTargetMe =
+          currentUser?.userId &&
+          (r.targetUserId === currentUser.userId || r.targetUser?.userId === currentUser.userId);
+        if (isTargetMe && (r.status === 'PENDING' || r.status === 'REJECTED')) {
+          return false;
+        }
+        return true;
+      });
+
+      setRecords(filtered);
     } catch (err: any) {
       setError('Failed to fetch lender records.');
     } finally {
@@ -169,7 +186,14 @@ export const LenderRecordsScreen: React.FC<Props> = ({ navigation }) => {
           <Ionicons name="chevron-back" size={24} color="#1E293B" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Lender Records</Text>
-        <View style={styles.headerSpacer} />
+        <TouchableOpacity
+          style={styles.incomingShortcutBtn}
+          onPress={() => navigation.navigate('IncomingRequests')}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="mail-unread-outline" size={16} color="#056B38" style={{ marginRight: 4 }} />
+          <Text style={styles.incomingShortcutText}>Requests</Text>
+        </TouchableOpacity>
       </View>
 
       {/* 2. MAIN CONTENT AREA */}
@@ -316,8 +340,20 @@ const styles = StyleSheet.create({
     color: '#1E293B',
     letterSpacing: 0.2,
   },
-  headerSpacer: {
-    width: 40,
+  incomingShortcutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+  },
+  incomingShortcutText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#056B38',
   },
   contentContainer: {
     flex: 1,

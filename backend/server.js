@@ -12,6 +12,7 @@ const personRecordRoutes = require("./routes/personRecordRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const lenderRecordRoutes = require("./routes/lenderRecordRoutes");
+const requestRoutes = require("./routes/requestRoutes");
 const path = require("path");
 
 const app = express();
@@ -34,6 +35,7 @@ app.use("/api/person-records", personRecordRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/lender-records", lenderRecordRoutes);
+app.use("/api/requests", requestRoutes);
 
 const PORT = process.env.PORT || 5000;
 // const sequelize = require("./config/database");

@@ -61,23 +61,42 @@ export const AdminMemberDetailsScreen: React.FC<Props> = ({ navigation, route })
     const newStatus = isCurrentlyActive ? 'INACTIVE' : 'ACTIVE';
     const actionText = isCurrentlyActive ? 'suspend' : 'activate';
 
+    const executeStatusUpdate = async () => {
+      setProcessing(true);
+      try {
+        await adminService.updateMemberStatus(id, newStatus);
+        if (Platform.OS === 'web') {
+          window.alert(`Member ${isCurrentlyActive ? 'suspended' : 'activated'} successfully.`);
+        } else {
+          Alert.alert('Success', `Member ${isCurrentlyActive ? 'suspended' : 'activated'} successfully.`);
+        }
+        fetchMemberDetails();
+      } catch (err: any) {
+        const msg = err.response?.data?.message || 'Failed to update status';
+        if (Platform.OS === 'web') {
+          window.alert(msg);
+        } else {
+          Alert.alert('Error', msg);
+        }
+      } finally {
+        setProcessing(false);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(`Are you sure you want to ${actionText} this member?`);
+      if (confirmed) {
+        executeStatusUpdate();
+      }
+      return;
+    }
+
     Alert.alert(`Confirm Action`, `Are you sure you want to ${actionText} this member?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Confirm',
         style: isCurrentlyActive ? 'destructive' : 'default',
-        onPress: async () => {
-          setProcessing(true);
-          try {
-            await adminService.updateMemberStatus(id, newStatus);
-            Alert.alert('Success', `Member ${isCurrentlyActive ? 'suspended' : 'activated'} successfully.`);
-            fetchMemberDetails();
-          } catch (err: any) {
-            Alert.alert('Error', err.response?.data?.message || 'Failed to update status');
-          } finally {
-            setProcessing(false);
-          }
-        },
+        onPress: executeStatusUpdate,
       },
     ]);
   };

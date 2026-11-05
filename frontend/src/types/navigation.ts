@@ -55,6 +55,14 @@ export type MainStackParamList = {
   LenderRecordDetails: { id: string };
   Notifications: undefined;
   NotificationDetails: { id: string };
+  IncomingRequests: undefined;
+  IncomingRequestDetails: { 
+    id?: string; // notificationId if coming from notification
+    requestId?: number | string; 
+    recordType?: 'LENDER_RECORD' | 'PERSON_RECORD';
+    senderName?: string;
+    senderUserId?: string;
+  };
 };
 
 export type RootStackParamList = {

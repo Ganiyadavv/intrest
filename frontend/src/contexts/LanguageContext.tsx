@@ -32,8 +32,10 @@ const translations = {
     'table.status': 'Status',
     'table.lender': 'Lender',
     'table.borrower': 'Borrower',
+    'table.active': 'Active',
     'table.pending': 'Pending',
     'table.completed': 'Completed',
+    'table.rejected': 'Rejected',
     'dashboard.noTransactions': 'No Transactions Yet',
     'dashboard.noTransactionsSub': 'Tap "+" below to create your first borrower or lender record.',
 
@@ -125,8 +127,10 @@ const translations = {
     'table.status': 'స్థితి',
     'table.lender': 'రుణదాత',
     'table.borrower': 'రుణగ్రహీత',
+    'table.active': 'యాక్టివ్',
     'table.pending': 'పెండింగ్',
     'table.completed': 'పూర్తయింది',
+    'table.rejected': 'తిరస్కరించబడింది',
     'dashboard.noTransactions': 'ఇంకా లావాదేవీలు లేవు',
     'dashboard.noTransactionsSub': 'మీ మొదటి రికార్డును సృష్టించడానికి క్రింద ఉన్న "+" నొక్కండి.',
 

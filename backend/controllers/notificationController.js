@@ -11,6 +11,9 @@ exports.getMyNotifications = async (req, res) => {
     const userId = req.user.userId;
     const notifications = await Notification.findAll({
       where: { recipientId: userId },
+      include: [
+        { model: User, as: 'sender', attributes: ['id', 'userId', 'fullName', 'email'] }
+      ],
       order: [['createdAt', 'DESC']]
     });
 
@@ -44,12 +47,12 @@ exports.getNotificationPersonDetails = async (req, res) => {
 
     if (notification.personRecordId) {
       record = await PersonRecord.findByPk(notification.personRecordId, {
-        attributes: { exclude: ['ownerId', 'targetUserId', 'createdAt', 'updatedAt'] }
+        include: [{ model: User, as: 'owner', attributes: ['id', 'userId', 'fullName'] }]
       });
       recordType = 'PERSON_RECORD';
     } else if (notification.lenderRecordId) {
       record = await LenderRecord.findByPk(notification.lenderRecordId, {
-        attributes: { exclude: ['ownerId', 'targetUserId', 'createdAt', 'updatedAt'] }
+        include: [{ model: User, as: 'owner', attributes: ['id', 'userId', 'fullName'] }]
       });
       recordType = 'LENDER_RECORD';
     }
@@ -58,9 +61,30 @@ exports.getNotificationPersonDetails = async (req, res) => {
       return sendResponse(res, 404, "ERROR", "Associated record not found");
     }
 
+    const sender = await User.findByPk(notification.senderId, {
+      attributes: ['id', 'userId', 'fullName', 'email']
+    });
+
+    const resolvedSender = sender ? {
+      id: sender.id,
+      name: sender.fullName,
+      userId: sender.userId,
+      email: sender.email
+    } : (record.owner ? {
+      id: record.owner.id,
+      name: record.owner.fullName,
+      userId: record.owner.userId
+    } : null);
+
     const responseData = {
       ...record.toJSON(),
-      recordType
+      recordType,
+      notificationId: notification.id,
+      title: notification.title,
+      message: notification.message,
+      senderId: notification.senderId,
+      requestDate: notification.createdAt,
+      sender: resolvedSender
     };
 
     return sendResponse(res, 200, "SUCCESS", "Record details fetched successfully", responseData);

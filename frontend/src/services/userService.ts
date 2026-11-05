@@ -42,5 +42,14 @@ export const userService = {
     } catch (error: any) {
       throw error.response?.data || { message: 'Something went wrong. Please try again.' };
     }
-  }
+  },
+
+  searchUserById: async (id: number | string): Promise<User | null> => {
+    try {
+      const response = await api.get(`/users/search?id=${id}`);
+      return response.data.data.user || response.data.data || null;
+    } catch {
+      return null;
+    }
+  },
 };

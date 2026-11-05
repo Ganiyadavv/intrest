@@ -83,6 +83,7 @@ export const EditPersonScreen: React.FC<Props> = ({ navigation, route }) => {
   const [amount, setAmount] = useState('');
   const [interestRate, setInterestRate] = useState('');
   const [notes, setNotes] = useState('');
+  const [senderTag, setSenderTag] = useState('');
 
   // Date State
   const [date, setDate] = useState(new Date());
@@ -115,7 +116,12 @@ export const EditPersonScreen: React.FC<Props> = ({ navigation, route }) => {
       setCountry(person.country || '');
       setAmount(person.amount ? person.amount.toString() : '');
       setInterestRate(person.interestRate ? person.interestRate.toString() : '');
-      setNotes(person.notes || '');
+      const rawNotes = person.notes || '';
+      const tagMatch = rawNotes.match(/_{1,2}SENDER_{1,2}=[^_\n]+_{1,2}/);
+      if (tagMatch) {
+        setSenderTag(tagMatch[0]);
+      }
+      setNotes(rawNotes.replace(/_{1,2}SENDER_{1,2}=[^_\n]+_{1,2}\n?/g, '').trim());
 
       if (person.givenDate) {
         const parsed = parseDateString(person.givenDate);
@@ -236,7 +242,11 @@ export const EditPersonScreen: React.FC<Props> = ({ navigation, route }) => {
       if (district) formData.append('district', district);
       if (state) formData.append('state', state);
       if (country) formData.append('country', country);
-      if (notes) formData.append('notes', notes);
+      let finalNotes = notes ? notes.trim() : '';
+      if (senderTag) {
+        finalNotes = finalNotes ? `${finalNotes}\n${senderTag}` : senderTag;
+      }
+      if (finalNotes) formData.append('notes', finalNotes);
 
       if (paymentScreenshot) {
         if (Platform.OS === 'web') {

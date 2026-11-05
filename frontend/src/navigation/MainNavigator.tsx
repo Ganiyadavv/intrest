@@ -21,6 +21,8 @@ import { LenderRecordDetailsScreen } from '../screens/LenderRecordDetailsScreen'
 import { NotificationsScreen } from '../screens/NotificationsScreen';
 import { NotificationDetailsScreen } from '../screens/NotificationDetailsScreen';
 import { EditLenderRecordScreen } from '../screens/EditLenderRecordScreen';
+import { IncomingRequestsScreen } from '../screens/IncomingRequestsScreen';
+import { IncomingRequestDetailsScreen } from '../screens/IncomingRequestDetailsScreen';
 import { COLORS } from '../constants/colors';
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
@@ -95,6 +97,8 @@ export const MainNavigator = () => {
       <Stack.Screen name="LenderRecordDetails" component={LenderRecordDetailsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="NotificationDetails" component={NotificationDetailsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="IncomingRequests" component={IncomingRequestsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="IncomingRequestDetails" component={IncomingRequestDetailsScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 };

@@ -21,6 +21,7 @@ import { LenderRecord } from '../types/lenderRecord';
 import { personRecordService } from '../services/personRecordService';
 import { lenderRecordService } from '../services/lenderRecordService';
 import { notificationService } from '../services/notificationService';
+import { requestService } from '../services/requestService';
 import { formatCurrency } from '../utils/currency';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -37,7 +38,7 @@ interface TransactionItem {
   type: 'Lender' | 'Borrower';
   amount: number;
   rate: string;
-  status: 'Active' | 'Pending' | 'Completed';
+  status: 'Active' | 'Pending' | 'Completed' | 'Rejected';
   initials: string;
   color: string;
   date?: number;
@@ -51,6 +52,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
   const [personRecords, setPersonRecords] = useState<PersonRecord[]>([]);
   const [lenderRecords, setLenderRecords] = useState<LenderRecord[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [menuModalVisible, setMenuModalVisible] = useState(false);
   const { language, setLanguage, t } = useLanguage();
@@ -60,10 +62,11 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
       const storedUser = await getUser();
       setUser(storedUser);
 
-      const [borrowers, lenders, notifications] = await Promise.all([
+      const [borrowers, lenders, notifications, incoming] = await Promise.all([
         personRecordService.getPersonRecords().catch(() => []),
         lenderRecordService.getLenderRecords().catch(() => []),
         notificationService.getNotifications().catch(() => []),
+        requestService.getIncomingRequests().catch(() => []),
       ]);
 
       setPersonRecords(Array.isArray(borrowers) ? borrowers : []);
@@ -73,6 +76,11 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
         ? notifications.filter((n: any) => n.isRead === false || n.status === 'UNREAD').length
         : 0;
       setUnreadCount(unread);
+
+      const pendingIncoming = Array.isArray(incoming)
+        ? incoming.filter((r: any) => r.status === 'PENDING').length
+        : 0;
+      setPendingRequestsCount(pendingIncoming);
     } catch (error) {
       console.log('Error loading dashboard data', error);
     } finally {
@@ -118,6 +126,8 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
           ? 'Completed'
           : r.status === 'ACCEPTED'
           ? 'Active'
+          : r.status === 'REJECTED'
+          ? 'Rejected'
           : 'Pending',
       initials,
       color: '#F59E0B',
@@ -147,6 +157,8 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
           ? 'Completed'
           : r.status === 'ACCEPTED'
           ? 'Active'
+          : r.status === 'REJECTED'
+          ? 'Rejected'
           : 'Pending',
       initials,
       color: '#10B981',
@@ -241,6 +253,33 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
               resizeMode="contain"
             />
           </View>
+
+          {/* 2.1 PENDING INCOMING REQUESTS NOTIFICATION BANNER */}
+          {pendingRequestsCount > 0 && (
+            <TouchableOpacity
+              style={styles.pendingIncomingBanner}
+              onPress={() => navigation.navigate('IncomingRequests')}
+              activeOpacity={0.85}
+            >
+              <View style={styles.pendingIncomingLeft}>
+                <View style={styles.pendingIncomingIconBox}>
+                  <Ionicons name="mail-unread" size={20} color="#FFFFFF" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.pendingIncomingTitle}>
+                    {pendingRequestsCount === 1 ? '1 Pending Incoming Request' : `${pendingRequestsCount} Pending Incoming Requests`}
+                  </Text>
+                  <Text style={styles.pendingIncomingSubtitle}>
+                    Review loan requests waiting for your approval
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.pendingIncomingAction}>
+                <Text style={styles.pendingIncomingActionText}>Review</Text>
+                <Ionicons name="arrow-forward" size={13} color="#056B38" />
+              </View>
+            </TouchableOpacity>
+          )}
 
           {/* 3. QUICK TOOLS SECTION */}
           <View style={styles.sectionHeaderRow}>
@@ -412,6 +451,10 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                                 ? '#DCFCE7'
                                 : tx.status === 'Pending'
                                 ? '#FEF3C7'
+                                : tx.status === 'Completed'
+                                ? '#DBEAFE'
+                                : tx.status === 'Rejected'
+                                ? '#FEE2E2'
                                 : '#E2E8F0',
                           },
                         ]}
@@ -425,6 +468,10 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                                   ? '#16A34A'
                                   : tx.status === 'Pending'
                                   ? '#D97706'
+                                  : tx.status === 'Completed'
+                                  ? '#1D4ED8'
+                                  : tx.status === 'Rejected'
+                                  ? '#DC2626'
                                   : '#64748B',
                             },
                           ]}
@@ -438,14 +485,22 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                                   ? '#15803D'
                                   : tx.status === 'Pending'
                                   ? '#B45309'
+                                  : tx.status === 'Completed'
+                                  ? '#1E40AF'
+                                  : tx.status === 'Rejected'
+                                  ? '#DC2626'
                                   : '#475569',
                             },
                           ]}
                         >
                           {tx.status === 'Active'
-                            ? t('table.completed')
+                            ? t('table.active')
                             : tx.status === 'Pending'
                             ? t('table.pending')
+                            : tx.status === 'Completed'
+                            ? t('table.completed')
+                            : tx.status === 'Rejected'
+                            ? t('table.rejected')
                             : tx.status}
                         </Text>
                       </View>
@@ -641,6 +696,24 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
               style={styles.menuItemRow}
               onPress={() => {
                 setMenuModalVisible(false);
+                navigation.navigate('IncomingRequests');
+              }}
+            >
+              <Ionicons name="mail-unread-outline" size={22} color="#056B38" />
+              <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text style={styles.menuItemText}>Incoming Requests</Text>
+                {pendingRequestsCount > 0 && (
+                  <View style={{ backgroundColor: '#DC2626', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10 }}>
+                    <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>{pendingRequestsCount}</Text>
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuItemRow}
+              onPress={() => {
+                setMenuModalVisible(false);
                 navigation.navigate('SearchUser');
               }}
             >
@@ -815,6 +888,72 @@ const styles = StyleSheet.create({
         boxShadow: '0 3px 12px rgba(5, 107, 56, 0.06)',
       },
     }),
+  },
+  pendingIncomingBanner: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#D97706',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0 2px 8px rgba(217, 119, 6, 0.1)',
+      },
+    }),
+  },
+  pendingIncomingLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 10,
+    gap: 10,
+  },
+  pendingIncomingIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#D97706',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pendingIncomingTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#92400E',
+  },
+  pendingIncomingSubtitle: {
+    fontSize: 11,
+    color: '#B45309',
+    marginTop: 2,
+  },
+  pendingIncomingAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  pendingIncomingActionText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#056B38',
   },
   greetingTextGroup: {
     flex: 1,

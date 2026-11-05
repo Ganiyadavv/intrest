@@ -1,4 +1,5 @@
-const { PersonRecord, User, Notification } = require("../models");
+const { PersonRecord, LenderRecord, User, Notification } = require("../models");
+const { Op } = require("sequelize");
 
 // Helper to format responses
 const sendResponse = (res, statusCode, status, message, data = null) => {
@@ -55,13 +56,16 @@ exports.createPersonRecord = async (req, res) => {
     });
 
     if (targetUserId) {
+      const sender = await User.findByPk(ownerId);
+      const senderName = sender?.fullName || sender?.name || "User";
+
       await Notification.create({
         recipientId: targetUserId,
         senderId: ownerId,
         personRecordId: personRecord.id,
         type: "PERSON_RECORD_REQUEST",
-        title: "Payment Request from Lender",
-        message: "User A has sent you a payment request with the amount and interest details. Please review the payment details and accept or reject the request."
+        title: "Payment Request from " + senderName,
+        message: `${senderName} has sent you a payment request with the amount and interest details. Please review the payment details and accept or reject the request.`
       });
     }
 
@@ -77,15 +81,31 @@ exports.createPersonRecord = async (req, res) => {
 exports.getPersonRecords = async (req, res) => {
   try {
     const ownerId = req.user.userId;
-    const records = await PersonRecord.findAll({
+
+    // 1. Records created by ownerId as PersonRecord (where ownerId gave money to someone)
+    const personRecords = await PersonRecord.findAll({
       where: { ownerId },
       attributes: { exclude: ['paymentScreenshot'] },
       include: [
-        { model: User, as: 'targetUser', attributes: ['userId', 'fullName'] }
-      ]
+        { model: User, as: 'targetUser', attributes: ['userId', 'fullName'] },
+        { model: User, as: 'owner', attributes: ['userId', 'fullName'] }
+      ],
+      order: [['createdAt', 'DESC']]
     });
 
-    const formattedRecords = records.map(record => {
+    // 2. Records created by others as LenderRecord (Lender for them = they borrowed money from ownerId) that ownerId accepted!
+    // To ownerId, this is a Borrower Record (money given to them)!
+    const acceptedLenderRecords = await LenderRecord.findAll({
+      where: { targetUserId: ownerId, status: "ACCEPTED" },
+      attributes: { exclude: ['paymentScreenshot'] },
+      include: [
+        { model: User, as: 'targetUser', attributes: ['userId', 'fullName'] },
+        { model: User, as: 'owner', attributes: ['userId', 'fullName'] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+
+    const formattedPersons = personRecords.map(record => {
       const data = record.toJSON();
       if (data.targetUser && data.targetUser.userId) {
         data.targetUserId = data.targetUser.userId;
@@ -93,7 +113,22 @@ exports.getPersonRecords = async (req, res) => {
       return data;
     });
 
-    return sendResponse(res, 200, "SUCCESS", "Person records fetched successfully", formattedRecords);
+    const formattedAccepted = acceptedLenderRecords.map(record => {
+      const data = record.toJSON();
+      return {
+        ...data,
+        name: data.owner?.fullName || data.name,
+        targetUserId: data.owner?.userId,
+        givenDate: data.receivedDate,
+        recordType: 'LENDER_RECORD',
+      };
+    });
+
+    const allRecords = [...formattedPersons, ...formattedAccepted].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    return sendResponse(res, 200, "SUCCESS", "Person records fetched successfully", allRecords);
   } catch (error) {
     console.error("Error fetching person records:", error);
     return sendResponse(res, 500, "ERROR", "Internal server error");
@@ -105,27 +140,50 @@ exports.getPersonRecord = async (req, res) => {
     const userId = req.user.userId;
     const recordId = req.params.id;
 
-    const record = await PersonRecord.findByPk(recordId, {
+    let record = await PersonRecord.findByPk(recordId, {
       include: [
-        { model: User, as: 'targetUser', attributes: ['userId', 'fullName'] }
+        { model: User, as: 'targetUser', attributes: ['userId', 'fullName'] },
+        { model: User, as: 'owner', attributes: ['id', 'userId', 'fullName'] }
       ]
     });
 
-    if (!record) {
-      return sendResponse(res, 404, "ERROR", "Person record not found");
+    if (record && (record.ownerId === userId || record.targetUserId === userId)) {
+      const formattedRecord = record.toJSON();
+      if (formattedRecord.ownerId !== userId) {
+        formattedRecord.name = formattedRecord.owner?.fullName || formattedRecord.name;
+        formattedRecord.targetUserId = formattedRecord.owner?.userId;
+      } else if (formattedRecord.targetUser && formattedRecord.targetUser.userId) {
+        formattedRecord.targetUserId = formattedRecord.targetUser.userId;
+      }
+      return sendResponse(res, 200, "SUCCESS", "Person record fetched successfully", formattedRecord);
     }
 
-    if (record.ownerId !== userId && record.targetUserId !== userId) {
-      return sendResponse(res, 403, "ERROR", "You do not have permission to access this record");
+    // Also check if it's an accepted LenderRecord where current user is target (borrower)
+    const lenderRecord = await LenderRecord.findByPk(recordId, {
+      include: [
+        { model: User, as: 'targetUser', attributes: ['userId', 'fullName'] },
+        { model: User, as: 'owner', attributes: ['id', 'userId', 'fullName'] }
+      ]
+    });
+
+    if (lenderRecord && (lenderRecord.targetUserId === userId || lenderRecord.ownerId === userId)) {
+      const formatted = lenderRecord.toJSON();
+      const mapped = {
+        ...formatted,
+        name: formatted.owner?.fullName || formatted.name,
+        targetUserId: formatted.owner?.userId,
+        givenDate: formatted.receivedDate,
+        recordType: 'LENDER_RECORD',
+      };
+      return sendResponse(res, 200, "SUCCESS", "Person record fetched successfully", mapped);
     }
 
-    const formattedRecord = record.toJSON();
-    if (formattedRecord.targetUser && formattedRecord.targetUser.userId) {
-      formattedRecord.targetUserId = formattedRecord.targetUser.userId;
-    }
-
-    return sendResponse(res, 200, "SUCCESS", "Person record fetched successfully", formattedRecord);
+    return sendResponse(res, 404, "ERROR", "Person record not found");
   } catch (error) {
+    console.error("Error fetching person record:", error);
+    return sendResponse(res, 500, "ERROR", "Internal server error");
+  }
+};
     console.error("Error fetching person record:", error);
     return sendResponse(res, 500, "ERROR", "Internal server error");
   }
@@ -221,7 +279,16 @@ exports.acceptPersonRecord = async (req, res) => {
       where: { personRecordId: recordId, recipientId: userId, type: "PERSON_RECORD_REQUEST" }
     });
 
-
+    const recipientUser = await User.findByPk(userId);
+    const recipientName = recipientUser?.fullName || "Recipient";
+    await Notification.create({
+      recipientId: record.ownerId,
+      senderId: userId,
+      personRecordId: record.id,
+      type: "PERSON_RECORD_ACCEPTED",
+      title: "Request Accepted",
+      message: `${recipientName} has accepted your borrower request for ₹${Number(record.amount).toLocaleString('en-IN')}.`
+    });
 
     return sendResponse(res, 200, "SUCCESS", "Person record accepted successfully");
   } catch (error) {
@@ -255,7 +322,16 @@ exports.rejectPersonRecord = async (req, res) => {
       where: { personRecordId: recordId, recipientId: userId, type: "PERSON_RECORD_REQUEST" }
     });
 
-
+    const recipientUser = await User.findByPk(userId);
+    const recipientName = recipientUser?.fullName || "Recipient";
+    await Notification.create({
+      recipientId: record.ownerId,
+      senderId: userId,
+      personRecordId: record.id,
+      type: "PERSON_RECORD_REJECTED",
+      title: "Request Rejected",
+      message: `${recipientName} has rejected your borrower request for ₹${Number(record.amount).toLocaleString('en-IN')}.`
+    });
 
     return sendResponse(res, 200, "SUCCESS", "Person record rejected successfully");
   } catch (error) {
@@ -269,20 +345,19 @@ exports.completePersonRecord = async (req, res) => {
     const userId = req.user.userId;
     const recordId = req.params.id;
 
-    const record = await PersonRecord.findByPk(recordId);
-    if (!record) {
-      return sendResponse(res, 404, "ERROR", "Person record not found");
+    let record = await PersonRecord.findByPk(recordId);
+    if (record && (record.ownerId === userId || record.targetUserId === userId)) {
+      await record.update({ status: "COMPLETED" });
+      return sendResponse(res, 200, "SUCCESS", "Person record marked as completed");
     }
 
-    if (record.ownerId !== userId) {
-      return sendResponse(res, 403, "ERROR", "Only the owner can complete this record");
+    let lRecord = await LenderRecord.findByPk(recordId);
+    if (lRecord && (lRecord.ownerId === userId || lRecord.targetUserId === userId)) {
+      await lRecord.update({ status: "COMPLETED" });
+      return sendResponse(res, 200, "SUCCESS", "Person record marked as completed");
     }
 
-    await record.update({ status: "COMPLETED" });
-
-
-
-    return sendResponse(res, 200, "SUCCESS", "Person record marked as completed");
+    return sendResponse(res, 404, "ERROR", "Person record not found");
   } catch (error) {
     console.error("Error completing person record:", error);
     return sendResponse(res, 500, "ERROR", "Internal server error");

@@ -20,6 +20,7 @@ import { ErrorMessage } from '../components/ErrorMessage';
 import { SuccessMessage } from '../components/SuccessMessage';
 import { personRecordService } from '../services/personRecordService';
 import { Ionicons } from '@expo/vector-icons';
+import { getUser } from '../storage/storage';
 
 type AddPersonNavigationProp = NativeStackNavigationProp<MainStackParamList, 'AddPerson'>;
 
@@ -153,7 +154,16 @@ export const AddPersonScreen: React.FC<Props> = ({ navigation }) => {
       if (district) formData.append('district', district);
       if (state) formData.append('state', state);
       if (country) formData.append('country', country);
-      if (notes) formData.append('notes', notes);
+
+      const currentUser = await getUser().catch(() => null);
+      let encodedNotes = notes ? notes.trim() : '';
+      if (currentUser?.fullName) {
+        const senderTag = `__SENDER__=${currentUser.fullName}|${currentUser.userId || ''}__`;
+        encodedNotes = encodedNotes ? `${senderTag}\n${encodedNotes}` : senderTag;
+      }
+      if (encodedNotes) {
+        formData.append('notes', encodedNotes);
+      }
 
       if (paymentScreenshot) {
         if (Platform.OS === 'web') {

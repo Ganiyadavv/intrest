@@ -29,6 +29,11 @@ interface Props {
   route: PersonDetailsRouteProp;
 }
 
+const cleanNotes = (notes?: string) => {
+  if (!notes) return '';
+  return notes.replace(/_{1,2}SENDER_{1,2}=[^_\n]+_{1,2}\n?/g, '').trim();
+};
+
 const AVATAR_COLORS = [
   { bg: '#FEF3C7', text: '#B45309' },
   { bg: '#DBEAFE', text: '#1D4ED8' },
@@ -361,10 +366,10 @@ export const PersonDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
             </View>
           )}
 
-          {!!person.notes && (
+          {!!cleanNotes(person.notes) && (
             <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
               <Text style={styles.infoRowLabel}>Notes</Text>
-              <Text style={[styles.infoRowValue, { flex: 1, textAlign: 'right' }]}>{person.notes}</Text>
+              <Text style={[styles.infoRowValue, { flex: 1, textAlign: 'right' }]}>{cleanNotes(person.notes)}</Text>
             </View>
           )}
         </View>
@@ -409,7 +414,17 @@ export const PersonDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
 
       {/* 8. BOTTOM PINNED BUTTONS (Matching Pic 4) */}
       <View style={styles.bottomBar}>
-        {person.status !== 'COMPLETED' ? (
+        {person.status === 'REJECTED' ? (
+          <View style={styles.rejectedBadgeBtn}>
+            <Ionicons name="close-circle" size={18} color="#DC2626" style={{ marginRight: 6 }} />
+            <Text style={styles.rejectedBadgeBtnText}>Rejected</Text>
+          </View>
+        ) : person.status === 'COMPLETED' ? (
+          <View style={styles.completedBadgeBtn}>
+            <Ionicons name="checkmark-circle" size={18} color="#15803D" style={{ marginRight: 6 }} />
+            <Text style={styles.completedBadgeBtnText}>Completed</Text>
+          </View>
+        ) : person.status === 'ACCEPTED' ? (
           <TouchableOpacity
             style={styles.primaryActionBtn}
             onPress={handleUpdateStatus}
@@ -418,19 +433,24 @@ export const PersonDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
             <Text style={styles.primaryActionBtnText}>Mark Complete</Text>
           </TouchableOpacity>
         ) : (
-          <View style={styles.completedBadgeBtn}>
-            <Ionicons name="checkmark-circle" size={18} color="#15803D" style={{ marginRight: 6 }} />
-            <Text style={styles.completedBadgeBtnText}>Completed</Text>
-          </View>
-        )}
+          <>
+            <TouchableOpacity
+              style={styles.primaryActionBtn}
+              onPress={handleUpdateStatus}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.primaryActionBtnText}>Mark Complete</Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.secondaryActionBtn}
-          onPress={() => navigation.navigate('EditPerson', { id: person.id || (person as any)._id || '' })}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.secondaryActionBtnText}>Edit</Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.secondaryActionBtn}
+              onPress={() => navigation.navigate('EditPerson', { id: person.id || (person as any)._id || '' })}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.secondaryActionBtnText}>Edit</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
 
       {/* CONFIRMATION MODAL */}
@@ -701,6 +721,20 @@ const styles = StyleSheet.create({
   },
   completedBadgeBtnText: {
     color: '#15803D',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  rejectedBadgeBtn: {
+    flex: 1,
+    backgroundColor: '#FEE2E2',
+    borderRadius: 14,
+    height: 48,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rejectedBadgeBtnText: {
+    color: '#DC2626',
     fontSize: 14,
     fontWeight: '700',
   },

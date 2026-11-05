@@ -98,7 +98,35 @@ export const NotificationsScreen: React.FC<Props> = ({ navigation }) => {
       }
     }
 
-    navigation.navigate('NotificationDetails', { id: item.id });
+    // Extract sender name and sender userId if available
+    let senderName: string | undefined = item.sender?.fullName || item.sender?.name;
+    let senderUserId: string | undefined = item.sender?.userId;
+
+    if (!senderName && item.title && typeof item.title === 'string') {
+      const fromMatch = item.title.match(/from\s+([^.]+)/i);
+      if (fromMatch && fromMatch[1]) {
+        const candidate = fromMatch[1].trim();
+        if (candidate.toLowerCase() !== 'lender' && candidate.toLowerCase() !== 'borrower' && candidate.toLowerCase() !== 'user') {
+          senderName = candidate;
+        }
+      }
+    }
+
+    if (!senderName && item.message && typeof item.message === 'string') {
+      const sentMatch = item.message.match(/^(.+?)\s+has sent you/i);
+      if (sentMatch && sentMatch[1]) {
+        const candidate = sentMatch[1].trim();
+        if (candidate.toLowerCase() !== 'user' && candidate.toLowerCase() !== 'user a' && candidate.toLowerCase() !== 'lender' && candidate.toLowerCase() !== 'borrower') {
+          senderName = candidate;
+        }
+      }
+    }
+
+    navigation.navigate('IncomingRequestDetails', { 
+      id: String(item.id),
+      senderName,
+      senderUserId,
+    });
   };
 
   const handleMarkAllAsRead = async () => {
@@ -315,6 +343,24 @@ export const NotificationsScreen: React.FC<Props> = ({ navigation }) => {
           )}
         </View>
 
+        {/* INCOMING REQUESTS BANNER */}
+        <TouchableOpacity
+          style={styles.incomingBanner}
+          onPress={() => navigation.navigate('IncomingRequests')}
+          activeOpacity={0.85}
+        >
+          <View style={styles.incomingBannerLeft}>
+            <View style={styles.incomingBannerIcon}>
+              <Ionicons name="mail-unread" size={16} color="#056B38" />
+            </View>
+            <View>
+              <Text style={styles.incomingBannerTitle}>Incoming Requests</Text>
+              <Text style={styles.incomingBannerSubtitle}>Review, accept or reject incoming loan requests</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#056B38" />
+        </TouchableOpacity>
+
         {/* 3. NOTIFICATION LIST OR EMPTY STATE */}
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -530,6 +576,47 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#056B38',
+  },
+  incomingBanner: {
+    marginHorizontal: 16,
+    marginBottom: 10,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    maxWidth: 500,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  incomingBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  incomingBannerIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#DCFCE7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  incomingBannerTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#056B38',
+  },
+  incomingBannerSubtitle: {
+    fontSize: 11,
+    color: '#15803D',
+    marginTop: 1,
   },
   listContent: {
     paddingHorizontal: 16,

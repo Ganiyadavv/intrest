@@ -115,13 +115,34 @@ const updateProfile = async (req, res) => {
 
 const searchUser = async (req, res) => {
   try {
-    let { userId, name, query } = req.query;
+    let { userId, name, query, id } = req.query;
 
-    if (!userId && !name && !query) {
+    if (!userId && !name && !query && !id) {
       return res.status(400).json({
         statusCode: 400,
         status: 'ERROR',
         message: 'Search query is required'
+      });
+    }
+
+    if (id) {
+      const user = await User.findByPk(id, {
+        attributes: { exclude: ['password', 'createdAt', 'updatedAt'] }
+      });
+
+      if (!user) {
+        return res.status(404).json({
+          statusCode: 404,
+          status: 'ERROR',
+          message: 'User not found'
+        });
+      }
+
+      return res.status(200).json({
+        statusCode: 200,
+        status: 'SUCCESS',
+        message: 'User found',
+        data: user
       });
     }
 
