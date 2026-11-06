@@ -342,7 +342,7 @@ export const LenderRecordDetailsScreen: React.FC<Props> = ({ navigation, route }
                 },
               ]}
             >
-              {person.status === 'ACCEPTED' ? 'Active' : person.status}
+              {person.status === 'ACCEPTED' ? 'Accepted' : person.status}
             </Text>
           </View>
         </View>
@@ -523,7 +523,7 @@ export const LenderRecordDetailsScreen: React.FC<Props> = ({ navigation, route }
           ) : (
             <View style={styles.completedBadgeBtn}>
               <Ionicons name="checkmark-circle" size={18} color="#15803D" style={{ marginRight: 6 }} />
-              <Text style={styles.completedBadgeBtnText}>Active</Text>
+              <Text style={styles.completedBadgeBtnText}>Accepted</Text>
             </View>
           )
         ) : (
@@ -548,7 +548,7 @@ export const LenderRecordDetailsScreen: React.FC<Props> = ({ navigation, route }
           ) : (
             <View style={styles.completedBadgeBtn}>
               <Ionicons name="checkmark-circle" size={18} color="#15803D" style={{ marginRight: 6 }} />
-              <Text style={styles.completedBadgeBtnText}>Active</Text>
+              <Text style={styles.completedBadgeBtnText}>Accepted</Text>
             </View>
           )
         )}

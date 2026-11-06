@@ -350,7 +350,7 @@ export const IncomingRequestDetailsScreen: React.FC<Props> = ({ navigation, rout
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerIconBtn}>
             <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.appBarTitle}>Incoming Request</Text>
+          <Text style={styles.appBarTitle}>Requests</Text>
           <View style={{ width: 38 }} />
         </View>
         <View style={styles.loadingContainer}>
@@ -368,7 +368,7 @@ export const IncomingRequestDetailsScreen: React.FC<Props> = ({ navigation, rout
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerIconBtn}>
             <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.appBarTitle}>Incoming Request</Text>
+          <Text style={styles.appBarTitle}>Requests</Text>
           <View style={{ width: 38 }} />
         </View>
         <View style={styles.loadingContainer}>
@@ -428,7 +428,7 @@ export const IncomingRequestDetailsScreen: React.FC<Props> = ({ navigation, rout
           <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
         </TouchableOpacity>
 
-        <Text style={styles.appBarTitle}>Incoming Request Details</Text>
+        <Text style={styles.appBarTitle}>Request Details</Text>
 
         <View style={{ width: 38 }} />
       </View>
@@ -576,7 +576,7 @@ export const IncomingRequestDetailsScreen: React.FC<Props> = ({ navigation, rout
           ) : (
             <View style={styles.statusDisplayBadgeGreen}>
               <Ionicons name="checkmark-circle" size={20} color="#15803D" style={{ marginRight: 6 }} />
-              <Text style={styles.statusDisplayBadgeTextGreen}>Active</Text>
+              <Text style={styles.statusDisplayBadgeTextGreen}>Accepted</Text>
             </View>
           )
         ) : record.status === 'COMPLETED' ? (

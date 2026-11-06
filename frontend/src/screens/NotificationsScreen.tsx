@@ -354,7 +354,7 @@ export const NotificationsScreen: React.FC<Props> = ({ navigation }) => {
               <Ionicons name="mail-unread" size={16} color="#056B38" />
             </View>
             <View>
-              <Text style={styles.incomingBannerTitle}>Incoming Requests</Text>
+              <Text style={styles.incomingBannerTitle}>Requests</Text>
               <Text style={styles.incomingBannerSubtitle}>Review, accept or reject incoming loan requests</Text>
             </View>
           </View>

@@ -414,7 +414,7 @@ export const IncomingRequestsScreen: React.FC<Props> = ({ navigation }) => {
           <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
         </TouchableOpacity>
 
-        <Text style={styles.appBarTitle}>Incoming Requests</Text>
+        <Text style={styles.appBarTitle}>Requests</Text>
 
         <View style={{ width: 38 }} />
       </View>

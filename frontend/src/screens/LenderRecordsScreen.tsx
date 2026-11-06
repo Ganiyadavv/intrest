@@ -103,7 +103,7 @@ export const LenderRecordsScreen: React.FC<Props> = ({ navigation }) => {
     let color = '#D97706';
 
     if (status === 'ACCEPTED') {
-      label = 'Active';
+      label = 'Accepted';
       bg = '#DCFCE7';
       color = '#16A34A';
     } else if (status === 'COMPLETED') {
@@ -248,7 +248,7 @@ export const LenderRecordsScreen: React.FC<Props> = ({ navigation }) => {
                   : status === 'PENDING'
                   ? 'Pending'
                   : status === 'ACCEPTED'
-                  ? 'Active'
+                  ? 'Accepted'
                   : 'Completed';
               const isActive = statusFilter === status;
               return (

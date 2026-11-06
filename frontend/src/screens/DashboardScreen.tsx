@@ -38,7 +38,7 @@ interface TransactionItem {
   type: 'Lender' | 'Borrower';
   amount: number;
   rate: string;
-  status: 'Active' | 'Pending' | 'Completed' | 'Rejected';
+  status: 'Active' | 'Accepted' | 'Pending' | 'Completed' | 'Rejected';
   initials: string;
   color: string;
   date?: number;
@@ -154,7 +154,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
         r.status === 'COMPLETED'
           ? 'Completed'
           : r.status === 'ACCEPTED'
-          ? 'Active'
+          ? 'Accepted'
           : 'Pending',
       initials,
       color: '#F59E0B',
@@ -190,7 +190,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
         r.status === 'COMPLETED'
           ? 'Completed'
           : r.status === 'ACCEPTED'
-          ? 'Active'
+          ? 'Accepted'
           : 'Pending',
       initials,
       color: '#10B981',
@@ -299,7 +299,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.pendingIncomingTitle}>
-                    {pendingRequestsCount === 1 ? '1 Pending Incoming Request' : `${pendingRequestsCount} Pending Incoming Requests`}
+                    {pendingRequestsCount === 1 ? '1 Pending Request' : `${pendingRequestsCount} Pending Requests`}
                   </Text>
                   <Text style={styles.pendingIncomingSubtitle}>
                     Review loan requests waiting for your approval
@@ -479,7 +479,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                           styles.statusPill,
                           {
                             backgroundColor:
-                              tx.status === 'Active'
+                              tx.status === 'Accepted' || tx.status === 'Active'
                                 ? '#DCFCE7'
                                 : tx.status === 'Pending'
                                 ? '#FEF3C7'
@@ -496,7 +496,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                             styles.statusDot,
                             {
                               backgroundColor:
-                                tx.status === 'Active'
+                                tx.status === 'Accepted' || tx.status === 'Active'
                                   ? '#16A34A'
                                   : tx.status === 'Pending'
                                   ? '#D97706'
@@ -513,7 +513,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                             styles.statusText,
                             {
                               color:
-                                tx.status === 'Active'
+                                tx.status === 'Accepted' || tx.status === 'Active'
                                   ? '#15803D'
                                   : tx.status === 'Pending'
                                   ? '#B45309'
@@ -525,7 +525,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                             },
                           ]}
                         >
-                          {tx.status === 'Active'
+                          {tx.status === 'Accepted' || tx.status === 'Active'
                             ? t('table.active')
                             : tx.status === 'Pending'
                             ? t('table.pending')
@@ -733,7 +733,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             >
               <Ionicons name="mail-unread-outline" size={22} color="#056B38" />
               <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={styles.menuItemText}>Incoming Requests</Text>
+                <Text style={styles.menuItemText}>Requests</Text>
                 {pendingRequestsCount > 0 && (
                   <View style={{ backgroundColor: '#DC2626', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10 }}>
                     <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>{pendingRequestsCount}</Text>
