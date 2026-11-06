@@ -72,6 +72,14 @@ export const requestService = {
       return await personRecordService.rejectPersonRecord(String(recordId));
     }
   },
+
+  completeRequest: async (recordType: string, recordId: number | string): Promise<any> => {
+    if (recordType === 'LENDER_RECORD') {
+      return await lenderRecordService.completeLenderRecord(String(recordId));
+    } else {
+      return await personRecordService.completePersonRecord(String(recordId));
+    }
+  },
 };
 
 // Robust resolution of actual sender name and userId without ever querying all users

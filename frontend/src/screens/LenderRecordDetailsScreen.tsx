@@ -222,7 +222,16 @@ export const LenderRecordDetailsScreen: React.FC<Props> = ({ navigation, route }
     person?.country ||
     person?.pincode;
 
-  const isRecipient = person?.ownerId !== currentUser?.id;
+  const isSender =
+    (currentUser?.id != null && person?.ownerId != null && String(currentUser.id) === String(person.ownerId)) ||
+    (currentUser?.userId && (person as any)?.owner?.userId && currentUser.userId.trim().toUpperCase() === (person as any).owner.userId.trim().toUpperCase());
+
+  const isTargetUser =
+    Boolean(currentUser?.userId &&
+    ((person?.targetUserId && currentUser.userId.trim().toUpperCase() === person.targetUserId.trim().toUpperCase()) ||
+     ((person as any)?.targetUser?.userId && currentUser.userId.trim().toUpperCase() === (person as any).targetUser.userId.trim().toUpperCase())));
+
+  const isRecipient = isTargetUser || !isSender;
   const needsAcceptance = isRecipient && person?.status === 'PENDING';
 
   if (loading)
@@ -503,15 +512,7 @@ export const LenderRecordDetailsScreen: React.FC<Props> = ({ navigation, route }
             <Text style={styles.completedBadgeBtnText}>Completed</Text>
           </View>
         ) : person.status === 'ACCEPTED' ? (
-          <TouchableOpacity
-            style={styles.primaryActionBtn}
-            onPress={handleUpdateStatus}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.primaryActionBtnText}>Mark Complete</Text>
-          </TouchableOpacity>
-        ) : (
-          <>
+          !isRecipient ? (
             <TouchableOpacity
               style={styles.primaryActionBtn}
               onPress={handleUpdateStatus}
@@ -519,8 +520,23 @@ export const LenderRecordDetailsScreen: React.FC<Props> = ({ navigation, route }
             >
               <Text style={styles.primaryActionBtnText}>Mark Complete</Text>
             </TouchableOpacity>
+          ) : (
+            <View style={styles.completedBadgeBtn}>
+              <Ionicons name="checkmark-circle" size={18} color="#15803D" style={{ marginRight: 6 }} />
+              <Text style={styles.completedBadgeBtnText}>Active</Text>
+            </View>
+          )
+        ) : (
+          !isRecipient ? (
+            <>
+              <TouchableOpacity
+                style={styles.primaryActionBtn}
+                onPress={handleUpdateStatus}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.primaryActionBtnText}>Mark Complete</Text>
+              </TouchableOpacity>
 
-            {!isRecipient && (
               <TouchableOpacity
                 style={styles.secondaryActionBtn}
                 onPress={() => navigation.navigate('EditLenderRecord', { id: person.id || (person as any)._id || '' })}
@@ -528,8 +544,13 @@ export const LenderRecordDetailsScreen: React.FC<Props> = ({ navigation, route }
               >
                 <Text style={styles.secondaryActionBtnText}>Edit</Text>
               </TouchableOpacity>
-            )}
-          </>
+            </>
+          ) : (
+            <View style={styles.completedBadgeBtn}>
+              <Ionicons name="checkmark-circle" size={18} color="#15803D" style={{ marginRight: 6 }} />
+              <Text style={styles.completedBadgeBtnText}>Active</Text>
+            </View>
+          )
         )}
       </View>
 

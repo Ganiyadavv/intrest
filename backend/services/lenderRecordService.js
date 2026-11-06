@@ -58,7 +58,8 @@ class LenderRecordService {
   }
 
   async getLenderRecords(ownerId) {
-    // 1. Records created by ownerId as LenderRecord (where ownerId took/received money)
+    // Only return records created/owned by ownerId.
+    // Incoming requests (whether pending, accepted or completed) are managed strictly in the Incoming Requests screen.
     const lenderRecords = await LenderRecord.findAll({
       where: { ownerId },
       attributes: { exclude: ['paymentScreenshot'] },
@@ -69,81 +70,37 @@ class LenderRecordService {
       order: [['createdAt', 'DESC']]
     });
 
-    // 2. Records created by others as PersonRecord (Borrower for them = they lent money to ownerId) that ownerId accepted!
-    // To ownerId, this is a Lender Record (ownerId received money from them)!
-    const acceptedPersonRecords = await PersonRecord.findAll({
-      where: { targetUserId: ownerId, status: "ACCEPTED" },
-      attributes: { exclude: ['paymentScreenshot'] },
-      include: [
-        { model: User, as: 'targetUser', attributes: ['userId', 'fullName'] },
-        { model: User, as: 'owner', attributes: ['userId', 'fullName'] }
-      ],
-      order: [['createdAt', 'DESC']]
-    });
-
-    const formattedLenders = lenderRecords.map(record => {
+    return lenderRecords.map(record => {
       const data = record.toJSON();
       if (data.targetUser && data.targetUser.userId) {
         data.targetUserId = data.targetUser.userId;
       }
       return data;
     });
-
-    const formattedAccepted = acceptedPersonRecords.map(record => {
-      const data = record.toJSON();
-      return {
-        ...data,
-        name: data.owner?.fullName || data.name,
-        targetUserId: data.owner?.userId,
-        receivedDate: data.givenDate,
-        recordType: 'PERSON_RECORD',
-      };
-    });
-
-    return [...formattedLenders, ...formattedAccepted].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
   }
 
   async getLenderRecordById(ownerId, recordId) {
-    let record = await LenderRecord.findByPk(recordId, {
+    const record = await LenderRecord.findByPk(recordId, {
       include: [
         { model: User, as: 'targetUser', attributes: ['userId', 'fullName'] },
         { model: User, as: 'owner', attributes: ['id', 'userId', 'fullName'] }
       ]
     });
 
-    if (record && (record.ownerId === ownerId || record.targetUserId === ownerId)) {
-      const formattedRecord = record.toJSON();
-      if (formattedRecord.ownerId !== ownerId) {
-        formattedRecord.name = formattedRecord.owner?.fullName || formattedRecord.name;
-        formattedRecord.targetUserId = formattedRecord.owner?.userId;
-      } else if (formattedRecord.targetUser && formattedRecord.targetUser.userId) {
-        formattedRecord.targetUserId = formattedRecord.targetUser.userId;
-      }
-      return formattedRecord;
+    if (!record) {
+      throw new Error("Lender record not found");
     }
 
-    // Also check PersonRecord where targetUserId = ownerId (accepted borrower record from someone else)
-    const personRecord = await PersonRecord.findByPk(recordId, {
-      include: [
-        { model: User, as: 'targetUser', attributes: ['userId', 'fullName'] },
-        { model: User, as: 'owner', attributes: ['id', 'userId', 'fullName'] }
-      ]
-    });
-
-    if (personRecord && (personRecord.targetUserId === ownerId || personRecord.ownerId === ownerId)) {
-      const formatted = personRecord.toJSON();
-      return {
-        ...formatted,
-        name: formatted.owner?.fullName || formatted.name,
-        targetUserId: formatted.owner?.userId,
-        receivedDate: formatted.givenDate,
-        recordType: 'PERSON_RECORD',
-      };
+    if (record.ownerId !== ownerId && record.targetUserId !== ownerId) {
+      throw new Error("You do not have permission to access this record");
     }
 
-    throw new Error("Lender record not found");
+    const formattedRecord = record.toJSON();
+    if (formattedRecord.targetUser && formattedRecord.targetUser.userId) {
+      formattedRecord.targetUserId = formattedRecord.targetUser.userId;
+    }
+
+    return formattedRecord;
   }
 
   async updateLenderRecord(ownerId, recordId, data) {
@@ -256,19 +213,17 @@ class LenderRecordService {
   }
 
   async completeLenderRecord(ownerId, recordId) {
-    let record = await LenderRecord.findByPk(recordId);
-    if (record && (record.ownerId === ownerId || record.targetUserId === ownerId)) {
-      await record.update({ status: "COMPLETED" });
-      return record;
+    const record = await LenderRecord.findByPk(recordId);
+    if (!record) {
+      throw new Error("Lender record not found");
     }
 
-    let pRecord = await PersonRecord.findByPk(recordId);
-    if (pRecord && (pRecord.ownerId === ownerId || pRecord.targetUserId === ownerId)) {
-      await pRecord.update({ status: "COMPLETED" });
-      return pRecord;
+    if (record.ownerId !== ownerId) {
+      throw new Error("Only the user who sent this request can mark it as complete");
     }
 
-    throw new Error("Lender record not found");
+    await record.update({ status: "COMPLETED" });
+    return record;
   }
 }
 

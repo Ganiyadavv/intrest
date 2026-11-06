@@ -69,8 +69,30 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
         requestService.getIncomingRequests().catch(() => []),
       ]);
 
-      setPersonRecords(Array.isArray(borrowers) ? borrowers : []);
-      setLenderRecords(Array.isArray(lenders) ? lenders : []);
+      const filterDashboardRecords = (list: any[]) => {
+        if (!Array.isArray(list)) return [];
+        return list.filter((r: any) => {
+          // Never display rejected records on the dashboard
+          if (r.status === 'REJECTED') {
+            return false;
+          }
+          // Only show records created/owned by this user
+          if (r.ownerId != null && storedUser?.id != null && String(r.ownerId) !== String(storedUser.id)) {
+            return false;
+          }
+          // Do not display incoming requests where this user is the recipient
+          const isTargetMe =
+            storedUser?.userId &&
+            (r.targetUserId === storedUser.userId || r.targetUser?.userId === storedUser.userId);
+          if (isTargetMe) {
+            return false;
+          }
+          return true;
+        });
+      };
+
+      setPersonRecords(filterDashboardRecords(borrowers));
+      setLenderRecords(filterDashboardRecords(lenders));
 
       const unread = Array.isArray(notifications)
         ? notifications.filter((n: any) => n.isRead === false || n.status === 'UNREAD').length
@@ -107,6 +129,13 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
   const realTransactions: TransactionItem[] = [];
 
   personRecords.forEach((r) => {
+    if ((r.status as string) === 'REJECTED') return;
+    if (r.ownerId != null && user?.id != null && String(r.ownerId) !== String(user.id)) return;
+    const isTargetMe =
+      user?.userId &&
+      (r.targetUserId === user.userId || (r as any).targetUser?.userId === user.userId);
+    if (isTargetMe) return;
+
     const rawName = (r.name || 'Borrower').trim();
     const parts = rawName.split(' ');
     const initials =
@@ -126,8 +155,6 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
           ? 'Completed'
           : r.status === 'ACCEPTED'
           ? 'Active'
-          : r.status === 'REJECTED'
-          ? 'Rejected'
           : 'Pending',
       initials,
       color: '#F59E0B',
@@ -138,6 +165,13 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
   });
 
   lenderRecords.forEach((r) => {
+    if ((r.status as string) === 'REJECTED') return;
+    if (r.ownerId != null && user?.id != null && String(r.ownerId) !== String(user.id)) return;
+    const isTargetMe =
+      user?.userId &&
+      (r.targetUserId === user.userId || (r as any).targetUser?.userId === user.userId);
+    if (isTargetMe) return;
+
     const rawName = (r.name || 'Lender').trim();
     const parts = rawName.split(' ');
     const initials =
@@ -157,8 +191,6 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
           ? 'Completed'
           : r.status === 'ACCEPTED'
           ? 'Active'
-          : r.status === 'REJECTED'
-          ? 'Rejected'
           : 'Pending',
       initials,
       color: '#10B981',

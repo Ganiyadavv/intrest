@@ -16,7 +16,9 @@ import { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { MainStackParamList } from '../types/navigation';
 import { PersonRecord } from '../types/personRecord';
+import { User } from '../types/user';
 import { personRecordService } from '../services/personRecordService';
+import { getUser } from '../storage/storage';
 import { Loading } from '../components/Loading';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { formatCurrency } from '../utils/currency';
@@ -55,6 +57,7 @@ const getAvatarColor = (name: string) => {
 export const PersonDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
   const { id } = route.params;
   const [person, setPerson] = useState<PersonRecord | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
@@ -69,8 +72,12 @@ export const PersonDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
   const fetchPerson = async () => {
     try {
       setError('');
-      const data = await personRecordService.getPersonRecordById(id);
+      const [data, user] = await Promise.all([
+        personRecordService.getPersonRecordById(id),
+        getUser(),
+      ]);
       setPerson(data);
+      setCurrentUser(user);
     } catch (err: any) {
       setError('Failed to fetch details');
     } finally {
@@ -173,6 +180,17 @@ export const PersonDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
     person?.country ||
     person?.pincode;
 
+  const isSender =
+    (currentUser?.id != null && person?.ownerId != null && String(currentUser.id) === String(person.ownerId)) ||
+    (currentUser?.userId && (person as any)?.owner?.userId && currentUser.userId.trim().toUpperCase() === (person as any).owner.userId.trim().toUpperCase());
+
+  const isTargetUser =
+    Boolean(currentUser?.userId &&
+    ((person?.targetUserId && currentUser.userId.trim().toUpperCase() === person.targetUserId.trim().toUpperCase()) ||
+     ((person as any)?.targetUser?.userId && currentUser.userId.trim().toUpperCase() === (person as any).targetUser.userId.trim().toUpperCase())));
+
+  const isRecipient = isTargetUser || !isSender;
+
   if (loading)
     return (
       <SafeAreaView style={styles.safeContainer}>
@@ -220,13 +238,17 @@ export const PersonDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
           <Ionicons name="chevron-back" size={24} color="#1E293B" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Borrower Details</Text>
-        <TouchableOpacity
-          onPress={handleDelete}
-          style={styles.headerBtn}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="trash-outline" size={20} color="#DC2626" />
-        </TouchableOpacity>
+        {!isRecipient ? (
+          <TouchableOpacity
+            onPress={handleDelete}
+            style={styles.headerBtn}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="trash-outline" size={20} color="#DC2626" />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.headerBtn} />
+        )}
       </View>
 
       <ScrollView
@@ -425,15 +447,7 @@ export const PersonDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
             <Text style={styles.completedBadgeBtnText}>Completed</Text>
           </View>
         ) : person.status === 'ACCEPTED' ? (
-          <TouchableOpacity
-            style={styles.primaryActionBtn}
-            onPress={handleUpdateStatus}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.primaryActionBtnText}>Mark Complete</Text>
-          </TouchableOpacity>
-        ) : (
-          <>
+          !isRecipient ? (
             <TouchableOpacity
               style={styles.primaryActionBtn}
               onPress={handleUpdateStatus}
@@ -441,15 +455,37 @@ export const PersonDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
             >
               <Text style={styles.primaryActionBtnText}>Mark Complete</Text>
             </TouchableOpacity>
+          ) : (
+            <View style={styles.completedBadgeBtn}>
+              <Ionicons name="checkmark-circle" size={18} color="#15803D" style={{ marginRight: 6 }} />
+              <Text style={styles.completedBadgeBtnText}>Active</Text>
+            </View>
+          )
+        ) : (
+          !isRecipient ? (
+            <>
+              <TouchableOpacity
+                style={styles.primaryActionBtn}
+                onPress={handleUpdateStatus}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.primaryActionBtnText}>Mark Complete</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.secondaryActionBtn}
-              onPress={() => navigation.navigate('EditPerson', { id: person.id || (person as any)._id || '' })}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.secondaryActionBtnText}>Edit</Text>
-            </TouchableOpacity>
-          </>
+              <TouchableOpacity
+                style={styles.secondaryActionBtn}
+                onPress={() => navigation.navigate('EditPerson', { id: person.id || (person as any)._id || '' })}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.secondaryActionBtnText}>Edit</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <View style={styles.completedBadgeBtn}>
+              <Ionicons name="checkmark-circle" size={18} color="#15803D" style={{ marginRight: 6 }} />
+              <Text style={styles.completedBadgeBtnText}>Active</Text>
+            </View>
+          )
         )}
       </View>
 

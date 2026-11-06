@@ -12,6 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -402,6 +403,7 @@ export const IncomingRequestsScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeContainer} edges={['top', 'left', 'right']}>
+      <StatusBar style="light" />
       {/* 1. TOP APP BAR */}
       <View style={styles.topAppBar}>
         <TouchableOpacity
@@ -417,112 +419,118 @@ export const IncomingRequestsScreen: React.FC<Props> = ({ navigation }) => {
         <View style={{ width: 38 }} />
       </View>
 
-      {/* 2. TAB SELECTOR (Incoming vs Sent) */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tabButton, activeTab === 'INCOMING' && styles.tabButtonActive]}
-          onPress={() => setActiveTab('INCOMING')}
-          activeOpacity={0.8}
-        >
-          <Ionicons
-            name="arrow-down-circle"
-            size={18}
-            color={activeTab === 'INCOMING' ? '#056B38' : '#64748B'}
-            style={{ marginRight: 6 }}
-          />
-          <Text style={[styles.tabText, activeTab === 'INCOMING' && styles.tabTextActive]}>
-            Incoming
-          </Text>
-          {pendingIncomingCount > 0 && (
-            <View style={styles.tabBadge}>
-              <Text style={styles.tabBadgeText}>{pendingIncomingCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tabButton, activeTab === 'SENT' && styles.tabButtonActive]}
-          onPress={() => setActiveTab('SENT')}
-          activeOpacity={0.8}
-        >
-          <Ionicons
-            name="arrow-up-circle"
-            size={18}
-            color={activeTab === 'SENT' ? '#056B38' : '#64748B'}
-            style={{ marginRight: 6 }}
-          />
-          <Text style={[styles.tabText, activeTab === 'SENT' && styles.tabTextActive]}>
-            Sent Requests
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* 3. SEARCH & FILTER PILLS */}
-      <View style={styles.filterSection}>
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={18} color="#94A3B8" style={{ marginRight: 8 }} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder={activeTab === 'INCOMING' ? 'Search by sender name, ID...' : 'Search by recipient name, ID...'}
-            placeholderTextColor="#94A3B8"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={18} color="#94A3B8" />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <View style={styles.pillsRow}>
-          {(['ALL', 'PENDING', 'ACCEPTED', 'REJECTED'] as const).map((filter) => (
-            <TouchableOpacity
-              key={filter}
-              style={[styles.pill, statusFilter === filter && styles.pillActive]}
-              onPress={() => setStatusFilter(filter)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.pillText, statusFilter === filter && styles.pillTextActive]}>
-                {filter === 'ALL' ? 'All' : filter}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {/* 4. LIST OF REQUESTS */}
-      {loading ? (
-        <Loading />
-      ) : (
-        <FlatList
-          data={filteredRequests}
-          keyExtractor={(item) => `${item.recordType}-${item.id}`}
-          renderItem={renderRequestItem}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#056B38']} />}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <View style={styles.emptyIconCircle}>
-                <Ionicons
-                  name={activeTab === 'INCOMING' ? 'mail-open-outline' : 'paper-plane-outline'}
-                  size={36}
-                  color="#94A3B8"
-                />
+      {/* BODY CONTENT CONTAINER (Full height, light background) */}
+      <View style={styles.mainContent}>
+        {/* 2. TAB SELECTOR (Incoming vs Sent) */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'INCOMING' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('INCOMING')}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name="arrow-down-circle"
+              size={18}
+              color={activeTab === 'INCOMING' ? '#056B38' : '#64748B'}
+              style={{ marginRight: 6 }}
+            />
+            <Text style={[styles.tabText, activeTab === 'INCOMING' && styles.tabTextActive]}>
+              Incoming
+            </Text>
+            {pendingIncomingCount > 0 && (
+              <View style={styles.tabBadge}>
+                <Text style={styles.tabBadgeText}>{pendingIncomingCount}</Text>
               </View>
-              <Text style={styles.emptyTitle}>
-                {activeTab === 'INCOMING' ? 'No Incoming Requests' : 'No Sent Requests'}
-              </Text>
-              <Text style={styles.emptySubtitle}>
-                {activeTab === 'INCOMING'
-                  ? 'When other members send you loan or lender requests, they will appear here.'
-                  : 'Requests you send to other users will be tracked here.'}
-              </Text>
-            </View>
-          }
-        />
-      )}
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'SENT' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('SENT')}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name="arrow-up-circle"
+              size={18}
+              color={activeTab === 'SENT' ? '#056B38' : '#64748B'}
+              style={{ marginRight: 6 }}
+            />
+            <Text style={[styles.tabText, activeTab === 'SENT' && styles.tabTextActive]}>
+              Sent Requests
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* 3. SEARCH & FILTER PILLS */}
+        <View style={styles.filterSection}>
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={18} color="#94A3B8" style={{ marginRight: 8 }} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder={activeTab === 'INCOMING' ? 'Search by sender name, ID...' : 'Search by recipient name, ID...'}
+              placeholderTextColor="#94A3B8"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={18} color="#94A3B8" />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View style={styles.pillsRow}>
+            {(['ALL', 'PENDING', 'ACCEPTED', 'REJECTED'] as const).map((filter) => (
+              <TouchableOpacity
+                key={filter}
+                style={[styles.pill, statusFilter === filter && styles.pillActive]}
+                onPress={() => setStatusFilter(filter)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.pillText, statusFilter === filter && styles.pillTextActive]}>
+                  {filter === 'ALL' ? 'All' : filter}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* 4. LIST OF REQUESTS */}
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <Loading />
+          </View>
+        ) : (
+          <FlatList
+            style={styles.flatList}
+            data={filteredRequests}
+            keyExtractor={(item) => `${item.recordType}-${item.id}`}
+            renderItem={renderRequestItem}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#056B38']} />}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <View style={styles.emptyIconCircle}>
+                  <Ionicons
+                    name={activeTab === 'INCOMING' ? 'mail-open-outline' : 'paper-plane-outline'}
+                    size={36}
+                    color="#94A3B8"
+                  />
+                </View>
+                <Text style={styles.emptyTitle}>
+                  {activeTab === 'INCOMING' ? 'No Incoming Requests' : 'No Sent Requests'}
+                </Text>
+                <Text style={styles.emptySubtitle}>
+                  {activeTab === 'INCOMING'
+                    ? 'When other members send you loan or lender requests, they will appear here.'
+                    : 'Requests you send to other users will be tracked here.'}
+                </Text>
+              </View>
+            }
+          />
+        )}
+      </View>
 
       {/* CONFIRMATION / ALERT MODAL */}
       <Modal
@@ -576,6 +584,10 @@ const styles = StyleSheet.create({
   safeContainer: {
     flex: 1,
     backgroundColor: '#056B38',
+  },
+  mainContent: {
+    flex: 1,
+    backgroundColor: '#F8FAF8',
   },
   topAppBar: {
     backgroundColor: '#056B38',
@@ -670,6 +682,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#0F172A',
     paddingVertical: 2,
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+      } as any,
+    }),
   },
   pillsRow: {
     flexDirection: 'row',
@@ -696,6 +713,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
   },
+  flatList: {
+    flex: 1,
+    backgroundColor: '#F8FAF8',
+  },
   listContent: {
     backgroundColor: '#F8FAF8',
     padding: 16,
@@ -703,6 +724,13 @@ const styles = StyleSheet.create({
     maxWidth: 600,
     width: '100%',
     alignSelf: 'center',
+    flexGrow: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: '#F8FAF8',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   card: {
     backgroundColor: '#FFFFFF',

@@ -63,12 +63,15 @@ export const PersonRecordsScreen: React.FC<Props> = ({ navigation }) => {
       ]);
 
       const list = Array.isArray(data) ? data : [];
-      // Do not display incoming requests that are pending in the recipient's records
+      // Do not display incoming requests in Borrower Records - incoming requests belong strictly to the Incoming Requests screen
       const filtered = list.filter((r: any) => {
+        if (r.ownerId != null && currentUser?.id != null && r.ownerId !== currentUser.id) {
+          return false;
+        }
         const isTargetMe =
           currentUser?.userId &&
           (r.targetUserId === currentUser.userId || r.targetUser?.userId === currentUser.userId);
-        if (isTargetMe && (r.status === 'PENDING' || r.status === 'REJECTED')) {
+        if (isTargetMe) {
           return false;
         }
         return true;

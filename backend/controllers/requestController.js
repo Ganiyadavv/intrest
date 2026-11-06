@@ -342,3 +342,35 @@ exports.rejectRequest = async (req, res) => {
   }
 };
 
+exports.completeRequest = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { recordType, recordId } = req.params;
+
+    if (recordType === 'LENDER_RECORD') {
+      const record = await LenderRecord.findByPk(recordId);
+      if (!record) {
+        return sendResponse(res, 404, "ERROR", "Lender record not found");
+      }
+      if (record.ownerId !== userId) {
+        return sendResponse(res, 403, "ERROR", "Only the user who sent this request can mark it as complete");
+      }
+      await record.update({ status: "COMPLETED" });
+      return sendResponse(res, 200, "SUCCESS", "Request marked as completed");
+    } else {
+      const record = await PersonRecord.findByPk(recordId);
+      if (!record) {
+        return sendResponse(res, 404, "ERROR", "Person record not found");
+      }
+      if (record.ownerId !== userId) {
+        return sendResponse(res, 403, "ERROR", "Only the user who sent this request can mark it as complete");
+      }
+      await record.update({ status: "COMPLETED" });
+      return sendResponse(res, 200, "SUCCESS", "Request marked as completed");
+    }
+  } catch (error) {
+    console.error("Error completing request:", error);
+    return sendResponse(res, 500, "ERROR", "Internal server error");
+  }
+};
+

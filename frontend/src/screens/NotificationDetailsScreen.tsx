@@ -11,6 +11,7 @@ import {
   Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -147,6 +148,7 @@ export const NotificationDetailsScreen: React.FC<Props> = ({ navigation, route }
   if (loading) {
     return (
       <SafeAreaView style={styles.safeContainer} edges={['top', 'left', 'right']}>
+        <StatusBar style="light" />
         <View style={styles.topAppBar}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerIconBtn}>
             <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
@@ -154,7 +156,9 @@ export const NotificationDetailsScreen: React.FC<Props> = ({ navigation, route }
           <Text style={styles.appBarTitle}>Notification Details</Text>
           <View style={{ width: 38 }} />
         </View>
-        <Loading />
+        <View style={styles.loadingContainer}>
+          <Loading />
+        </View>
       </SafeAreaView>
     );
   }
@@ -162,6 +166,7 @@ export const NotificationDetailsScreen: React.FC<Props> = ({ navigation, route }
   if (error || !record) {
     return (
       <SafeAreaView style={styles.safeContainer} edges={['top', 'left', 'right']}>
+        <StatusBar style="light" />
         <View style={styles.topAppBar}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerIconBtn}>
             <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
@@ -169,7 +174,9 @@ export const NotificationDetailsScreen: React.FC<Props> = ({ navigation, route }
           <Text style={styles.appBarTitle}>Notification Details</Text>
           <View style={{ width: 38 }} />
         </View>
-        <ErrorMessage message={error || 'Record details not available'} />
+        <View style={styles.loadingContainer}>
+          <ErrorMessage message={error || 'Record details not available'} />
+        </View>
       </SafeAreaView>
     );
   }
@@ -206,6 +213,7 @@ export const NotificationDetailsScreen: React.FC<Props> = ({ navigation, route }
 
   return (
     <SafeAreaView style={styles.safeContainer} edges={['top', 'left', 'right']}>
+      <StatusBar style="light" />
       {/* 1. TOP APP BAR */}
       <View style={styles.topAppBar}>
         <TouchableOpacity
@@ -408,6 +416,15 @@ const styles = StyleSheet.create({
     maxWidth: 500,
     width: '100%',
     alignSelf: 'center',
+    flexGrow: 1,
+    backgroundColor: '#F8FAF8',
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: '#F8FAF8',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
   },
   userCard: {
     flexDirection: 'row',

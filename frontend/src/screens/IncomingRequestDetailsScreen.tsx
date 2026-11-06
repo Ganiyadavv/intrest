@@ -11,6 +11,7 @@ import {
   Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -162,6 +163,20 @@ export const IncomingRequestDetailsScreen: React.FC<Props> = ({ navigation, rout
     }, [id, requestId, recordType])
   );
 
+  const senderName =
+    resolvedSender.name ||
+    paramSenderName ||
+    record?.sender?.name ||
+    record?.sender?.fullName ||
+    record?.owner?.fullName ||
+    'Sender';
+
+  const senderUserId =
+    resolvedSender.userId ||
+    paramSenderUserId ||
+    record?.sender?.userId ||
+    record?.owner?.userId;
+
   const handleAccept = () => {
     const targetRecordId = record?.id || record?._id || requestId;
     const type = record?.recordType || recordType;
@@ -169,7 +184,7 @@ export const IncomingRequestDetailsScreen: React.FC<Props> = ({ navigation, rout
 
     setModalConfig({
       title: 'Accept Request',
-      message: `Are you sure you want to accept this request from ${senderName}? The record will be added to your confirmed records.`,
+      message: `Are you sure you want to accept this request from ${senderName}?`,
       confirmText: 'Accept',
       confirmColor: '#056B38',
       iconName: 'checkmark-circle',
@@ -182,7 +197,7 @@ export const IncomingRequestDetailsScreen: React.FC<Props> = ({ navigation, rout
           await requestService.acceptRequest(type, targetRecordId);
           setModalConfig({
             title: 'Request Accepted!',
-            message: 'Request accepted successfully! The record is now available in your records.',
+            message: 'Request accepted successfully!',
             confirmText: 'OK',
             confirmColor: '#056B38',
             iconName: 'checkmark-circle',
@@ -191,7 +206,7 @@ export const IncomingRequestDetailsScreen: React.FC<Props> = ({ navigation, rout
             showCancel: false,
             onConfirm: () => {
               setModalVisible(false);
-              navigation.goBack();
+              fetchDetails();
             },
           });
           setModalVisible(true);
@@ -246,7 +261,7 @@ export const IncomingRequestDetailsScreen: React.FC<Props> = ({ navigation, rout
             showCancel: false,
             onConfirm: () => {
               setModalVisible(false);
-              navigation.goBack();
+              fetchDetails();
             },
           });
           setModalVisible(true);
@@ -272,9 +287,65 @@ export const IncomingRequestDetailsScreen: React.FC<Props> = ({ navigation, rout
     setModalVisible(true);
   };
 
+  const handleMarkComplete = () => {
+    const targetRecordId = record?.id || record?._id || requestId;
+    const type = record?.recordType || recordType;
+    if (!targetRecordId || !type) return;
+
+    setModalConfig({
+      title: 'Mark Complete',
+      message: 'Are you sure you want to mark this request as COMPLETED?',
+      confirmText: 'Mark Complete',
+      confirmColor: '#056B38',
+      iconName: 'checkmark-circle',
+      iconColor: '#056B38',
+      iconBg: '#DCFCE7',
+      showCancel: true,
+      onConfirm: async () => {
+        setProcessing(true);
+        try {
+          await requestService.completeRequest(type, targetRecordId);
+          setModalConfig({
+            title: 'Request Completed',
+            message: 'This request has been marked as completed.',
+            confirmText: 'OK',
+            confirmColor: '#056B38',
+            iconName: 'checkmark-circle',
+            iconColor: '#15803D',
+            iconBg: '#DCFCE7',
+            showCancel: false,
+            onConfirm: () => {
+              setModalVisible(false);
+              fetchDetails();
+            },
+          });
+          setModalVisible(true);
+        } catch (err: any) {
+          const msg = err.response?.data?.message || 'Failed to complete request';
+          setModalConfig({
+            title: 'Error',
+            message: msg,
+            confirmText: 'OK',
+            confirmColor: '#DC2626',
+            iconName: 'close-circle',
+            iconColor: '#DC2626',
+            iconBg: '#FEE2E2',
+            showCancel: false,
+            onConfirm: () => setModalVisible(false),
+          });
+          setModalVisible(true);
+        } finally {
+          setProcessing(false);
+        }
+      },
+    });
+    setModalVisible(true);
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.safeContainer} edges={['top', 'left', 'right']}>
+        <StatusBar style="light" />
         <View style={styles.topAppBar}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerIconBtn}>
             <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
@@ -282,7 +353,9 @@ export const IncomingRequestDetailsScreen: React.FC<Props> = ({ navigation, rout
           <Text style={styles.appBarTitle}>Incoming Request</Text>
           <View style={{ width: 38 }} />
         </View>
-        <Loading />
+        <View style={styles.loadingContainer}>
+          <Loading />
+        </View>
       </SafeAreaView>
     );
   }
@@ -290,6 +363,7 @@ export const IncomingRequestDetailsScreen: React.FC<Props> = ({ navigation, rout
   if (error || !record) {
     return (
       <SafeAreaView style={styles.safeContainer} edges={['top', 'left', 'right']}>
+        <StatusBar style="light" />
         <View style={styles.topAppBar}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerIconBtn}>
             <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
@@ -297,24 +371,12 @@ export const IncomingRequestDetailsScreen: React.FC<Props> = ({ navigation, rout
           <Text style={styles.appBarTitle}>Incoming Request</Text>
           <View style={{ width: 38 }} />
         </View>
-        <ErrorMessage message={error || 'Request details not available'} />
+        <View style={styles.loadingContainer}>
+          <ErrorMessage message={error || 'Request details not available'} />
+        </View>
       </SafeAreaView>
     );
   }
-
-  const senderName =
-    resolvedSender.name ||
-    paramSenderName ||
-    record.sender?.name ||
-    record.sender?.fullName ||
-    record.owner?.fullName ||
-    'Sender';
-
-  const senderUserId =
-    resolvedSender.userId ||
-    paramSenderUserId ||
-    record.sender?.userId ||
-    record.owner?.userId;
 
   const initials = formatInitials(senderName);
 
@@ -333,6 +395,10 @@ export const IncomingRequestDetailsScreen: React.FC<Props> = ({ navigation, rout
   };
 
   const statusInfo = getStatusStyle(record.status);
+  const isSender =
+    (currentUser?.id != null && record?.ownerId != null && String(currentUser.id) === String(record.ownerId)) ||
+    (currentUser?.userId && record?.owner?.userId && currentUser.userId.trim().toUpperCase() === record.owner.userId.trim().toUpperCase());
+
   // Inverted role for receiver:
   // If sender created PERSON_RECORD (Borrower for sender), receiver received money -> Lender Record
   // If sender created LENDER_RECORD (Lender for sender), receiver gave money -> Borrower Record
@@ -351,6 +417,7 @@ export const IncomingRequestDetailsScreen: React.FC<Props> = ({ navigation, rout
 
   return (
     <SafeAreaView style={styles.safeContainer} edges={['top', 'left', 'right']}>
+      <StatusBar style="light" />
       {/* 1. TOP APP BAR */}
       <View style={styles.topAppBar}>
         <TouchableOpacity
@@ -466,8 +533,8 @@ export const IncomingRequestDetailsScreen: React.FC<Props> = ({ navigation, rout
           </View>
         )}
 
-        {/* 5. ACTION BUTTONS (IF PENDING) */}
-        {record.status === 'PENDING' && (
+        {/* 5. ACTION BUTTONS */}
+        {record.status === 'PENDING' ? (
           <View style={styles.actionsContainer}>
             <TouchableOpacity
               style={[styles.acceptBtn, processing && { opacity: 0.6 }]}
@@ -491,7 +558,38 @@ export const IncomingRequestDetailsScreen: React.FC<Props> = ({ navigation, rout
               <Text style={styles.rejectBtnText}>Reject Request</Text>
             </TouchableOpacity>
           </View>
-        )}
+        ) : record.status === 'ACCEPTED' ? (
+          isSender ? (
+            <View style={styles.actionsContainer}>
+              <TouchableOpacity
+                style={[styles.markCompleteBtn, processing && { opacity: 0.6 }]}
+                onPress={handleMarkComplete}
+                disabled={processing}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" style={{ marginRight: 6 }} />
+                <Text style={styles.markCompleteBtnText}>
+                  {processing ? 'Processing...' : 'Mark Complete'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.statusDisplayBadgeGreen}>
+              <Ionicons name="checkmark-circle" size={20} color="#15803D" style={{ marginRight: 6 }} />
+              <Text style={styles.statusDisplayBadgeTextGreen}>Active</Text>
+            </View>
+          )
+        ) : record.status === 'COMPLETED' ? (
+          <View style={styles.statusDisplayBadgeGreen}>
+            <Ionicons name="checkmark-circle" size={20} color="#15803D" style={{ marginRight: 6 }} />
+            <Text style={styles.statusDisplayBadgeTextGreen}>Completed</Text>
+          </View>
+        ) : record.status === 'REJECTED' ? (
+          <View style={styles.statusDisplayBadgeRed}>
+            <Ionicons name="close-circle" size={20} color="#DC2626" style={{ marginRight: 6 }} />
+            <Text style={styles.statusDisplayBadgeTextRed}>Rejected</Text>
+          </View>
+        ) : null}
       </ScrollView>
 
       {/* CONFIRMATION / ALERT MODAL */}
@@ -583,6 +681,15 @@ const styles = StyleSheet.create({
     maxWidth: 500,
     width: '100%',
     alignSelf: 'center',
+    flexGrow: 1,
+    backgroundColor: '#F8FAF8',
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: '#F8FAF8',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
   },
   senderCard: {
     flexDirection: 'row',
@@ -785,6 +892,70 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     fontSize: 15,
     fontWeight: '700',
+  },
+  markCompleteBtn: {
+    backgroundColor: '#056B38',
+    height: 50,
+    borderRadius: 14,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#056B38',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.2,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 3,
+      },
+      web: {
+        boxShadow: '0 3px 8px rgba(5, 107, 56, 0.2)',
+      },
+    }),
+  },
+  markCompleteBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  statusDisplayBadgeGreen: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  statusDisplayBadgeTextGreen: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  statusDisplayBadgeRed: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  statusDisplayBadgeTextRed: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#DC2626',
   },
   modalOverlay: {
     flex: 1,
