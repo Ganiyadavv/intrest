@@ -24,11 +24,11 @@ const getProfile = async (req, res) => {
       data: user
     });
   } catch (error) {
-    console.error(error);
+    console.error("Error updating profile:", error);
     return res.status(500).json({
       statusCode: 500,
       status: 'ERROR',
-      message: 'Internal server error'
+      message: error.message || 'Internal server error'
     });
   }
 };
@@ -104,11 +104,11 @@ const updateProfile = async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("Error updating profile:", error);
     return res.status(500).json({
       statusCode: 500,
       status: 'ERROR',
-      message: 'Internal server error'
+      message: error.message || 'Internal server error'
     });
   }
 };
@@ -203,11 +203,11 @@ const searchUser = async (req, res) => {
     }
 
   } catch (error) {
-    console.error(error);
+    console.error("Error updating profile:", error);
     return res.status(500).json({
       statusCode: 500,
       status: 'ERROR',
-      message: 'Internal server error'
+      message: error.message || 'Internal server error'
     });
   }
 };

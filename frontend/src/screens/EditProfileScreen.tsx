@@ -29,6 +29,78 @@ interface Props {
   navigation: EditProfileScreenNavigationProp;
 }
 
+const processImageForProfile = async (
+  uri: string,
+  rawBase64?: string | null,
+  mimeType?: string | null
+): Promise<string> => {
+  let dataUrl = '';
+
+  if (rawBase64) {
+    const mime = mimeType || 'image/jpeg';
+    dataUrl = `data:${mime};base64,${rawBase64}`;
+  } else if (uri.startsWith('data:')) {
+    dataUrl = uri;
+  } else if (Platform.OS === 'web' || uri.startsWith('blob:') || uri.startsWith('http')) {
+    try {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (e) {
+      console.warn('Failed to read image blob:', e);
+      return uri;
+    }
+  } else {
+    return uri;
+  }
+
+  // Compress & resize on Web using canvas to prevent payload errors and ensure fast upload and small storage (< 100KB)
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && dataUrl.startsWith('data:image')) {
+    try {
+      dataUrl = await new Promise<string>((resolve) => {
+        const img = new (window as any).Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          const maxDim = 600;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return resolve(dataUrl);
+
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL('image/jpeg', 0.75);
+          resolve(compressed);
+        };
+        img.onerror = () => resolve(dataUrl);
+        img.src = dataUrl;
+      });
+    } catch (e) {
+      console.warn('Canvas compression failed:', e);
+    }
+  }
+
+  return dataUrl;
+};
+
 export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -79,17 +151,18 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.5,
+        quality: 0.7,
         base64: true,
       });
 
-      if (!result.canceled) {
+      if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
-        if (asset.base64) {
-          setProfileImage(`data:image/jpeg;base64,${asset.base64}`);
-        } else {
-          setProfileImage(asset.uri);
-        }
+        const processed = await processImageForProfile(
+          asset.uri,
+          asset.base64,
+          asset.mimeType
+        );
+        setProfileImage(processed);
       }
     } catch (err) {
       console.log('Image picker error', err);
@@ -112,6 +185,15 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
 
     setLoading(true);
     try {
+      let finalProfileImage = profileImage;
+      if (
+        finalProfileImage &&
+        (finalProfileImage.startsWith('blob:') ||
+          (Platform.OS === 'web' && finalProfileImage.length > 500000))
+      ) {
+        finalProfileImage = await processImageForProfile(finalProfileImage);
+      }
+
       const updatedUser = await userService.updateProfile({
         fullName,
         email,
@@ -119,7 +201,7 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
         city,
         state,
         pincode,
-        profileImage,
+        profileImage: finalProfileImage,
       });
 
       await saveUser(updatedUser);

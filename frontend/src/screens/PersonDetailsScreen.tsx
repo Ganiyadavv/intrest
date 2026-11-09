@@ -22,6 +22,7 @@ import { getUser } from '../storage/storage';
 import { Loading } from '../components/Loading';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { formatCurrency } from '../utils/currency';
+import { sharePaymentScreenshot } from '../utils/shareUtils';
 
 type PersonDetailsNavigationProp = NativeStackNavigationProp<MainStackParamList, 'PersonDetails'>;
 type PersonDetailsRouteProp = RouteProp<MainStackParamList, 'PersonDetails'>;
@@ -399,8 +400,26 @@ export const PersonDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
         {/* 6. CARD: PAYMENT SCREENSHOT (if available) */}
         {!!person.paymentScreenshot && (
           <View style={styles.infoCard}>
-            <Text style={styles.cardHeaderTitle}>Payment Screenshot</Text>
+            <View style={styles.screenshotHeaderRow}>
+              <Text style={[styles.cardHeaderTitle, { marginBottom: 0 }]}>Payment Screenshot</Text>
+              <TouchableOpacity
+                style={styles.shareScreenshotBtn}
+                onPress={() => sharePaymentScreenshot(person.paymentScreenshot!, person.name)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="share-social-outline" size={15} color="#056B38" style={{ marginRight: 4 }} />
+                <Text style={styles.shareScreenshotBtnText}>Share</Text>
+              </TouchableOpacity>
+            </View>
             <Image source={{ uri: person.paymentScreenshot }} style={styles.screenshotImage} />
+            <TouchableOpacity
+              style={styles.shareScreenshotFullBtn}
+              onPress={() => sharePaymentScreenshot(person.paymentScreenshot!, person.name)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="share-social" size={16} color="#056B38" style={{ marginRight: 6 }} />
+              <Text style={styles.shareScreenshotFullBtnText}>Share Screenshot</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -670,6 +689,27 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#056B38',
   },
+  screenshotHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  shareScreenshotBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  shareScreenshotBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#056B38',
+  },
   screenshotImage: {
     width: '100%',
     height: 220,
@@ -679,6 +719,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
     marginTop: 4,
+  },
+  shareScreenshotFullBtn: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    borderRadius: 10,
+    paddingVertical: 10,
+    marginTop: 10,
+  },
+  shareScreenshotFullBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#056B38',
   },
   calcTileBtn: {
     backgroundColor: '#FFFFFF',

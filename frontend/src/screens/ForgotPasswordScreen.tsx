@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,9 +7,11 @@ import {
   Platform,
   ScrollView,
   TouchableOpacity,
+  Pressable,
   TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthStackParamList } from '../types/navigation';
@@ -28,6 +30,7 @@ export const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
   const [isEmailFocused, setIsEmailFocused] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const emailInputRef = useRef<TextInput>(null);
 
   const handleSendOtp = async () => {
     setError('');
@@ -55,6 +58,7 @@ export const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeContainer} edges={['top', 'left', 'right']}>
+      <StatusBar style="light" />
       {/* 1. TOP APP BAR */}
       <View style={styles.topAppBar}>
         <TouchableOpacity
@@ -106,7 +110,8 @@ export const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
           {/* 3. INPUT FORM CARD */}
           <View style={styles.formCard}>
             <Text style={styles.fieldLabel}>Email Address *</Text>
-            <View
+            <Pressable
+              onPress={() => emailInputRef.current?.focus()}
               style={[
                 styles.inputWrapper,
                 isEmailFocused && styles.inputWrapperFocused,
@@ -119,10 +124,8 @@ export const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
                 style={styles.inputIcon}
               />
               <TextInput
-                style={[
-                  styles.input,
-                  { outlineStyle: 'none' } as any,
-                ]}
+                ref={emailInputRef}
+                style={styles.input}
                 placeholder="name@example.com"
                 placeholderTextColor="#94A3B8"
                 value={email}
@@ -138,7 +141,7 @@ export const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
                 onSubmitEditing={handleSendOtp}
                 returnKeyType="done"
               />
-            </View>
+            </Pressable>
 
             {/* SEND OTP BUTTON */}
             <TouchableOpacity
@@ -303,31 +306,42 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
     borderRadius: 12,
     paddingHorizontal: 12,
-    height: 48,
+    height: 50,
     marginBottom: 20,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+      },
+    }),
   },
   inputWrapperFocused: {
     borderColor: '#056B38',
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#056B38',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 0 0 3px rgba(5, 107, 56, 0.12)',
+      },
+    }),
   },
   inputIcon: {
     marginRight: 10,
   },
   input: {
     flex: 1,
-    fontSize: 14,
+    height: '100%',
+    fontSize: 15,
     color: '#1E293B',
     paddingVertical: 0,
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+        borderWidth: 0,
+      } as any,
+    }),
   },
   sendButton: {
     backgroundColor: '#056B38',

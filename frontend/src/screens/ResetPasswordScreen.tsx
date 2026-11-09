@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,9 +7,11 @@ import {
   Platform,
   ScrollView,
   TouchableOpacity,
+  Pressable,
   TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,6 +35,9 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const otpRef = useRef<TextInput>(null);
+  const newPasswordRef = useRef<TextInput>(null);
+  const confirmPasswordRef = useRef<TextInput>(null);
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
@@ -127,6 +132,7 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
 
   return (
     <SafeAreaView style={styles.safeContainer} edges={['top', 'left', 'right']}>
+      <StatusBar style="light" />
       {/* 1. TOP APP BAR */}
       <View style={styles.topAppBar}>
         <TouchableOpacity
@@ -196,7 +202,8 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
             <View style={styles.formCard}>
               {/* OTP Input */}
               <Text style={styles.fieldLabel}>6-Digit OTP *</Text>
-              <View
+              <Pressable
+                onPress={() => otpRef.current?.focus()}
                 style={[
                   styles.inputWrapper,
                   focusedField === 'otp' && styles.inputWrapperFocused,
@@ -209,10 +216,10 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
                   style={styles.inputIcon}
                 />
                 <TextInput
+                  ref={otpRef}
                   style={[
                     styles.input,
                     styles.otpInput,
-                    { outlineStyle: 'none' } as any,
                   ]}
                   placeholder="123456"
                   placeholderTextColor="#94A3B8"
@@ -226,11 +233,12 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
                   onFocus={() => setFocusedField('otp')}
                   onBlur={() => setFocusedField(null)}
                 />
-              </View>
+              </Pressable>
 
               {/* New Password */}
               <Text style={styles.fieldLabel}>New Password *</Text>
-              <View
+              <Pressable
+                onPress={() => newPasswordRef.current?.focus()}
                 style={[
                   styles.inputWrapper,
                   focusedField === 'newPassword' && styles.inputWrapperFocused,
@@ -243,10 +251,8 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
                   style={styles.inputIcon}
                 />
                 <TextInput
-                  style={[
-                    styles.input,
-                    { outlineStyle: 'none' } as any,
-                  ]}
+                  ref={newPasswordRef}
+                  style={styles.input}
                   placeholder="Enter new password"
                   placeholderTextColor="#94A3B8"
                   value={newPassword}
@@ -268,11 +274,12 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
                     color="#64748B"
                   />
                 </TouchableOpacity>
-              </View>
+              </Pressable>
 
               {/* Confirm Password */}
               <Text style={styles.fieldLabel}>Confirm Password *</Text>
-              <View
+              <Pressable
+                onPress={() => confirmPasswordRef.current?.focus()}
                 style={[
                   styles.inputWrapper,
                   focusedField === 'confirmPassword' && styles.inputWrapperFocused,
@@ -285,10 +292,8 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
                   style={styles.inputIcon}
                 />
                 <TextInput
-                  style={[
-                    styles.input,
-                    { outlineStyle: 'none' } as any,
-                  ]}
+                  ref={confirmPasswordRef}
+                  style={styles.input}
                   placeholder="Confirm new password"
                   placeholderTextColor="#94A3B8"
                   value={confirmPassword}
@@ -312,7 +317,7 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
                     color="#64748B"
                   />
                 </TouchableOpacity>
-              </View>
+              </Pressable>
 
               {/* RESET BUTTON */}
               <TouchableOpacity
@@ -507,31 +512,42 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
     borderRadius: 12,
     paddingHorizontal: 12,
-    height: 48,
+    height: 50,
     marginBottom: 16,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+      },
+    }),
   },
   inputWrapperFocused: {
     borderColor: '#056B38',
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#056B38',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 0 0 3px rgba(5, 107, 56, 0.12)',
+      },
+    }),
   },
   inputIcon: {
     marginRight: 10,
   },
   input: {
     flex: 1,
-    fontSize: 14,
+    height: '100%',
+    fontSize: 15,
     color: '#1E293B',
     paddingVertical: 0,
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+        borderWidth: 0,
+      } as any,
+    }),
   },
   otpInput: {
     letterSpacing: 4,

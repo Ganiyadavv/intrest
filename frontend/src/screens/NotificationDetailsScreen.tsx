@@ -23,6 +23,7 @@ import { lenderRecordService } from '../services/lenderRecordService';
 import { Loading } from '../components/Loading';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { formatCurrency } from '../utils/currency';
+import { sharePaymentScreenshot } from '../utils/shareUtils';
 
 type NotificationDetailsNavigationProp = NativeStackNavigationProp<MainStackParamList, 'NotificationDetails'>;
 type NotificationDetailsRouteProp = RouteProp<MainStackParamList, 'NotificationDetails'>;
@@ -303,11 +304,29 @@ export const NotificationDetailsScreen: React.FC<Props> = ({ navigation, route }
         {/* 4. PAYMENT SCREENSHOT (IF ANY) */}
         {record.paymentScreenshot && (
           <View style={styles.detailsCard}>
-            <View style={styles.cardHeader}>
-              <Ionicons name="image-outline" size={18} color="#056B38" style={{ marginRight: 8 }} />
-              <Text style={styles.cardHeaderTitle}>Payment Screenshot</Text>
+            <View style={[styles.cardHeader, { justifyContent: 'space-between' }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="image-outline" size={18} color="#056B38" style={{ marginRight: 8 }} />
+                <Text style={styles.cardHeaderTitle}>Payment Screenshot</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.shareScreenshotBtn}
+                onPress={() => sharePaymentScreenshot(record.paymentScreenshot, rawName)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="share-social-outline" size={15} color="#056B38" style={{ marginRight: 4 }} />
+                <Text style={styles.shareScreenshotBtnText}>Share</Text>
+              </TouchableOpacity>
             </View>
             <Image source={{ uri: record.paymentScreenshot }} style={styles.screenshotImage} />
+            <TouchableOpacity
+              style={styles.shareScreenshotFullBtn}
+              onPress={() => sharePaymentScreenshot(record.paymentScreenshot, rawName)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="share-social" size={16} color="#056B38" style={{ marginRight: 6 }} />
+              <Text style={styles.shareScreenshotFullBtnText}>Share Screenshot</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -547,9 +566,41 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 220,
     borderRadius: 12,
-    resizeMode: 'cover',
+    resizeMode: 'contain',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
+  },
+  shareScreenshotBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  shareScreenshotBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#056B38',
+  },
+  shareScreenshotFullBtn: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    borderRadius: 10,
+    paddingVertical: 10,
+    marginTop: 10,
+  },
+  shareScreenshotFullBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#056B38',
   },
   actionsContainer: {
     gap: 10,

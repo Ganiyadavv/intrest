@@ -41,7 +41,7 @@ const User = sequelize.define("User", {
     defaultValue: "ACTIVE"
   },
   profileImage: {
-    type: DataTypes.TEXT,
+    type: DataTypes.TEXT('long'),
     allowNull: true
   },
   address: {

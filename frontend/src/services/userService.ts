@@ -13,16 +13,15 @@ export const userService = {
 
   updateProfile: async (profileData: any): Promise<User> => {
     try {
-      // In reality, if it's multipart/form-data for image, it needs to be handled differently, 
-      // but we will keep it as JSON for now or use FormData as requested.
-      // If we use FormData in mobile:
-      // const formData = new FormData();
-      // ... append data
-      
       const response = await api.put('/users/profile', profileData);
       return response.data.data.user || response.data.data;
     } catch (error: any) {
-      throw error.response?.data || { message: 'Failed to update profile' };
+      const msg =
+        error.response?.data?.message ||
+        (typeof error.response?.data === 'string' ? error.response.data : null) ||
+        error.message ||
+        'Failed to update profile';
+      throw { message: msg };
     }
   },
 
