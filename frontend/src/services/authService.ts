@@ -50,7 +50,12 @@ export const authService = {
       const response = await api.post('/auth/forgot-password', { email });
       return response.data;
     } catch (error: any) {
-      throw error.response?.data || { message: 'Network error. Please try again.' };
+      const msg =
+        error.response?.data?.message ||
+        (typeof error.response?.data === 'string' ? error.response.data.replace(/<[^>]+>/g, '') : null) ||
+        error.message ||
+        'Failed to send OTP. Please check your network and try again.';
+      throw { message: msg };
     }
   },
 
@@ -59,7 +64,12 @@ export const authService = {
       const response = await api.post('/auth/reset-password', { email, otp, newPassword });
       return response.data;
     } catch (error: any) {
-      throw error.response?.data || { message: 'Network error. Please try again.' };
+      const msg =
+        error.response?.data?.message ||
+        (typeof error.response?.data === 'string' ? error.response.data.replace(/<[^>]+>/g, '') : null) ||
+        error.message ||
+        'Failed to reset password. Please try again.';
+      throw { message: msg, statusCode: error.response?.status };
     }
   },
 
@@ -68,7 +78,12 @@ export const authService = {
       const response = await api.post('/auth/resend-reset-otp', { email });
       return response.data;
     } catch (error: any) {
-      throw error.response?.data || { message: 'Network error. Please try again.' };
+      const msg =
+        error.response?.data?.message ||
+        (typeof error.response?.data === 'string' ? error.response.data.replace(/<[^>]+>/g, '') : null) ||
+        error.message ||
+        'Failed to resend OTP. Please try again.';
+      throw { message: msg, statusCode: error.response?.status };
     }
   }
 };

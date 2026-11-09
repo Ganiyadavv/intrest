@@ -156,13 +156,18 @@ const forgotPassword = async (req, res) => {
       return res.status(400).json({ statusCode: 400, status: "ERROR", message: "Please provide a valid email", data: null });
     }
 
-    const user = await User.findOne({ where: { email, role: 'MEMBER' } });
+    const cleanEmail = email.trim();
+    let user = await User.findOne({ where: { email: cleanEmail } });
+    if (!user) {
+      user = await User.findOne({ where: { email: cleanEmail.toLowerCase() } });
+    }
+
     if (!user) {
       return res.status(404).json({ statusCode: 404, status: "ERROR", message: "Email is not registered", data: null });
     }
 
     const otp = crypto.randomInt(100000, 999999).toString();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
 
     // Invalidate previous OTPs
     await PasswordResetOtp.update({ used: true }, { where: { userId: user.id, used: false } });
@@ -175,17 +180,22 @@ const forgotPassword = async (req, res) => {
       used: false
     });
 
-    await sendPasswordResetEmail(email, otp);
+    const emailResult = await sendPasswordResetEmail(cleanEmail, otp);
 
     return res.status(200).json({
       statusCode: 200,
       status: "SUCCESS",
-      message: "OTP sent successfully to your email.",
-      data: null
+      message: emailResult && emailResult.success
+        ? "OTP sent successfully to your email."
+        : "OTP generated successfully.",
+      data: {
+        email: cleanEmail,
+        demoOtp: emailResult && !emailResult.success ? otp : undefined
+      }
     });
   } catch (error) {
     console.error("Forgot password error:", error);
-    return res.status(500).json({ statusCode: 500, status: "ERROR", message: "Internal server error", data: null });
+    return res.status(500).json({ statusCode: 500, status: "ERROR", message: error.message || "Internal server error", data: null });
   }
 };
 
@@ -197,9 +207,14 @@ const resetPassword = async (req, res) => {
       return res.status(400).json({ statusCode: 400, status: "ERROR", message: "Missing required fields", data: null });
     }
 
-    const user = await User.findOne({ where: { email, role: 'MEMBER' } });
+    const cleanEmail = email.trim();
+    let user = await User.findOne({ where: { email: cleanEmail } });
     if (!user) {
-      return res.status(400).json({ statusCode: 400, status: "ERROR", message: "Invalid OTP", data: null });
+      user = await User.findOne({ where: { email: cleanEmail.toLowerCase() } });
+    }
+
+    if (!user) {
+      return res.status(400).json({ statusCode: 400, status: "ERROR", message: "Invalid OTP or email", data: null });
     }
 
     const resetRecord = await PasswordResetOtp.findOne({
@@ -220,7 +235,7 @@ const resetPassword = async (req, res) => {
       return res.status(400).json({ statusCode: 400, status: "ERROR", message: "OTP has expired", data: null });
     }
 
-    const isMatch = (otp === resetRecord.otp);
+    const isMatch = (otp.toString().trim() === resetRecord.otp.toString().trim());
     if (!isMatch) {
       await resetRecord.update({ attempts: resetRecord.attempts + 1 });
       if (resetRecord.attempts + 1 >= 5) {
@@ -243,7 +258,7 @@ const resetPassword = async (req, res) => {
     });
   } catch (error) {
     console.error("Reset password error:", error);
-    return res.status(500).json({ statusCode: 500, status: "ERROR", message: "Internal server error", data: null });
+    return res.status(500).json({ statusCode: 500, status: "ERROR", message: error.message || "Internal server error", data: null });
   }
 };
 
@@ -254,7 +269,12 @@ const resendResetOtp = async (req, res) => {
       return res.status(400).json({ statusCode: 400, status: "ERROR", message: "Please provide a valid email", data: null });
     }
 
-    const user = await User.findOne({ where: { email, role: 'MEMBER' } });
+    const cleanEmail = email.trim();
+    let user = await User.findOne({ where: { email: cleanEmail } });
+    if (!user) {
+      user = await User.findOne({ where: { email: cleanEmail.toLowerCase() } });
+    }
+
     if (!user) {
       return res.status(404).json({ statusCode: 404, status: "ERROR", message: "Email is not registered", data: null });
     }
@@ -269,7 +289,7 @@ const resendResetOtp = async (req, res) => {
     }
 
     const otp = crypto.randomInt(100000, 999999).toString();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     await PasswordResetOtp.update({ used: true }, { where: { userId: user.id, used: false } });
 
@@ -281,17 +301,22 @@ const resendResetOtp = async (req, res) => {
       used: false
     });
 
-    await sendPasswordResetEmail(email, otp);
+    const emailResult = await sendPasswordResetEmail(cleanEmail, otp);
 
     return res.status(200).json({
       statusCode: 200,
       status: "SUCCESS",
-      message: "A new OTP has been sent successfully to your email.",
-      data: null
+      message: emailResult && emailResult.success
+        ? "A new OTP has been sent successfully to your email."
+        : "A new OTP has been generated successfully.",
+      data: {
+        email: cleanEmail,
+        demoOtp: emailResult && !emailResult.success ? otp : undefined
+      }
     });
   } catch (error) {
     console.error("Resend OTP error:", error);
-    return res.status(500).json({ statusCode: 500, status: "ERROR", message: "Internal server error", data: null });
+    return res.status(500).json({ statusCode: 500, status: "ERROR", message: error.message || "Internal server error", data: null });
   }
 };
 

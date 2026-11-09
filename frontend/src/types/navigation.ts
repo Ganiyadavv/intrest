@@ -5,7 +5,7 @@ export type AuthStackParamList = {
   Login: { message?: string } | undefined;
   Register: undefined;
   ForgotPassword: undefined;
-  ResetPassword: { email: string };
+  ResetPassword: { email: string; demoOtp?: string };
   InterestCalculator: {
     principal?: string;
     rate?: string;

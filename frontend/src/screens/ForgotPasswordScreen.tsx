@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { AuthStackParamList } from '../types/navigation';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { authService } from '../services/authService';
+import { warmUpBackend } from '../services/api';
 import { isValidEmail } from '../utils/validation';
 
 type ForgotPasswordScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'ForgotPassword'>;
@@ -32,6 +33,10 @@ export const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
   const [error, setError] = useState('');
   const emailInputRef = useRef<TextInput>(null);
 
+  React.useEffect(() => {
+    warmUpBackend();
+  }, []);
+
   const handleSendOtp = async () => {
     setError('');
 
@@ -46,8 +51,9 @@ export const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
 
     setLoading(true);
     try {
-      await authService.forgotPassword(email);
-      navigation.navigate('ResetPassword', { email });
+      const response = await authService.forgotPassword(email.trim());
+      const demoOtp = response?.data?.demoOtp;
+      navigation.navigate('ResetPassword', { email: email.trim(), demoOtp });
       setTimeout(() => setEmail(''), 500);
     } catch (err: any) {
       setError(err.message || 'Something went wrong. Please try again.');
