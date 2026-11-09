@@ -28,9 +28,9 @@ interface Props {
 }
 
 export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { email, demoOtp } = route.params;
+  const { email } = route.params;
 
-  const [otp, setOtp] = useState(demoOtp || '');
+  const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -110,11 +110,7 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
     setSuccessMsg('');
     setResending(true);
     try {
-      const response = await authService.resendResetOtp(email);
-      if (response?.data?.demoOtp) {
-        setOtp(response.data.demoOtp);
-      }
-      setSuccessMsg(response?.message || 'A new OTP has been sent successfully.');
+      await authService.resendResetOtp(email);
       setCooldown(60);
     } catch (err: any) {
       setError(err.message || 'Unable to connect to the server. Please try again.');
