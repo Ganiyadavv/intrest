@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
 import { MainStackParamList } from '../types/navigation';
 import { AppInput } from '../components/AppInput';
@@ -41,6 +42,16 @@ const processImageForProfile = async (
     dataUrl = `data:${mime};base64,${rawBase64}`;
   } else if (uri.startsWith('data:')) {
     dataUrl = uri;
+  } else if (Platform.OS !== 'web' && uri.startsWith('file://')) {
+    try {
+      const base64Data = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      dataUrl = `data:image/jpeg;base64,${base64Data}`;
+    } catch (e) {
+      console.warn('Failed to read file as base64 with FileSystem:', e);
+      return uri;
+    }
   } else if (Platform.OS === 'web' || uri.startsWith('blob:') || uri.startsWith('http')) {
     try {
       const response = await fetch(uri);
@@ -151,7 +162,7 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.7,
+        quality: 0.25,
         base64: true,
       });
 
@@ -189,6 +200,7 @@ export const EditProfileScreen: React.FC<Props> = ({ navigation }) => {
       if (
         finalProfileImage &&
         (finalProfileImage.startsWith('blob:') ||
+          finalProfileImage.startsWith('file://') ||
           (Platform.OS === 'web' && finalProfileImage.length > 500000))
       ) {
         finalProfileImage = await processImageForProfile(finalProfileImage);

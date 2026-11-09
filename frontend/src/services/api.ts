@@ -8,7 +8,28 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 45000,
 });
+
+// Non-blocking background warm-up ping for cloud servers (e.g. Render free tier spin-down)
+let lastWarmUpTime = 0;
+export const warmUpBackend = async (): Promise<void> => {
+  const now = Date.now();
+  // Don't re-ping if already pinged in the last 2 minutes
+  if (now - lastWarmUpTime < 120000) return;
+  lastWarmUpTime = now;
+
+  try {
+    const rootUrl = API_BASE_URL.replace(/\/api\/?$/, '');
+    if (typeof fetch !== 'undefined') {
+      fetch(`${rootUrl}/health`, { method: 'GET' }).catch(() => {});
+    } else {
+      axios.get(`${rootUrl}/health`, { timeout: 10000 }).catch(() => {});
+    }
+  } catch {
+    // Background ping, fail silently
+  }
+};
 
 // Request interceptor to attach JWT token
 api.interceptors.request.use(

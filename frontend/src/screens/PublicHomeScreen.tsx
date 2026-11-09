@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../types/navigation';
 import { useLanguage } from '../contexts/LanguageContext';
+import { warmUpBackend } from '../services/api';
 
 type PublicHomeScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'PublicHome'>;
 
@@ -23,6 +24,10 @@ interface Props {
 
 export const PublicHomeScreen: React.FC<Props> = ({ navigation }) => {
   const { language, setLanguage, t } = useLanguage();
+
+  useEffect(() => {
+    warmUpBackend();
+  }, []);
 
   return (
     <SafeAreaView style={styles.safeContainer} edges={['top', 'left', 'right']}>

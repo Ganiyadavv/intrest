@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -15,6 +15,7 @@ import { AuthStackParamList } from '../types/navigation';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { SuccessMessage } from '../components/SuccessMessage';
 import { authService } from '../services/authService';
+import { warmUpBackend } from '../services/api';
 import { isValidEmail } from '../utils/validation';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -40,8 +41,25 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   const [isConfirmPasswordFocused, setIsConfirmPasswordFocused] = useState(false);
 
   const [loading, setLoading] = useState(false);
+  const [takingLonger, setTakingLonger] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    warmUpBackend();
+  }, []);
+
+  useEffect(() => {
+    let timer: any;
+    if (loading) {
+      timer = setTimeout(() => {
+        setTakingLonger(true);
+      }, 3500);
+    } else {
+      setTakingLonger(false);
+    }
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   const handleRegister = async () => {
     setError('');
@@ -260,9 +278,19 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
               activeOpacity={0.85}
             >
               <Text style={styles.signUpBtnText}>
-                {loading ? 'Creating Account...' : 'Sign Up'}
+                {loading
+                  ? takingLonger
+                    ? 'Connecting to Server...'
+                    : 'Creating Account...'
+                  : 'Sign Up'}
               </Text>
             </TouchableOpacity>
+
+            {takingLonger && (
+              <Text style={styles.takingLongerHint}>
+                Waking up cloud server, please wait a moment...
+              </Text>
+            )}
 
             {/* Footer */}
             <View style={styles.footerRow}>
@@ -427,6 +455,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.2,
+  },
+  takingLongerHint: {
+    textAlign: 'center',
+    color: '#056B38',
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 8,
   },
   footerRow: {
     flexDirection: 'row',

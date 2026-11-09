@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../types/navigation';
 import { authService } from '../services/authService';
 import { getUser } from '../storage/storage';
+import { warmUpBackend } from '../services/api';
 
 const { width } = Dimensions.get('window');
 
@@ -29,6 +30,8 @@ export const SplashScreen: React.FC<Props> = ({ navigation }) => {
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    warmUpBackend();
+
     // Entrance animation
     Animated.parallel([
       Animated.timing(fadeAnim, {

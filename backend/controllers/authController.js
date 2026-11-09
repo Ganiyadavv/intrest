@@ -20,7 +20,8 @@ const register = async (req, res) => {
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    const cleanEmail = email.trim();
+    if (!emailRegex.test(cleanEmail)) {
       return res.status(400).json({
         statusCode: 400,
         status: "ERROR",
@@ -28,7 +29,10 @@ const register = async (req, res) => {
       });
     }
 
-    const existingEmail = await User.findOne({ where: { email } });
+    const existingEmail = await User.findOne({
+      where: { email: cleanEmail },
+      attributes: ['id']
+    });
     if (existingEmail) {
       return res.status(400).json({
         statusCode: 400,
@@ -37,30 +41,17 @@ const register = async (req, res) => {
       });
     }
 
-
-
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    let userId;
-    let isUnique = false;
-    while (!isUnique) {
-      userId = generateUserId();
-      const existingId = await User.findOne({ where: { userId } });
-      if (!existingId) {
-        isUnique = true;
-      }
-    }
+    const userId = generateUserId();
 
     const newUser = await User.create({
       userId,
-      fullName,
-      email,
+      fullName: fullName.trim(),
+      email: cleanEmail,
       password: hashedPassword,
       role: "MEMBER",
       status: "ACTIVE"
     });
-
-
 
     const userResponse = newUser.toJSON();
     delete userResponse.password;
@@ -94,7 +85,12 @@ const login = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ where: { email } });
+    const cleanEmail = email.trim();
+    let user = await User.findOne({ where: { email: cleanEmail } });
+    if (!user) {
+      user = await User.findOne({ where: { email: cleanEmail.toLowerCase() } });
+    }
+
     if (!user) {
       return res.status(401).json({
         statusCode: 401,

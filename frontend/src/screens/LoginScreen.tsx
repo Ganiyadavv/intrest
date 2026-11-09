@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -14,6 +14,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../types/navigation';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { authService } from '../services/authService';
+import { warmUpBackend } from '../services/api';
 import { isValidEmail } from '../utils/validation';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -34,7 +35,24 @@ export const LoginScreen: React.FC<Props> = ({ navigation, route }) => {
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
 
   const [loading, setLoading] = useState(false);
+  const [takingLonger, setTakingLonger] = useState(false);
   const [error, setError] = useState(sessionMessage || '');
+
+  useEffect(() => {
+    warmUpBackend();
+  }, []);
+
+  useEffect(() => {
+    let timer: any;
+    if (loading) {
+      timer = setTimeout(() => {
+        setTakingLonger(true);
+      }, 3500);
+    } else {
+      setTakingLonger(false);
+    }
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   const handleLogin = async () => {
     setError('');
@@ -198,9 +216,19 @@ export const LoginScreen: React.FC<Props> = ({ navigation, route }) => {
               activeOpacity={0.85}
             >
               <Text style={styles.signInBtnText}>
-                {loading ? 'Signing In...' : 'Sign In'}
+                {loading
+                  ? takingLonger
+                    ? 'Connecting to Server...'
+                    : 'Signing In...'
+                  : 'Sign In'}
               </Text>
             </TouchableOpacity>
+
+            {takingLonger && (
+              <Text style={styles.takingLongerHint}>
+                Waking up cloud server, please wait a moment...
+              </Text>
+            )}
 
             {/* Footer: "Don't have an account? Sign Up" */}
             <View style={styles.footerRow}>
@@ -414,6 +442,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.2,
+  },
+  takingLongerHint: {
+    textAlign: 'center',
+    color: '#056B38',
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 8,
   },
   footerRow: {
     flexDirection: 'row',

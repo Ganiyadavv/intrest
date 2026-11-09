@@ -16,11 +16,22 @@ export const userService = {
       const response = await api.put('/users/profile', profileData);
       return response.data.data.user || response.data.data;
     } catch (error: any) {
-      const msg =
-        error.response?.data?.message ||
-        (typeof error.response?.data === 'string' ? error.response.data : null) ||
-        error.message ||
-        'Failed to update profile';
+      let msg = 'Failed to update profile';
+      if (error.response?.status === 413) {
+        msg = 'The selected image is too large. Please select a smaller photo.';
+      } else if (error.response?.data?.message) {
+        msg = error.response.data.message;
+      } else if (typeof error.response?.data === 'string') {
+        if (error.response.data.includes('Payload Too Large') || error.response.data.includes('413')) {
+          msg = 'The selected image is too large. Please select a smaller photo.';
+        } else {
+          // Clean HTML tags if a proxy or server error page was returned
+          const cleanText = error.response.data.replace(/<[^>]+>/g, '').trim();
+          msg = cleanText || 'Failed to update profile';
+        }
+      } else if (error.message) {
+        msg = error.message;
+      }
       throw { message: msg };
     }
   },
