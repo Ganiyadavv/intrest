@@ -13,7 +13,6 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../types/navigation';
 import { authService } from '../services/authService';
-import { getUser } from '../storage/storage';
 import { warmUpBackend } from '../services/api';
 
 const { width } = Dimensions.get('window');
@@ -65,26 +64,19 @@ export const SplashScreen: React.FC<Props> = ({ navigation }) => {
       ])
     ).start();
 
-    const checkToken = async () => {
+    const handleAppLaunch = async () => {
       try {
-        const isAuthenticated = await authService.isAuthenticated();
-        if (isAuthenticated) {
-          const user = await getUser();
-          if (user?.role === 'ADMIN') {
-            navigation.replace('Admin', { screen: 'AdminDashboard' });
-          } else {
-            navigation.replace('Main', { screen: 'Dashboard' });
-          }
-        } else {
-          navigation.replace('Auth', { screen: 'PublicHome' });
-        }
+        // Log out on fresh app launch so opening the app always opens the Public Dashboard
+        await authService.logoutUser();
       } catch (error) {
+        console.warn('Error clearing storage on launch', error);
+      } finally {
         navigation.replace('Auth', { screen: 'PublicHome' });
       }
     };
 
     const timer = setTimeout(() => {
-      checkToken();
+      handleAppLaunch();
     }, 2500);
 
     return () => clearTimeout(timer);
