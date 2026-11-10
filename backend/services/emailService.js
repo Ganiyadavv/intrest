@@ -42,20 +42,9 @@ const sendViaBrevoApi = async ({ to, subject, html, text, from, fromName }) => {
 
   if (!response.ok) {
     const errorMsg = data?.message || data?.error || `Brevo API returned HTTP status ${response.status}`;
-    console.error(`[Brevo API Error ${response.status}]:`, errorMsg);
-
-    if (errorMsg.includes('unrecognised IP address') || errorMsg.includes('authorised_ips')) {
-      console.warn('--------------------------------------------------------------------------------');
-      console.warn('Brevo IP Security Restriction:');
-      console.warn('Your current IP address must be added to Brevo Authorized IPs.');
-      console.warn('Visit: https://app.brevo.com/security/authorised_ips to authorize it.');
-      console.warn('--------------------------------------------------------------------------------');
-    }
-
     throw new Error(errorMsg);
   }
 
-  console.log(`Email successfully sent via Brevo API to ${to}. MessageId: ${data?.messageId}`);
   return data;
 };
 
@@ -66,7 +55,6 @@ const sendViaSmtp = async ({ to, subject, html, text, from, fromName }) => {
   const fromEmail = from || process.env.MAIL_FROM || process.env.MAIL_USERNAME || 'noreply@dhanamitra.com';
   const senderName = fromName || process.env.MAIL_FROM_NAME || 'DhanaMitra';
 
-  // Port 587 is blocked by Render's firewall; Brevo supports port 2525 which is open
   let port = Number(process.env.MAIL_PORT) || 2525;
   if (port === 587) {
     port = 2525;
@@ -97,14 +85,12 @@ const sendViaSmtp = async ({ to, subject, html, text, from, fromName }) => {
   };
 
   const info = await transporter.sendMail(mailOptions);
-  console.log(`Email successfully sent via SMTP to ${to}. MessageId: ${info.messageId}`);
   return info;
 };
 
 /**
  * Universal sendEmail function
- * Prioritizes Brevo API (BREVO_API_KEY), falls back to SMTP if configured,
- * or logs in mock mode if neither is configured.
+ * Prioritizes Brevo API (BREVO_API_KEY), falls back to SMTP if configured
  */
 const sendEmail = async ({ to, subject, html, text, from, fromName }) => {
   if (process.env.BREVO_API_KEY) {
@@ -115,8 +101,6 @@ const sendEmail = async ({ to, subject, html, text, from, fromName }) => {
     return await sendViaSmtp({ to, subject, html, text, from, fromName });
   }
 
-  console.log(`[Mock Email] No email credentials provided. Simulating email send to ${to}:`);
-  console.log(`Subject: ${subject}`);
   return { mock: true, to, subject };
 };
 
