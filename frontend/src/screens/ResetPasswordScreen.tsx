@@ -53,11 +53,6 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   }, [cooldown]);
 
-  const validatePassword = (pass: string) => {
-    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d\w\W]{8,}$/;
-    return regex.test(pass);
-  };
-
   const handleResetPassword = async () => {
     setError('');
     setSuccessMsg('');
@@ -68,12 +63,6 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
     }
     if (!newPassword) {
       setError('New password is required');
-      return;
-    }
-    if (!validatePassword(newPassword)) {
-      setError(
-        'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one number.'
-      );
       return;
     }
     if (newPassword !== confirmPassword) {
