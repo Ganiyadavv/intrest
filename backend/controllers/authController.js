@@ -185,7 +185,7 @@ const forgotPassword = async (req, res) => {
     });
   } catch (error) {
     console.error("Forgot password error:", error);
-    return res.status(500).json({ statusCode: 500, status: "ERROR", message: "Internal server error", data: null });
+    return res.status(500).json({ statusCode: 500, status: "ERROR", message: error.message || "Failed to send OTP email", data: null });
   }
 };
 
@@ -291,7 +291,7 @@ const resendResetOtp = async (req, res) => {
     });
   } catch (error) {
     console.error("Resend OTP error:", error);
-    return res.status(500).json({ statusCode: 500, status: "ERROR", message: "Internal server error", data: null });
+    return res.status(500).json({ statusCode: 500, status: "ERROR", message: error.message || "Failed to resend OTP email", data: null });
   }
 };
 
