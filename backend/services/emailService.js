@@ -66,17 +66,26 @@ const sendViaSmtp = async ({ to, subject, html, text, from, fromName }) => {
   const fromEmail = from || process.env.MAIL_FROM || process.env.MAIL_USERNAME || 'noreply@dhanamitra.com';
   const senderName = fromName || process.env.MAIL_FROM_NAME || 'DhanaMitra';
 
+  // Port 587 is blocked by Render's firewall; Brevo supports port 2525 which is open
+  let port = Number(process.env.MAIL_PORT) || 2525;
+  if (port === 587) {
+    port = 2525;
+  }
+
   const transporter = nodemailer.createTransport({
     host: process.env.MAIL_HOST || 'smtp-relay.brevo.com',
-    port: Number(process.env.MAIL_PORT) || 587,
-    secure: Number(process.env.MAIL_PORT) === 465,
+    port: port,
+    secure: port === 465,
     auth: {
       user: process.env.MAIL_USERNAME,
       pass: process.env.MAIL_PASSWORD
     },
     tls: {
       rejectUnauthorized: false
-    }
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000
   });
 
   const mailOptions = {
