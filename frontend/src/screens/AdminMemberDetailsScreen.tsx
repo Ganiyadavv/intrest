@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   Platform,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -35,6 +36,29 @@ export const AdminMemberDetailsScreen: React.FC<Props> = ({ navigation, route })
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
+
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalConfig, setModalConfig] = useState<{
+    title: string;
+    message: string;
+    confirmText: string;
+    confirmColor: string;
+    iconName?: keyof typeof Ionicons.glyphMap;
+    iconColor?: string;
+    iconBg?: string;
+    showCancel?: boolean;
+    onConfirm: () => void;
+  }>({
+    title: '',
+    message: '',
+    confirmText: 'OK',
+    confirmColor: '#056B38',
+    iconName: 'checkmark-circle',
+    iconColor: '#056B38',
+    iconBg: '#ECFDF5',
+    showCancel: false,
+    onConfirm: () => {},
+  });
 
   const fetchMemberDetails = async () => {
     try {
@@ -65,40 +89,56 @@ export const AdminMemberDetailsScreen: React.FC<Props> = ({ navigation, route })
       setProcessing(true);
       try {
         await adminService.updateMemberStatus(id, newStatus);
-        if (Platform.OS === 'web') {
-          window.alert(`Member ${isCurrentlyActive ? 'suspended' : 'activated'} successfully.`);
-        } else {
-          Alert.alert('Success', `Member ${isCurrentlyActive ? 'suspended' : 'activated'} successfully.`);
-        }
-        fetchMemberDetails();
+        setModalConfig({
+          title: 'Success',
+          message: `Member ${isCurrentlyActive ? 'suspended' : 'activated'} successfully.`,
+          confirmText: 'OK',
+          confirmColor: '#056B38',
+          iconName: 'checkmark-circle',
+          iconColor: '#056B38',
+          iconBg: '#ECFDF5',
+          showCancel: false,
+          onConfirm: () => {
+            setModalVisible(false);
+            fetchMemberDetails();
+          },
+        });
+        setModalVisible(true);
       } catch (err: any) {
         const msg = err.response?.data?.message || 'Failed to update status';
-        if (Platform.OS === 'web') {
-          window.alert(msg);
-        } else {
-          Alert.alert('Error', msg);
-        }
+        setModalConfig({
+          title: 'Error',
+          message: msg,
+          confirmText: 'Close',
+          confirmColor: '#DC2626',
+          iconName: 'alert-circle',
+          iconColor: '#DC2626',
+          iconBg: '#FEE2E2',
+          showCancel: false,
+          onConfirm: () => {
+            setModalVisible(false);
+          },
+        });
+        setModalVisible(true);
       } finally {
         setProcessing(false);
       }
     };
 
-    if (Platform.OS === 'web') {
-      const confirmed = window.confirm(`Are you sure you want to ${actionText} this member?`);
-      if (confirmed) {
+    setModalConfig({
+      title: isCurrentlyActive ? 'Suspend Member' : 'Activate Member',
+      message: `Are you sure you want to ${actionText} this member?`,
+      confirmText: isCurrentlyActive ? 'Suspend' : 'Activate',
+      confirmColor: isCurrentlyActive ? '#EF4444' : '#059669',
+      iconName: isCurrentlyActive ? 'person-remove-outline' : 'checkmark-circle-outline',
+      iconColor: isCurrentlyActive ? '#EF4444' : '#059669',
+      iconBg: isCurrentlyActive ? '#FEE2E2' : '#ECFDF5',
+      showCancel: true,
+      onConfirm: () => {
         executeStatusUpdate();
-      }
-      return;
-    }
-
-    Alert.alert(`Confirm Action`, `Are you sure you want to ${actionText} this member?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Confirm',
-        style: isCurrentlyActive ? 'destructive' : 'default',
-        onPress: executeStatusUpdate,
       },
-    ]);
+    });
+    setModalVisible(true);
   };
 
   // Helper to format date with time e.g. "12 Aug 2024, 10:30 AM"
@@ -335,11 +375,18 @@ export const AdminMemberDetailsScreen: React.FC<Props> = ({ navigation, route })
         <TouchableOpacity
           style={styles.viewRecordsBtn}
           onPress={() => {
-            if (Platform.OS === 'web') {
-              window.alert?.(`Records overview for ${displayName}`);
-            } else {
-              Alert.alert('Records Overview', `Viewing all records for ${displayName}`);
-            }
+            setModalConfig({
+              title: 'Records Overview',
+              message: `Viewing records overview for ${displayName}.`,
+              confirmText: 'OK',
+              confirmColor: '#056B38',
+              iconName: 'swap-horizontal',
+              iconColor: '#056B38',
+              iconBg: '#ECFDF5',
+              showCancel: false,
+              onConfirm: () => setModalVisible(false),
+            });
+            setModalVisible(true);
           }}
           activeOpacity={0.85}
         >
@@ -373,6 +420,57 @@ export const AdminMemberDetailsScreen: React.FC<Props> = ({ navigation, route })
           </Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* CUSTOM CONFIRMATION & ALERT MODAL */}
+      <Modal
+        visible={modalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          if (!processing) setModalVisible(false);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={[styles.modalIconContainer, { backgroundColor: modalConfig.iconBg || '#F8FAFC' }]}>
+              <Ionicons
+                name={modalConfig.iconName || 'warning'}
+                size={30}
+                color={modalConfig.iconColor || modalConfig.confirmColor}
+              />
+            </View>
+            <Text style={styles.modalTitle}>{modalConfig.title}</Text>
+            <Text style={styles.modalMessage}>{modalConfig.message}</Text>
+            <View style={styles.modalActions}>
+              {modalConfig.showCancel && (
+                <TouchableOpacity
+                  style={styles.modalCancelBtn}
+                  onPress={() => setModalVisible(false)}
+                  disabled={processing}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={[
+                  styles.modalConfirmBtn,
+                  { backgroundColor: modalConfig.confirmColor },
+                  !modalConfig.showCancel && { flex: 1, minWidth: 160 },
+                  processing && { opacity: 0.7 },
+                ]}
+                onPress={modalConfig.onConfirm}
+                disabled={processing}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.modalConfirmText}>
+                  {processing ? 'Updating...' : modalConfig.confirmText}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -700,5 +798,87 @@ const styles = StyleSheet.create({
   },
   activateBtnText: {
     color: '#059669',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  modalContainer: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.15,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 8,
+      },
+      web: {
+        boxShadow: '0 12px 36px rgba(0,0,0,0.18)',
+      },
+    }),
+  },
+  modalIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    marginBottom: 22,
+    lineHeight: 20,
+    paddingHorizontal: 8,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  modalCancelBtn: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    color: '#64748B',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  modalConfirmBtn: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalConfirmText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

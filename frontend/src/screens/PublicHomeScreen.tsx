@@ -111,7 +111,7 @@ export const PublicHomeScreen: React.FC<Props> = ({ navigation }) => {
               activeOpacity={0.7}
             >
               <View style={[styles.toolIconBox, { backgroundColor: '#FFF7ED' }]}>
-                <Ionicons name="sunny" size={28} color="#F97316" />
+                <Ionicons name="sunny" size={34} color="#F97316" />
               </View>
               <Text style={styles.toolLabel} numberOfLines={2}>
                 {t('tools.simpleInterest')}
@@ -125,7 +125,7 @@ export const PublicHomeScreen: React.FC<Props> = ({ navigation }) => {
               activeOpacity={0.7}
             >
               <View style={[styles.toolIconBox, { backgroundColor: '#ECFDF5' }]}>
-                <Ionicons name="trending-up" size={28} color="#10B981" />
+                <Ionicons name="trending-up" size={34} color="#10B981" />
               </View>
               <Text style={styles.toolLabel} numberOfLines={2}>
                 {t('tools.compoundInterest')}
@@ -139,7 +139,7 @@ export const PublicHomeScreen: React.FC<Props> = ({ navigation }) => {
               activeOpacity={0.7}
             >
               <View style={[styles.toolIconBox, { backgroundColor: '#EEF2FF' }]}>
-                <Ionicons name="calculator" size={28} color="#2563EB" />
+                <Ionicons name="calculator" size={34} color="#2563EB" />
               </View>
               <Text style={styles.toolLabel} numberOfLines={2}>
                 {t('tools.emiCalculator')}
@@ -153,7 +153,7 @@ export const PublicHomeScreen: React.FC<Props> = ({ navigation }) => {
               activeOpacity={0.7}
             >
               <View style={[styles.toolIconBox, { backgroundColor: '#F5F3FF' }]}>
-                <Ionicons name="pie-chart" size={26} color="#7C3AED" />
+                <Ionicons name="pie-chart" size={32} color="#7C3AED" />
               </View>
               <Text style={styles.toolLabel} numberOfLines={2}>
                 {t('tools.rateCalculator')}
@@ -430,8 +430,8 @@ const styles = StyleSheet.create({
   toolsCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
-    paddingVertical: 20,
-    paddingHorizontal: 8,
+    paddingVertical: 24,
+    paddingHorizontal: 6,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -461,19 +461,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   toolIconBox: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+    width: 66,
+    height: 66,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   toolLabel: {
-    fontSize: 12.5,
+    fontSize: 13,
     fontWeight: '700',
     color: '#1E293B',
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: 17,
   },
   manageCard: {
     backgroundColor: '#FFFFFF',

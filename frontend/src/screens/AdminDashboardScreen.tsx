@@ -8,6 +8,7 @@ import {
   Dimensions,
   RefreshControl,
   Platform,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -33,6 +34,7 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const fetchDashboard = async () => {
     try {
@@ -42,7 +44,7 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
     } catch (err: any) {
       setError(err.message || 'Failed to load admin dashboard');
       if (err.statusCode === 401) {
-        handleLogout();
+        confirmLogout();
       }
     } finally {
       setLoading(false);
@@ -61,7 +63,8 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
     fetchDashboard();
   };
 
-  const handleLogout = async () => {
+  const confirmLogout = async () => {
+    setShowLogoutModal(false);
     await authService.logoutUser();
     navigation.getParent()?.reset({
       index: 0,
@@ -101,7 +104,7 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.adminAvatarContainer}>
               <Ionicons name="person" size={17} color="#056B38" />
             </View>
-            <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn} activeOpacity={0.75}>
+            <TouchableOpacity onPress={() => setShowLogoutModal(true)} style={styles.logoutBtn} activeOpacity={0.75}>
               <Ionicons name="log-out-outline" size={15} color="#FFFFFF" />
               <Text style={styles.logoutText}>Logout</Text>
             </TouchableOpacity>
@@ -288,6 +291,42 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </View>
       </ScrollView>
+
+      {/* LOGOUT CONFIRMATION MODAL */}
+      <Modal
+        visible={showLogoutModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalIconContainer}>
+              <Ionicons name="log-out-outline" size={28} color="#DC2626" />
+            </View>
+            <Text style={styles.modalTitle}>Log Out as Administrator?</Text>
+            <Text style={styles.modalMessage}>
+              Are you sure you want to log out from the administrator dashboard?
+            </Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setShowLogoutModal(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalConfirmBtn}
+                onPress={confirmLogout}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.modalConfirmText}>Log Out</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -697,5 +736,89 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#0F172A',
     fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  modalContainer: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.15,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 8,
+      },
+      web: {
+        boxShadow: '0 12px 36px rgba(0,0,0,0.18)',
+      },
+    }),
+  },
+  modalIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FEE2E2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    marginBottom: 22,
+    lineHeight: 20,
+    paddingHorizontal: 8,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  modalCancelBtn: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    color: '#64748B',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  modalConfirmBtn: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: '#DC2626',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalConfirmText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
