@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MainStackParamList } from '../types/navigation';
 import { useFocusEffect } from '@react-navigation/native';
-import { getUser, clearStorage } from '../storage/storage';
+import { getUser, saveUser, clearStorage } from '../storage/storage';
 import { User } from '../types/user';
 import { PersonRecord } from '../types/personRecord';
 import { LenderRecord } from '../types/lenderRecord';
@@ -22,6 +22,8 @@ import { personRecordService } from '../services/personRecordService';
 import { lenderRecordService } from '../services/lenderRecordService';
 import { notificationService } from '../services/notificationService';
 import { requestService } from '../services/requestService';
+import { userService } from '../services/userService';
+import { API_BASE_URL } from '../config/apiConfig';
 import { formatCurrency } from '../utils/currency';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -55,19 +57,43 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [menuModalVisible, setMenuModalVisible] = useState(false);
+  const [profileImgError, setProfileImgError] = useState(false);
   const { language, setLanguage, t } = useLanguage();
+
+  useEffect(() => {
+    setProfileImgError(false);
+  }, [user?.profileImage]);
+
+  const resolveProfileImageUri = (uri?: string | null) => {
+    if (!uri) return null;
+    if (uri.match(/^(http|https|data|blob|file):/i)) {
+      return uri;
+    }
+    return `${API_BASE_URL.replace('/api', '')}/uploads/${uri}`;
+  };
+
+  const resolvedProfileUri = user?.profileImage ? resolveProfileImageUri(user.profileImage) : null;
+  const hasValidProfileImg = Boolean(resolvedProfileUri) && !profileImgError;
 
   const loadData = async () => {
     try {
       const storedUser = await getUser();
-      setUser(storedUser);
+      if (storedUser) {
+        setUser(storedUser);
+      }
 
-      const [borrowers, lenders, notifications, incoming] = await Promise.all([
+      const [borrowers, lenders, notifications, incoming, freshProfile] = await Promise.all([
         personRecordService.getPersonRecords().catch(() => []),
         lenderRecordService.getLenderRecords().catch(() => []),
         notificationService.getNotifications().catch(() => []),
         requestService.getIncomingRequests().catch(() => []),
+        userService.getProfile().catch(() => null),
       ]);
+
+      if (freshProfile) {
+        setUser(freshProfile);
+        await saveUser(freshProfile).catch(() => {});
+      }
 
       const filterDashboardRecords = (list: any[]) => {
         if (!Array.isArray(list)) return [];
@@ -254,7 +280,16 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             onPress={() => navigation.navigate('Profile')}
             activeOpacity={0.7}
           >
-            <Ionicons name="person-outline" size={18} color="#0A4224" />
+            {hasValidProfileImg ? (
+              <Image
+                source={{ uri: resolvedProfileUri! }}
+                style={styles.profileAvatarImg}
+                resizeMode="cover"
+                onError={() => setProfileImgError(true)}
+              />
+            ) : (
+              <Ionicons name="person-outline" size={18} color="#0A4224" />
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -881,6 +916,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 4,
+    overflow: 'hidden',
+  },
+  profileAvatarImg: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 17,
   },
   scrollContent: {
     flexGrow: 1,

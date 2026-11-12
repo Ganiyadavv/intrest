@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   RefreshControl,
   Platform,
   Modal,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -20,6 +21,10 @@ import { adminService } from '../services/adminService';
 import { AdminDashboard } from '../types/admin';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { authService } from '../services/authService';
+import { getUser, saveUser } from '../storage/storage';
+import { User } from '../types/user';
+import { userService } from '../services/userService';
+import { API_BASE_URL } from '../config/apiConfig';
 
 const { width } = Dimensions.get('window');
 
@@ -31,16 +36,45 @@ interface Props {
 
 export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
   const [data, setData] = useState<AdminDashboard | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [profileImgError, setProfileImgError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
+  useEffect(() => {
+    setProfileImgError(false);
+  }, [user?.profileImage]);
+
+  const resolveProfileImageUri = (uri?: string | null) => {
+    if (!uri) return null;
+    if (uri.match(/^(http|https|data|blob|file):/i)) {
+      return uri;
+    }
+    return `${API_BASE_URL.replace('/api', '')}/uploads/${uri}`;
+  };
+
+  const resolvedProfileUri = user?.profileImage ? resolveProfileImageUri(user.profileImage) : null;
+  const hasValidProfileImg = Boolean(resolvedProfileUri) && !profileImgError;
+
   const fetchDashboard = async () => {
     try {
       setError('');
-      const response = await adminService.getAdminDashboard();
+      const storedUser = await getUser();
+      if (storedUser) {
+        setUser(storedUser);
+      }
+
+      const [response, freshProfile] = await Promise.all([
+        adminService.getAdminDashboard(),
+        userService.getProfile().catch(() => null),
+      ]);
       setData(response);
+      if (freshProfile) {
+        setUser(freshProfile);
+        await saveUser(freshProfile).catch(() => {});
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to load admin dashboard');
       if (err.statusCode === 401) {
@@ -102,7 +136,16 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
 
           <View style={styles.headerRightGroup}>
             <View style={styles.adminAvatarContainer}>
-              <Ionicons name="person" size={17} color="#056B38" />
+              {hasValidProfileImg ? (
+                <Image
+                  source={{ uri: resolvedProfileUri! }}
+                  style={styles.adminAvatarImg}
+                  resizeMode="cover"
+                  onError={() => setProfileImgError(true)}
+                />
+              ) : (
+                <Ionicons name="person" size={17} color="#056B38" />
+              )}
             </View>
             <TouchableOpacity onPress={() => setShowLogoutModal(true)} style={styles.logoutBtn} activeOpacity={0.75}>
               <Ionicons name="log-out-outline" size={15} color="#FFFFFF" />
@@ -378,6 +421,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  adminAvatarImg: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 18,
   },
   logoutBtn: {
     flexDirection: 'row',
