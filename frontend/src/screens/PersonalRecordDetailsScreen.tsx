@@ -693,7 +693,7 @@ Tracked securely on DhanaMitra.`;
               <View style={styles.modalInputBox}>
                 <Text style={styles.rupeePrefix}>₹</Text>
                 <TextInput
-                  style={styles.modalTextInput}
+                  style={[styles.modalTextInput, { outlineStyle: 'none' } as any]}
                   placeholder={`Max ${remaining}`}
                   placeholderTextColor="#94A3B8"
                   keyboardType="numeric"
@@ -767,7 +767,7 @@ Tracked securely on DhanaMitra.`;
               <Text style={styles.modalFieldLabel}>Notes (Optional)</Text>
               <View style={[styles.modalInputBox, { height: 65, alignItems: 'flex-start', paddingVertical: 6 }]}>
                 <TextInput
-                  style={[styles.modalTextInput, { textAlignVertical: 'top' }]}
+                  style={[styles.modalTextInput, { textAlignVertical: 'top', outlineStyle: 'none' } as any]}
                   placeholder="GPay, PhonePe, cash, etc."
                   placeholderTextColor="#94A3B8"
                   value={returnNotes}
@@ -1462,6 +1462,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#0F172A',
+    height: '100%',
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+        borderWidth: 0,
+      } as any,
+    }),
   },
   modalDateBtn: {
     flexDirection: 'row',

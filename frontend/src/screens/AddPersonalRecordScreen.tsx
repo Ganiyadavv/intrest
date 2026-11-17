@@ -52,6 +52,7 @@ export const AddPersonalRecordScreen: React.FC<Props> = ({ navigation }) => {
   const [paymentScreenshot, setPaymentScreenshot] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   // In-app Alert Modal
   const [alertModalVisible, setAlertModalVisible] = useState(false);
@@ -184,7 +185,7 @@ export const AddPersonalRecordScreen: React.FC<Props> = ({ navigation }) => {
       }
 
       await personalRecordService.createPersonalRecord(formData);
-      
+
       const routes = navigation.getState()?.routes;
       const hasPersonalRecords = routes?.some((r: any) => r.name === 'PersonalRecords');
       if (hasPersonalRecords) {
@@ -240,13 +241,26 @@ export const AddPersonalRecordScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.fieldLabel}>
               Person Name <Text style={styles.reqStar}>*</Text>
             </Text>
-            <View style={[styles.inputBox, errors.name && styles.inputError]}>
-              <Ionicons name="person-outline" size={20} color="#056B38" style={styles.inputIcon} />
+            <View
+              style={[
+                styles.inputBox,
+                focusedField === 'name' && styles.inputBoxFocused,
+                errors.name && styles.inputError,
+              ]}
+            >
+              <Ionicons
+                name="person-outline"
+                size={20}
+                color={focusedField === 'name' ? '#056B38' : '#64748B'}
+                style={styles.inputIcon}
+              />
               <TextInput
-                style={styles.textInput}
+                style={[styles.textInput, { outlineStyle: 'none' } as any]}
                 placeholder="e.g. Ramesh"
                 placeholderTextColor="#94A3B8"
                 value={name}
+                onFocus={() => setFocusedField('name')}
+                onBlur={() => setFocusedField(null)}
                 onChangeText={(val) => {
                   setName(val);
                   if (errors.name) setErrors((prev) => ({ ...prev, name: '' }));
@@ -320,15 +334,28 @@ export const AddPersonalRecordScreen: React.FC<Props> = ({ navigation }) => {
           {/* 3. PHONE NUMBER (OPTIONAL) */}
           <View style={styles.fieldGroup}>
             <Text style={styles.fieldLabel}>Phone Number (Optional)</Text>
-            <View style={[styles.inputBox, errors.phoneNumber && styles.inputError]}>
-              <Ionicons name="call-outline" size={20} color="#056B38" style={styles.inputIcon} />
+            <View
+              style={[
+                styles.inputBox,
+                focusedField === 'phone' && styles.inputBoxFocused,
+                errors.phoneNumber && styles.inputError,
+              ]}
+            >
+              <Ionicons
+                name="call-outline"
+                size={20}
+                color={focusedField === 'phone' ? '#056B38' : '#64748B'}
+                style={styles.inputIcon}
+              />
               <TextInput
-                style={styles.textInput}
+                style={[styles.textInput, { outlineStyle: 'none' } as any]}
                 placeholder="10-digit mobile number"
                 placeholderTextColor="#94A3B8"
                 keyboardType="phone-pad"
                 maxLength={10}
                 value={phoneNumber}
+                onFocus={() => setFocusedField('phone')}
+                onBlur={() => setFocusedField(null)}
                 onChangeText={(val) => {
                   setPhoneNumber(val);
                   if (errors.phoneNumber) setErrors((prev) => ({ ...prev, phoneNumber: '' }));
@@ -343,14 +370,22 @@ export const AddPersonalRecordScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.fieldLabel}>
               Amount (₹) <Text style={styles.reqStar}>*</Text>
             </Text>
-            <View style={[styles.inputBox, errors.amount && styles.inputError]}>
+            <View
+              style={[
+                styles.inputBox,
+                focusedField === 'amount' && styles.inputBoxFocused,
+                errors.amount && styles.inputError,
+              ]}
+            >
               <Text style={styles.rupeePrefix}>₹</Text>
               <TextInput
-                style={styles.textInput}
+                style={[styles.textInput, { outlineStyle: 'none' } as any]}
                 placeholder="10,000"
                 placeholderTextColor="#94A3B8"
                 keyboardType="numeric"
                 value={amount}
+                onFocus={() => setFocusedField('amount')}
+                onBlur={() => setFocusedField(null)}
                 onChangeText={(val) => {
                   setAmount(val);
                   if (errors.amount) setErrors((prev) => ({ ...prev, amount: '' }));
@@ -422,20 +457,28 @@ export const AddPersonalRecordScreen: React.FC<Props> = ({ navigation }) => {
           {/* 6. NOTES (OPTIONAL) */}
           <View style={styles.fieldGroup}>
             <Text style={styles.fieldLabel}>Notes (Optional)</Text>
-            <View style={[styles.inputBox, styles.textAreaBox]}>
+            <View
+              style={[
+                styles.inputBox,
+                styles.textAreaBox,
+                focusedField === 'notes' && styles.inputBoxFocused,
+              ]}
+            >
               <Ionicons
                 name="document-text-outline"
                 size={20}
-                color="#056B38"
+                color={focusedField === 'notes' ? '#056B38' : '#64748B'}
                 style={[styles.inputIcon, { marginTop: 10 }]}
               />
               <TextInput
-                style={[styles.textInput, styles.textAreaInput]}
+                style={[styles.textInput, styles.textAreaInput, { outlineStyle: 'none' } as any]}
                 placeholder="Personal help, emergency loan, etc."
                 placeholderTextColor="#94A3B8"
                 multiline
                 numberOfLines={3}
                 value={notes}
+                onFocus={() => setFocusedField('notes')}
+                onBlur={() => setFocusedField(null)}
                 onChangeText={setNotes}
               />
             </View>
@@ -632,6 +675,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 50,
   },
+  inputBoxFocused: {
+    borderColor: '#056B38',
+    backgroundColor: '#FFFFFF',
+    ...Platform.select({
+      web: {
+        boxShadow: '0 0 0 3px rgba(5, 107, 56, 0.12)',
+      },
+    }),
+  },
   inputError: {
     borderColor: '#DC2626',
     backgroundColor: '#FEF2F2',
@@ -644,6 +696,13 @@ const styles = StyleSheet.create({
     fontSize: 14.5,
     color: '#0F172A',
     fontWeight: '600',
+    height: '100%',
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+        borderWidth: 0,
+      } as any,
+    }),
   },
   rupeePrefix: {
     fontSize: 17,
@@ -738,6 +797,12 @@ const styles = StyleSheet.create({
   textAreaInput: {
     textAlignVertical: 'top',
     height: 70,
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+        borderWidth: 0,
+      } as any,
+    }),
   },
   screenshotUploadDashed: {
     borderWidth: 2,

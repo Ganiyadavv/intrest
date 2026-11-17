@@ -31,6 +31,16 @@
         height: 100%;
         flex: 1;
       }
+      /* Disable browser default focus ring / black box */
+      input, textarea, select {
+        outline: none !important;
+        outline-style: none !important;
+        -webkit-tap-highlight-color: transparent;
+      }
+      input:focus, textarea:focus, select:focus {
+        outline: none !important;
+        outline-style: none !important;
+      }
     </style>
   </head>
 

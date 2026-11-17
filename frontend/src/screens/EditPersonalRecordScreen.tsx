@@ -55,6 +55,7 @@ export const EditPersonalRecordScreen: React.FC<Props> = ({ navigation, route })
   const [showGivenPicker, setShowGivenPicker] = useState(false);
   const [notes, setNotes] = useState('');
   const [paymentScreenshot, setPaymentScreenshot] = useState<string | null>(null);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   // In-app Alert Modal
   const [alertModalVisible, setAlertModalVisible] = useState(false);
@@ -245,9 +246,20 @@ export const EditPersonalRecordScreen: React.FC<Props> = ({ navigation, route })
           {/* Person Name */}
           <View style={styles.fieldGroup}>
             <Text style={styles.fieldLabel}>Person Name</Text>
-            <View style={styles.inputBox}>
-              <Ionicons name="person-outline" size={20} color="#056B38" style={styles.inputIcon} />
-              <TextInput style={styles.textInput} value={name} onChangeText={setName} />
+            <View style={[styles.inputBox, focusedField === 'name' && styles.inputBoxFocused]}>
+              <Ionicons
+                name="person-outline"
+                size={20}
+                color={focusedField === 'name' ? '#056B38' : '#64748B'}
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={[styles.textInput, { outlineStyle: 'none' } as any]}
+                value={name}
+                onFocus={() => setFocusedField('name')}
+                onBlur={() => setFocusedField(null)}
+                onChangeText={setName}
+              />
             </View>
           </View>
 
@@ -294,12 +306,19 @@ export const EditPersonalRecordScreen: React.FC<Props> = ({ navigation, route })
           {/* Phone */}
           <View style={styles.fieldGroup}>
             <Text style={styles.fieldLabel}>Phone Number</Text>
-            <View style={styles.inputBox}>
-              <Ionicons name="call-outline" size={20} color="#056B38" style={styles.inputIcon} />
+            <View style={[styles.inputBox, focusedField === 'phone' && styles.inputBoxFocused]}>
+              <Ionicons
+                name="call-outline"
+                size={20}
+                color={focusedField === 'phone' ? '#056B38' : '#64748B'}
+                style={styles.inputIcon}
+              />
               <TextInput
-                style={styles.textInput}
+                style={[styles.textInput, { outlineStyle: 'none' } as any]}
                 keyboardType="phone-pad"
                 value={phoneNumber}
+                onFocus={() => setFocusedField('phone')}
+                onBlur={() => setFocusedField(null)}
                 onChangeText={setPhoneNumber}
               />
             </View>
@@ -308,12 +327,14 @@ export const EditPersonalRecordScreen: React.FC<Props> = ({ navigation, route })
           {/* Amount */}
           <View style={styles.fieldGroup}>
             <Text style={styles.fieldLabel}>Amount (₹)</Text>
-            <View style={styles.inputBox}>
+            <View style={[styles.inputBox, focusedField === 'amount' && styles.inputBoxFocused]}>
               <Text style={styles.rupeePrefix}>₹</Text>
               <TextInput
-                style={styles.textInput}
+                style={[styles.textInput, { outlineStyle: 'none' } as any]}
                 keyboardType="numeric"
                 value={amount}
+                onFocus={() => setFocusedField('amount')}
+                onBlur={() => setFocusedField(null)}
                 onChangeText={setAmount}
               />
             </View>
@@ -379,12 +400,20 @@ export const EditPersonalRecordScreen: React.FC<Props> = ({ navigation, route })
           {/* Notes */}
           <View style={styles.fieldGroup}>
             <Text style={styles.fieldLabel}>Notes</Text>
-            <View style={[styles.inputBox, { height: 80, alignItems: 'flex-start', paddingVertical: 8 }]}>
+            <View
+              style={[
+                styles.inputBox,
+                { height: 80, alignItems: 'flex-start', paddingVertical: 8 },
+                focusedField === 'notes' && styles.inputBoxFocused,
+              ]}
+            >
               <TextInput
-                style={[styles.textInput, { textAlignVertical: 'top' }]}
+                style={[styles.textInput, { textAlignVertical: 'top', outlineStyle: 'none' } as any]}
                 multiline
                 numberOfLines={3}
                 value={notes}
+                onFocus={() => setFocusedField('notes')}
+                onBlur={() => setFocusedField(null)}
                 onChangeText={setNotes}
               />
             </View>
@@ -524,6 +553,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 50,
   },
+  inputBoxFocused: {
+    borderColor: '#056B38',
+    backgroundColor: '#FFFFFF',
+    ...Platform.select({
+      web: {
+        boxShadow: '0 0 0 3px rgba(5, 107, 56, 0.12)',
+      },
+    }),
+  },
   inputIcon: {
     marginRight: 10,
   },
@@ -532,6 +570,13 @@ const styles = StyleSheet.create({
     fontSize: 14.5,
     color: '#0F172A',
     fontWeight: '600',
+    height: '100%',
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+        borderWidth: 0,
+      } as any,
+    }),
   },
   rupeePrefix: {
     fontSize: 17,
