@@ -10,7 +10,7 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MainStackParamList } from '../types/navigation';
 import { useFocusEffect } from '@react-navigation/native';
@@ -731,7 +731,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
               activeOpacity={0.8}
             >
               <View style={[styles.modalChoiceIconCircle, { backgroundColor: '#DCFCE7' }]}>
-                <Ionicons name="people" size={22} color="#15803D" />
+                <FontAwesome5 name="handshake" size={20} color="#15803D" solid />
               </View>
               <View style={styles.modalChoiceTextGroup}>
                 <Text style={styles.modalChoiceTitle}>{t('modal.addFriendFamily')}</Text>
@@ -802,7 +802,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                 navigation.navigate('PersonalRecords');
               }}
             >
-              <Ionicons name="people-outline" size={22} color="#056B38" />
+              <FontAwesome5 name="handshake" size={18} color="#056B38" solid style={{ width: 22, textAlign: 'center' }} />
               <Text style={styles.menuItemText}>{t('menu.personalRecords')}</Text>
             </TouchableOpacity>
 
