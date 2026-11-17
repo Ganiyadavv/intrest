@@ -112,16 +112,16 @@ export const PersonalRecordDetailsScreen: React.FC<Props> = ({ navigation, route
   const handleRecordReturn = async () => {
     const amt = parseFloat(returnAmount);
     if (!returnAmount || isNaN(amt) || amt <= 0) {
-      Alert.alert('Invalid Amount', 'Please enter a valid return amount greater than 0.');
+      if (Platform.OS === 'web') window.alert('Please enter a valid return amount greater than 0.');
+      else Alert.alert('Invalid Amount', 'Please enter a valid return amount greater than 0.');
       return;
     }
 
     const remaining = parseFloat(String(record?.remainingAmount || 0));
     if (amt > remaining) {
-      Alert.alert(
-        'Amount Exceeds Balance',
-        `Return amount cannot exceed remaining balance of ${formatCurrency(remaining)}.`
-      );
+      const msg = `Return amount cannot exceed remaining balance of ${formatCurrency(remaining)}.`;
+      if (Platform.OS === 'web') window.alert(msg);
+      else Alert.alert('Amount Exceeds Balance', msg);
       return;
     }
 
@@ -157,59 +157,101 @@ export const PersonalRecordDetailsScreen: React.FC<Props> = ({ navigation, route
       setReturnNotes('');
       setReturnProof(null);
       await fetchRecordDetails();
-      Alert.alert('Success', 'Return recorded successfully!');
+      if (Platform.OS === 'web') {
+        window.alert('Return recorded successfully!');
+      } else {
+        Alert.alert('Success', 'Return recorded successfully!');
+      }
     } catch (err: any) {
-      Alert.alert('Error', err.response?.data?.message || 'Failed to record return.');
+      const msg = err.response?.data?.message || 'Failed to record return.';
+      if (Platform.OS === 'web') {
+        window.alert(msg);
+      } else {
+        Alert.alert('Error', msg);
+      }
     } finally {
       setSubmittingReturn(false);
     }
   };
 
+  const executeDeleteRecord = async () => {
+    try {
+      await personalRecordService.deletePersonalRecord(id);
+      if (Platform.OS === 'web') {
+        window.alert('Record removed successfully.');
+      } else {
+        Alert.alert('Deleted', 'Record removed successfully.');
+      }
+      navigation.goBack();
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || 'Failed to delete record.';
+      if (Platform.OS === 'web') {
+        window.alert(msg);
+      } else {
+        Alert.alert('Error', msg);
+      }
+    }
+  };
+
   const handleDeleteRecord = () => {
     setMenuVisible(false);
-    Alert.alert(
-      'Delete Record',
-      'Are you sure you want to delete this personal record? All return history will be removed.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await personalRecordService.deletePersonalRecord(id);
-              Alert.alert('Deleted', 'Record removed successfully.', [
-                { text: 'OK', onPress: () => navigation.goBack() },
-              ]);
-            } catch (err: any) {
-              Alert.alert('Error', 'Failed to delete record.');
-            }
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        'Are you sure you want to delete this personal record? All return history will be removed.'
+      );
+      if (confirmed) {
+        executeDeleteRecord();
+      }
+    } else {
+      Alert.alert(
+        'Delete Record',
+        'Are you sure you want to delete this personal record? All return history will be removed.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: executeDeleteRecord,
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const handleDeleteRepayment = (repaymentId: string | number) => {
-    Alert.alert(
-      'Delete Return Entry',
-      'Are you sure you want to remove this repayment entry?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await personalRecordService.deleteRepayment(id, repaymentId);
-              fetchRecordDetails();
-            } catch {
-              Alert.alert('Error', 'Failed to delete return entry.');
-            }
+    const executeDeleteRep = async () => {
+      try {
+        await personalRecordService.deleteRepayment(id, repaymentId);
+        fetchRecordDetails();
+      } catch (err: any) {
+        const msg = err.response?.data?.message || 'Failed to delete return entry.';
+        if (Platform.OS === 'web') {
+          window.alert(msg);
+        } else {
+          Alert.alert('Error', msg);
+        }
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm('Are you sure you want to remove this repayment entry?');
+      if (confirmed) {
+        executeDeleteRep();
+      }
+    } else {
+      Alert.alert(
+        'Delete Return Entry',
+        'Are you sure you want to remove this repayment entry?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: executeDeleteRep,
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const handleShareDetails = async () => {

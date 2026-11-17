@@ -144,11 +144,21 @@ export const EditPersonalRecordScreen: React.FC<Props> = ({ navigation, route })
       }
 
       await personalRecordService.updatePersonalRecord(id, formData);
-      Alert.alert('Success', 'Record updated successfully!', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      if (Platform.OS === 'web') {
+        window.alert('Record updated successfully!');
+        navigation.goBack();
+      } else {
+        Alert.alert('Success', 'Record updated successfully!', [
+          { text: 'OK', onPress: () => navigation.goBack() },
+        ]);
+      }
     } catch (err: any) {
-      Alert.alert('Error', err.response?.data?.message || 'Failed to update record.');
+      const msg = err.response?.data?.message || 'Failed to update record.';
+      if (Platform.OS === 'web') {
+        window.alert(msg);
+      } else {
+        Alert.alert('Error', msg);
+      }
     } finally {
       setSaving(false);
     }

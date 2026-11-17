@@ -147,14 +147,23 @@ export const AddPersonalRecordScreen: React.FC<Props> = ({ navigation }) => {
       }
 
       await personalRecordService.createPersonalRecord(formData);
-      Alert.alert(
-        'Success',
-        'Personal record saved successfully!',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
+      if (Platform.OS === 'web') {
+        window.alert('Personal record saved successfully!');
+        navigation.goBack();
+      } else {
+        Alert.alert(
+          'Success',
+          'Personal record saved successfully!',
+          [{ text: 'OK', onPress: () => navigation.goBack() }]
+        );
+      }
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Failed to save personal record.';
-      Alert.alert('Error', msg);
+      if (Platform.OS === 'web') {
+        window.alert(msg);
+      } else {
+        Alert.alert('Error', msg);
+      }
     } finally {
       setLoading(false);
     }
