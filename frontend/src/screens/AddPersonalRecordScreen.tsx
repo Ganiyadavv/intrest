@@ -21,6 +21,7 @@ import { MainStackParamList } from '../types/navigation';
 import { personalRecordService } from '../services/personalRecordService';
 import { useLanguage } from '../contexts/LanguageContext';
 import { PersonalRelationship, PersonalRecordType } from '../types/personalRecord';
+import { CustomAlertModal, AlertType } from '../components/CustomAlertModal';
 
 type AddPersonalRecordNavigationProp = NativeStackNavigationProp<MainStackParamList, 'AddPersonalRecord'>;
 
@@ -52,6 +53,34 @@ export const AddPersonalRecordScreen: React.FC<Props> = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
+  // In-app Alert Modal
+  const [alertModalVisible, setAlertModalVisible] = useState(false);
+  const [alertConfig, setAlertConfig] = useState<{
+    type: AlertType;
+    title: string;
+    message: string;
+    onClose?: () => void;
+  }>({
+    type: 'info',
+    title: '',
+    message: '',
+  });
+
+  const showAlert = (config: {
+    type?: AlertType;
+    title: string;
+    message: string;
+    onClose?: () => void;
+  }) => {
+    setAlertConfig({
+      type: config.type || 'info',
+      title: config.title,
+      message: config.message,
+      onClose: config.onClose,
+    });
+    setAlertModalVisible(true);
+  };
+
   const formatDate = (date: Date | null) => {
     if (!date) return 'Select date (optional)';
     const day = date.getDate().toString().padStart(2, '0');
@@ -70,7 +99,11 @@ export const AddPersonalRecordScreen: React.FC<Props> = ({ navigation }) => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Camera roll permissions are needed to attach proof.');
+        showAlert({
+          type: 'warning',
+          title: 'Permission Denied',
+          message: 'Camera roll permissions are needed to attach proof.',
+        });
         return;
       }
 
@@ -84,7 +117,11 @@ export const AddPersonalRecordScreen: React.FC<Props> = ({ navigation }) => {
         setPaymentScreenshot(result.assets[0].uri);
       }
     } catch {
-      Alert.alert('Error', 'Unable to pick image. Please try again.');
+      showAlert({
+        type: 'error',
+        title: 'Error',
+        message: 'Unable to pick image. Please try again.',
+      });
     }
   };
 
@@ -147,23 +184,19 @@ export const AddPersonalRecordScreen: React.FC<Props> = ({ navigation }) => {
       }
 
       await personalRecordService.createPersonalRecord(formData);
-      if (Platform.OS === 'web') {
-        window.alert('Personal record saved successfully!');
-        navigation.goBack();
-      } else {
-        Alert.alert(
-          'Success',
-          'Personal record saved successfully!',
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
-        );
-      }
+      showAlert({
+        type: 'success',
+        title: 'Record Saved',
+        message: 'Personal record saved successfully!',
+        onClose: () => navigation.goBack(),
+      });
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Failed to save personal record.';
-      if (Platform.OS === 'web') {
-        window.alert(msg);
-      } else {
-        Alert.alert('Error', msg);
-      }
+      showAlert({
+        type: 'error',
+        title: 'Save Failed',
+        message: msg,
+      });
     } finally {
       setLoading(false);
     }
@@ -486,6 +519,20 @@ export const AddPersonalRecordScreen: React.FC<Props> = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* IN-APP ALERT MODAL */}
+      <CustomAlertModal
+        visible={alertModalVisible}
+        type={alertConfig.type}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        onClose={() => {
+          setAlertModalVisible(false);
+          if (alertConfig.onClose) {
+            alertConfig.onClose();
+          }
+        }}
+      />
     </SafeAreaView>
   );
 };

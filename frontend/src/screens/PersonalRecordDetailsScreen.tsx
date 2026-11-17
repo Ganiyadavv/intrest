@@ -25,6 +25,7 @@ import { MainStackParamList } from '../types/navigation';
 import { personalRecordService } from '../services/personalRecordService';
 import { PersonalRecord, PersonalRecordRepayment } from '../types/personalRecord';
 import { formatCurrency } from '../utils/currency';
+import { CustomAlertModal, AlertType } from '../components/CustomAlertModal';
 
 type PersonalRecordDetailsNavigationProp = NativeStackNavigationProp<
   MainStackParamList,
@@ -58,6 +59,34 @@ export const PersonalRecordDetailsScreen: React.FC<Props> = ({ navigation, route
 
   // Full Image Modal
   const [fullImageUri, setFullImageUri] = useState<string | null>(null);
+
+  // In-app Alert Modal
+  const [alertModalVisible, setAlertModalVisible] = useState(false);
+  const [alertConfig, setAlertConfig] = useState<{
+    type: AlertType;
+    title: string;
+    message: string;
+    onClose?: () => void;
+  }>({
+    type: 'info',
+    title: '',
+    message: '',
+  });
+
+  const showAlert = (config: {
+    type?: AlertType;
+    title: string;
+    message: string;
+    onClose?: () => void;
+  }) => {
+    setAlertConfig({
+      type: config.type || 'info',
+      title: config.title,
+      message: config.message,
+      onClose: config.onClose,
+    });
+    setAlertModalVisible(true);
+  };
 
   // In-app Confirmation Modal
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
@@ -122,23 +151,32 @@ export const PersonalRecordDetailsScreen: React.FC<Props> = ({ navigation, route
         setReturnProof(result.assets[0].uri);
       }
     } catch {
-      Alert.alert('Error', 'Unable to pick screenshot.');
+      showAlert({
+        type: 'error',
+        title: 'Error',
+        message: 'Unable to pick screenshot.',
+      });
     }
   };
 
   const handleRecordReturn = async () => {
     const amt = parseFloat(returnAmount);
     if (!returnAmount || isNaN(amt) || amt <= 0) {
-      if (Platform.OS === 'web') window.alert('Please enter a valid return amount greater than 0.');
-      else Alert.alert('Invalid Amount', 'Please enter a valid return amount greater than 0.');
+      showAlert({
+        type: 'warning',
+        title: 'Invalid Amount',
+        message: 'Please enter a valid return amount greater than 0.',
+      });
       return;
     }
 
     const remaining = parseFloat(String(record?.remainingAmount || 0));
     if (amt > remaining) {
-      const msg = `Return amount cannot exceed remaining balance of ${formatCurrency(remaining)}.`;
-      if (Platform.OS === 'web') window.alert(msg);
-      else Alert.alert('Amount Exceeds Balance', msg);
+      showAlert({
+        type: 'warning',
+        title: 'Amount Exceeds Balance',
+        message: `Return amount cannot exceed remaining balance of ${formatCurrency(remaining)}.`,
+      });
       return;
     }
 
@@ -174,18 +212,18 @@ export const PersonalRecordDetailsScreen: React.FC<Props> = ({ navigation, route
       setReturnNotes('');
       setReturnProof(null);
       await fetchRecordDetails();
-      if (Platform.OS === 'web') {
-        window.alert('Return recorded successfully!');
-      } else {
-        Alert.alert('Success', 'Return recorded successfully!');
-      }
+      showAlert({
+        type: 'success',
+        title: 'Return Recorded',
+        message: 'Return payment recorded successfully!',
+      });
     } catch (err: any) {
       const msg = err.response?.data?.message || 'Failed to record return.';
-      if (Platform.OS === 'web') {
-        window.alert(msg);
-      } else {
-        Alert.alert('Error', msg);
-      }
+      showAlert({
+        type: 'error',
+        title: 'Error',
+        message: msg,
+      });
     } finally {
       setSubmittingReturn(false);
     }
@@ -199,11 +237,11 @@ export const PersonalRecordDetailsScreen: React.FC<Props> = ({ navigation, route
       navigation.goBack();
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Failed to delete record.';
-      if (Platform.OS === 'web') {
-        window.alert(msg);
-      } else {
-        Alert.alert('Error', msg);
-      }
+      showAlert({
+        type: 'error',
+        title: 'Delete Failed',
+        message: msg,
+      });
     } finally {
       setDeleting(false);
     }
@@ -230,11 +268,11 @@ export const PersonalRecordDetailsScreen: React.FC<Props> = ({ navigation, route
         fetchRecordDetails();
       } catch (err: any) {
         const msg = err.response?.data?.message || 'Failed to delete return entry.';
-        if (Platform.OS === 'web') {
-          window.alert(msg);
-        } else {
-          Alert.alert('Error', msg);
-        }
+        showAlert({
+          type: 'error',
+          title: 'Delete Failed',
+          message: msg,
+        });
       } finally {
         setDeleting(false);
       }
@@ -845,6 +883,20 @@ Tracked securely on DhanaMitra.`;
           </View>
         </View>
       </Modal>
+
+      {/* IN-APP ALERT MODAL */}
+      <CustomAlertModal
+        visible={alertModalVisible}
+        type={alertConfig.type}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        onClose={() => {
+          setAlertModalVisible(false);
+          if (alertConfig.onClose) {
+            alertConfig.onClose();
+          }
+        }}
+      />
     </SafeAreaView>
   );
 };

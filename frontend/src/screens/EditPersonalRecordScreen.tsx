@@ -21,6 +21,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { MainStackParamList } from '../types/navigation';
 import { personalRecordService } from '../services/personalRecordService';
 import { PersonalRelationship } from '../types/personalRecord';
+import { CustomAlertModal, AlertType } from '../components/CustomAlertModal';
 
 type EditPersonalRecordNavigationProp = NativeStackNavigationProp<
   MainStackParamList,
@@ -55,6 +56,34 @@ export const EditPersonalRecordScreen: React.FC<Props> = ({ navigation, route })
   const [notes, setNotes] = useState('');
   const [paymentScreenshot, setPaymentScreenshot] = useState<string | null>(null);
 
+  // In-app Alert Modal
+  const [alertModalVisible, setAlertModalVisible] = useState(false);
+  const [alertConfig, setAlertConfig] = useState<{
+    type: AlertType;
+    title: string;
+    message: string;
+    onClose?: () => void;
+  }>({
+    type: 'info',
+    title: '',
+    message: '',
+  });
+
+  const showAlert = (config: {
+    type?: AlertType;
+    title: string;
+    message: string;
+    onClose?: () => void;
+  }) => {
+    setAlertConfig({
+      type: config.type || 'info',
+      title: config.title,
+      message: config.message,
+      onClose: config.onClose,
+    });
+    setAlertModalVisible(true);
+  };
+
   useEffect(() => {
     (async () => {
       try {
@@ -67,8 +96,12 @@ export const EditPersonalRecordScreen: React.FC<Props> = ({ navigation, route })
         setNotes(data.notes || '');
         setPaymentScreenshot(data.paymentScreenshot || null);
       } catch (err: any) {
-        Alert.alert('Error', 'Unable to load record for editing.');
-        navigation.goBack();
+        showAlert({
+          type: 'error',
+          title: 'Error',
+          message: 'Unable to load record for editing.',
+          onClose: () => navigation.goBack(),
+        });
       } finally {
         setLoading(false);
       }
@@ -101,19 +134,31 @@ export const EditPersonalRecordScreen: React.FC<Props> = ({ navigation, route })
         setPaymentScreenshot(result.assets[0].uri);
       }
     } catch {
-      Alert.alert('Error', 'Unable to pick screenshot.');
+      showAlert({
+        type: 'error',
+        title: 'Error',
+        message: 'Unable to pick screenshot.',
+      });
     }
   };
 
   const handleUpdate = async () => {
     if (!name.trim()) {
-      Alert.alert('Validation Error', 'Person name is required.');
+      showAlert({
+        type: 'warning',
+        title: 'Validation Error',
+        message: 'Person name is required.',
+      });
       return;
     }
 
     const amt = parseFloat(amount);
     if (!amount || isNaN(amt) || amt <= 0) {
-      Alert.alert('Validation Error', 'Valid amount is required.');
+      showAlert({
+        type: 'warning',
+        title: 'Validation Error',
+        message: 'Valid amount greater than 0 is required.',
+      });
       return;
     }
 
@@ -144,21 +189,19 @@ export const EditPersonalRecordScreen: React.FC<Props> = ({ navigation, route })
       }
 
       await personalRecordService.updatePersonalRecord(id, formData);
-      if (Platform.OS === 'web') {
-        window.alert('Record updated successfully!');
-        navigation.goBack();
-      } else {
-        Alert.alert('Success', 'Record updated successfully!', [
-          { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
-      }
+      showAlert({
+        type: 'success',
+        title: 'Record Updated',
+        message: 'Personal record updated successfully!',
+        onClose: () => navigation.goBack(),
+      });
     } catch (err: any) {
       const msg = err.response?.data?.message || 'Failed to update record.';
-      if (Platform.OS === 'web') {
-        window.alert(msg);
-      } else {
-        Alert.alert('Error', msg);
-      }
+      showAlert({
+        type: 'error',
+        title: 'Update Failed',
+        message: msg,
+      });
     } finally {
       setSaving(false);
     }
@@ -388,6 +431,20 @@ export const EditPersonalRecordScreen: React.FC<Props> = ({ navigation, route })
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* IN-APP ALERT MODAL */}
+      <CustomAlertModal
+        visible={alertModalVisible}
+        type={alertConfig.type}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        onClose={() => {
+          setAlertModalVisible(false);
+          if (alertConfig.onClose) {
+            alertConfig.onClose();
+          }
+        }}
+      />
     </SafeAreaView>
   );
 };
