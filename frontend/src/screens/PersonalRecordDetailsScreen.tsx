@@ -59,6 +59,23 @@ export const PersonalRecordDetailsScreen: React.FC<Props> = ({ navigation, route
   // Full Image Modal
   const [fullImageUri, setFullImageUri] = useState<string | null>(null);
 
+  // In-app Confirmation Modal
+  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmModalConfig, setConfirmModalConfig] = useState<{
+    title: string;
+    message: string;
+    confirmText: string;
+    confirmColor: string;
+    onConfirm: () => void;
+  }>({
+    title: 'Delete Record',
+    message: 'Are you sure you want to delete this personal record? All return history will be removed.',
+    confirmText: 'Delete',
+    confirmColor: '#DC2626',
+    onConfirm: () => {},
+  });
+
   const fetchRecordDetails = useCallback(async () => {
     try {
       setError('');
@@ -176,12 +193,9 @@ export const PersonalRecordDetailsScreen: React.FC<Props> = ({ navigation, route
 
   const executeDeleteRecord = async () => {
     try {
+      setDeleting(true);
       await personalRecordService.deletePersonalRecord(id);
-      if (Platform.OS === 'web') {
-        window.alert('Record removed successfully.');
-      } else {
-        Alert.alert('Deleted', 'Record removed successfully.');
-      }
+      setConfirmModalVisible(false);
       navigation.goBack();
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Failed to delete record.';
@@ -190,38 +204,29 @@ export const PersonalRecordDetailsScreen: React.FC<Props> = ({ navigation, route
       } else {
         Alert.alert('Error', msg);
       }
+    } finally {
+      setDeleting(false);
     }
   };
 
   const handleDeleteRecord = () => {
     setMenuVisible(false);
-    if (Platform.OS === 'web') {
-      const confirmed = window.confirm(
-        'Are you sure you want to delete this personal record? All return history will be removed.'
-      );
-      if (confirmed) {
-        executeDeleteRecord();
-      }
-    } else {
-      Alert.alert(
-        'Delete Record',
-        'Are you sure you want to delete this personal record? All return history will be removed.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: executeDeleteRecord,
-          },
-        ]
-      );
-    }
+    setConfirmModalConfig({
+      title: 'Delete Record',
+      message: 'Are you sure you want to delete this personal record? All return history will be removed.',
+      confirmText: 'Delete',
+      confirmColor: '#DC2626',
+      onConfirm: executeDeleteRecord,
+    });
+    setConfirmModalVisible(true);
   };
 
   const handleDeleteRepayment = (repaymentId: string | number) => {
     const executeDeleteRep = async () => {
       try {
+        setDeleting(true);
         await personalRecordService.deleteRepayment(id, repaymentId);
+        setConfirmModalVisible(false);
         fetchRecordDetails();
       } catch (err: any) {
         const msg = err.response?.data?.message || 'Failed to delete return entry.';
@@ -230,28 +235,19 @@ export const PersonalRecordDetailsScreen: React.FC<Props> = ({ navigation, route
         } else {
           Alert.alert('Error', msg);
         }
+      } finally {
+        setDeleting(false);
       }
     };
 
-    if (Platform.OS === 'web') {
-      const confirmed = window.confirm('Are you sure you want to remove this repayment entry?');
-      if (confirmed) {
-        executeDeleteRep();
-      }
-    } else {
-      Alert.alert(
-        'Delete Return Entry',
-        'Are you sure you want to remove this repayment entry?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: executeDeleteRep,
-          },
-        ]
-      );
-    }
+    setConfirmModalConfig({
+      title: 'Delete Return Entry',
+      message: 'Are you sure you want to remove this repayment entry?',
+      confirmText: 'Delete',
+      confirmColor: '#DC2626',
+      onConfirm: executeDeleteRep,
+    });
+    setConfirmModalVisible(true);
   };
 
   const handleShareDetails = async () => {
@@ -790,6 +786,52 @@ Tracked securely on DhanaMitra.`;
           {!!fullImageUri && (
             <Image source={{ uri: fullImageUri }} style={styles.fullImageView} resizeMode="contain" />
           )}
+        </View>
+      </Modal>
+
+      {/* IN-APP CONFIRMATION MODAL */}
+      <Modal
+        visible={confirmModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => !deleting && setConfirmModalVisible(false)}
+      >
+        <View style={styles.confirmModalOverlay}>
+          <View style={styles.confirmModalCard}>
+            <View style={[styles.confirmModalIconBox, { backgroundColor: '#FEE2E2' }]}>
+              <Ionicons name="trash" size={28} color={confirmModalConfig.confirmColor} />
+            </View>
+            <Text style={styles.confirmModalTitle}>{confirmModalConfig.title}</Text>
+            <Text style={styles.confirmModalMessage}>{confirmModalConfig.message}</Text>
+            <View style={styles.confirmModalActions}>
+              <TouchableOpacity
+                style={styles.confirmModalCancelBtn}
+                onPress={() => setConfirmModalVisible(false)}
+                disabled={deleting}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.confirmModalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.confirmModalConfirmBtn,
+                  { backgroundColor: confirmModalConfig.confirmColor },
+                  deleting && { opacity: 0.6 },
+                ]}
+                onPress={confirmModalConfig.onConfirm}
+                disabled={deleting}
+                activeOpacity={0.85}
+              >
+                {deleting ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.confirmModalConfirmText}>
+                    {confirmModalConfig.confirmText}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </Modal>
     </SafeAreaView>
@@ -1446,5 +1488,86 @@ const styles = StyleSheet.create({
   fullImageView: {
     width: '100%',
     height: '80%',
+  },
+  confirmModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  confirmModalCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 24,
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 6,
+      },
+      web: {
+        boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
+      },
+    }),
+  },
+  confirmModalIconBox: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  confirmModalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  confirmModalMessage: {
+    fontSize: 13.5,
+    color: '#64748B',
+    textAlign: 'center',
+    marginBottom: 22,
+    lineHeight: 19,
+  },
+  confirmModalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  confirmModalCancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmModalCancelText: {
+    color: '#475569',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  confirmModalConfirmBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmModalConfirmText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
