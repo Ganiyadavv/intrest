@@ -1,8 +1,12 @@
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
+const path = require("path");
 
 dotenv.config();
+if (!process.env.SUPABASE_DB_URL && !process.env.PORT) {
+  dotenv.config({ path: path.resolve(__dirname, ".env") });
+}
 
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -12,8 +16,8 @@ const personRecordRoutes = require("./routes/personRecordRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const lenderRecordRoutes = require("./routes/lenderRecordRoutes");
+const personalRecordRoutes = require("./routes/personalRecordRoutes");
 const requestRoutes = require("./routes/requestRoutes");
-const path = require("path");
 
 const app = express();
 
@@ -45,6 +49,7 @@ app.use("/api/person-records", personRecordRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/lender-records", lenderRecordRoutes);
+app.use("/api/personal-records", personalRecordRoutes);
 app.use("/api/requests", requestRoutes);
 
 // Global error handling middleware (handles PayloadTooLarge 413 cleanly in JSON)
@@ -76,8 +81,15 @@ app.listen(PORT, () => {
 
 // Authenticate and connect database in background
 sequelize.authenticate()
-  .then(() => {
+  .then(async () => {
     console.log("Database connected successfully.");
+    try {
+      const { PersonalRecord, PersonalRecordRepayment } = require("./models");
+      await PersonalRecord.sync();
+      await PersonalRecordRepayment.sync();
+    } catch (syncErr) {
+      console.warn("Background personal records sync notice:", syncErr.message);
+    }
     // In local non-production development, sync models in background
     if (process.env.NODE_ENV !== "production") {
       sequelize.sync().catch((err) => {

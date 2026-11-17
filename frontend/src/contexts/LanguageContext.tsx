@@ -59,6 +59,9 @@ const translations = {
     'modal.addBorrowerDesc': 'Record money given / lent to someone',
     'modal.addLender': 'Add Lender Record',
     'modal.addLenderDesc': 'Record money received / borrowed from a lender',
+    'modal.addFriendFamily': 'Friend & Family',
+    'modal.addFriendFamilyDesc': 'Track money given without interest',
+    'menu.personalRecords': 'Friend & Family Records',
     'common.cancel': 'Cancel',
 
     // Legacy keys
@@ -154,6 +157,9 @@ const translations = {
     'modal.addBorrowerDesc': 'మీరు ఇతరులకు ఇచ్చిన డబ్బు వివరాలు',
     'modal.addLender': 'రుణదాత రికార్డు జోడించండి',
     'modal.addLenderDesc': 'మీరు ఇతరుల నుండి తీసుకున్న డబ్బు వివరాలు',
+    'modal.addFriendFamily': 'స్నేహితులు & కుటుంబం',
+    'modal.addFriendFamilyDesc': 'వడ్డీ లేకుండా ఇచ్చిన డబ్బు వివరాలు',
+    'menu.personalRecords': 'స్నేహితులు & కుటుంబ రికార్డులు',
     'common.cancel': 'రద్దు చేయండి',
 
     // Legacy keys

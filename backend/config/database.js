@@ -1,5 +1,9 @@
 const { Sequelize } = require('sequelize');
+const path = require('path');
 require('dotenv').config();
+if (!process.env.SUPABASE_DB_URL) {
+  require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
+}
 
 if (!process.env.SUPABASE_DB_URL) {
   throw new Error("Missing SUPABASE_DB_URL in .env");

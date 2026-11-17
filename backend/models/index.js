@@ -3,6 +3,9 @@ const PersonRecord = require('./PersonRecord');
 const Notification = require('./Notification');
 const PasswordResetOtp = require('./PasswordResetOtp');
 const LenderRecord = require('./LenderRecord');
+const PersonalRecord = require('./PersonalRecord');
+const PersonalRecordRepayment = require('./PersonalRecordRepayment');
+
 User.hasMany(PersonRecord, { foreignKey: 'ownerId', as: 'ownedRecords' });
 PersonRecord.belongsTo(User, { foreignKey: 'ownerId', as: 'owner' });
 
@@ -30,4 +33,10 @@ Notification.belongsTo(LenderRecord, { foreignKey: 'lenderRecordId', as: 'lender
 User.hasMany(PasswordResetOtp, { foreignKey: 'userId', as: 'passwordResetOtps' });
 PasswordResetOtp.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
-module.exports = { User, PersonRecord, Notification, PasswordResetOtp, LenderRecord };
+User.hasMany(PersonalRecord, { foreignKey: 'ownerId', as: 'personalRecords' });
+PersonalRecord.belongsTo(User, { foreignKey: 'ownerId', as: 'owner' });
+
+PersonalRecord.hasMany(PersonalRecordRepayment, { foreignKey: 'personalRecordId', as: 'repayments', onDelete: 'CASCADE' });
+PersonalRecordRepayment.belongsTo(PersonalRecord, { foreignKey: 'personalRecordId', as: 'personalRecord' });
+
+module.exports = { User, PersonRecord, Notification, PasswordResetOtp, LenderRecord, PersonalRecord, PersonalRecordRepayment };

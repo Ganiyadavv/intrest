@@ -723,6 +723,24 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
             </TouchableOpacity>
 
             <TouchableOpacity
+              style={styles.modalChoiceBtn}
+              onPress={() => {
+                setAddModalVisible(false);
+                navigation.navigate('AddPersonalRecord');
+              }}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.modalChoiceIconCircle, { backgroundColor: '#DCFCE7' }]}>
+                <Ionicons name="people" size={22} color="#15803D" />
+              </View>
+              <View style={styles.modalChoiceTextGroup}>
+                <Text style={styles.modalChoiceTitle}>{t('modal.addFriendFamily')}</Text>
+                <Text style={styles.modalChoiceDesc}>{t('modal.addFriendFamilyDesc')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#94A3B8" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
               style={styles.modalCancelBtn}
               onPress={() => setAddModalVisible(false)}
             >
@@ -775,6 +793,17 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
                   </View>
                 )}
               </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuItemRow}
+              onPress={() => {
+                setMenuModalVisible(false);
+                navigation.navigate('PersonalRecords');
+              }}
+            >
+              <Ionicons name="people-outline" size={22} color="#056B38" />
+              <Text style={styles.menuItemText}>{t('menu.personalRecords')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity

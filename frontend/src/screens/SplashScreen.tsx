@@ -7,6 +7,7 @@ import {
   Easing,
   Dimensions,
   Image,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -31,18 +32,20 @@ export const SplashScreen: React.FC<Props> = ({ navigation }) => {
   useEffect(() => {
     warmUpBackend();
 
+    const useNativeDriver = Platform.OS !== 'web';
+
     // Entrance animation
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 800,
-        useNativeDriver: true,
+        useNativeDriver,
       }),
       Animated.spring(scaleAnim, {
         toValue: 1,
         tension: 12,
         friction: 5,
-        useNativeDriver: true,
+        useNativeDriver,
       }),
     ]).start();
 
@@ -53,13 +56,13 @@ export const SplashScreen: React.FC<Props> = ({ navigation }) => {
           toValue: 1.03,
           duration: 1200,
           easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
+          useNativeDriver,
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
           duration: 1200,
           easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
+          useNativeDriver,
         }),
       ])
     ).start();

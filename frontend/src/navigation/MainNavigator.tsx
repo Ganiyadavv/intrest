@@ -23,6 +23,10 @@ import { NotificationDetailsScreen } from '../screens/NotificationDetailsScreen'
 import { EditLenderRecordScreen } from '../screens/EditLenderRecordScreen';
 import { IncomingRequestsScreen } from '../screens/IncomingRequestsScreen';
 import { IncomingRequestDetailsScreen } from '../screens/IncomingRequestDetailsScreen';
+import { PersonalRecordsScreen } from '../screens/PersonalRecordsScreen';
+import { AddPersonalRecordScreen } from '../screens/AddPersonalRecordScreen';
+import { PersonalRecordDetailsScreen } from '../screens/PersonalRecordDetailsScreen';
+import { EditPersonalRecordScreen } from '../screens/EditPersonalRecordScreen';
 import { COLORS } from '../constants/colors';
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
@@ -99,6 +103,10 @@ export const MainNavigator = () => {
       <Stack.Screen name="NotificationDetails" component={NotificationDetailsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="IncomingRequests" component={IncomingRequestsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="IncomingRequestDetails" component={IncomingRequestDetailsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="PersonalRecords" component={PersonalRecordsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="AddPersonalRecord" component={AddPersonalRecordScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="PersonalRecordDetails" component={PersonalRecordDetailsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="EditPersonalRecord" component={EditPersonalRecordScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 };

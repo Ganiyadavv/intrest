@@ -63,6 +63,10 @@ export type MainStackParamList = {
     senderName?: string;
     senderUserId?: string;
   };
+  PersonalRecords: undefined;
+  AddPersonalRecord: undefined;
+  EditPersonalRecord: { id: string };
+  PersonalRecordDetails: { id: string };
 };
 
 export type RootStackParamList = {
