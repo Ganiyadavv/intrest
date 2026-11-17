@@ -586,7 +586,12 @@ Tracked securely on DhanaMitra.`;
 
       {/* 3-DOTS OPTIONS MODAL */}
       <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setMenuVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setMenuVisible(false)}
+          />
           <View style={styles.menuModalCard}>
             <TouchableOpacity
               style={styles.menuModalRow}
@@ -621,7 +626,7 @@ Tracked securely on DhanaMitra.`;
               <Text style={[styles.menuModalText, { color: '#DC2626' }]}>Delete Record</Text>
             </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
 
       {/* RECORD RETURN MODAL */}
@@ -631,11 +636,12 @@ Tracked securely on DhanaMitra.`;
         animationType="slide"
         onRequestClose={() => setReturnModalVisible(false)}
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setReturnModalVisible(false)}
-        >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setReturnModalVisible(false)}
+          />
           <View style={styles.returnModalCard}>
             <View style={styles.modalHandle} />
             <Text style={styles.returnModalTitle}>Record Return Payment</Text>
@@ -774,7 +780,7 @@ Tracked securely on DhanaMitra.`;
               </TouchableOpacity>
             </View>
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
 
       {/* FULL IMAGE PROOF MODAL */}
@@ -797,6 +803,11 @@ Tracked securely on DhanaMitra.`;
         onRequestClose={() => !deleting && setConfirmModalVisible(false)}
       >
         <View style={styles.confirmModalOverlay}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => !deleting && setConfirmModalVisible(false)}
+          />
           <View style={styles.confirmModalCard}>
             <View style={[styles.confirmModalIconBox, { backgroundColor: '#FEE2E2' }]}>
               <Ionicons name="trash" size={28} color={confirmModalConfig.confirmColor} />
