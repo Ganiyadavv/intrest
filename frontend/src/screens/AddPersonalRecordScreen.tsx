@@ -184,12 +184,14 @@ export const AddPersonalRecordScreen: React.FC<Props> = ({ navigation }) => {
       }
 
       await personalRecordService.createPersonalRecord(formData);
-      showAlert({
-        type: 'success',
-        title: 'Record Saved',
-        message: 'Personal record saved successfully!',
-        onClose: () => navigation.goBack(),
-      });
+      
+      const routes = navigation.getState()?.routes;
+      const hasPersonalRecords = routes?.some((r: any) => r.name === 'PersonalRecords');
+      if (hasPersonalRecords) {
+        navigation.navigate('PersonalRecords');
+      } else {
+        navigation.replace('PersonalRecords');
+      }
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Failed to save personal record.';
       showAlert({
