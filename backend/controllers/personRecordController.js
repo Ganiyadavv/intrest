@@ -1,5 +1,32 @@
-const { PersonRecord, LenderRecord, User, Notification } = require("../models");
+const { PersonRecord, PersonRecordRepayment, LenderRecord, User, Notification } = require("../models");
 const { Op } = require("sequelize");
+
+// Helper to compute borrower total payable (principal + accrued simple interest)
+const computeTotalPayable = (record, extraDays = 0) => {
+  const d1 = new Date(record.givenDate);
+  const d2 = new Date();
+  if (extraDays) d2.setDate(d2.getDate() + extraDays);
+
+  let years = d2.getFullYear() - d1.getFullYear();
+  let months = d2.getMonth() - d1.getMonth();
+  let days = d2.getDate() - d1.getDate();
+
+  if (days < 0) {
+    months -= 1;
+    const prevMonth = new Date(d2.getFullYear(), d2.getMonth(), 0);
+    days += prevMonth.getDate();
+  }
+  if (months < 0) {
+    years -= 1;
+    months += 12;
+  }
+
+  const totalMonths = Math.max(0, years * 12 + months + days / 30);
+  const principal = Number(record.amount) || 0;
+  const rate = Number(record.interestRate) || 0;
+  const interest = (principal * rate * totalMonths) / 100;
+  return Math.max(0, principal + interest);
+};
 
 // Helper to format responses
 const sendResponse = (res, statusCode, status, message, data = null) => {
@@ -89,7 +116,8 @@ exports.getPersonRecords = async (req, res) => {
       attributes: { exclude: ['paymentScreenshot'] },
       include: [
         { model: User, as: 'targetUser', attributes: ['userId', 'fullName'] },
-        { model: User, as: 'owner', attributes: ['userId', 'fullName'] }
+        { model: User, as: 'owner', attributes: ['userId', 'fullName'] },
+        { model: PersonRecordRepayment, as: 'repayments', attributes: ['id', 'amount', 'returnDate'] }
       ],
       order: [['createdAt', 'DESC']]
     });
@@ -99,6 +127,7 @@ exports.getPersonRecords = async (req, res) => {
       if (data.targetUser && data.targetUser.userId) {
         data.targetUserId = data.targetUser.userId;
       }
+      data.totalReturned = (data.repayments || []).reduce((sum, r) => sum + Number(r.amount || 0), 0);
       return data;
     });
 
@@ -117,7 +146,13 @@ exports.getPersonRecord = async (req, res) => {
     const record = await PersonRecord.findByPk(recordId, {
       include: [
         { model: User, as: 'targetUser', attributes: ['userId', 'fullName'] },
-        { model: User, as: 'owner', attributes: ['id', 'userId', 'fullName'] }
+        { model: User, as: 'owner', attributes: ['id', 'userId', 'fullName'] },
+        {
+          model: PersonRecordRepayment,
+          as: 'repayments',
+          separate: true,
+          order: [['returnDate', 'DESC'], ['createdAt', 'DESC']]
+        }
       ]
     });
 
@@ -133,6 +168,10 @@ exports.getPersonRecord = async (req, res) => {
     if (formattedRecord.targetUser && formattedRecord.targetUser.userId) {
       formattedRecord.targetUserId = formattedRecord.targetUser.userId;
     }
+    formattedRecord.totalReturned = (formattedRecord.repayments || []).reduce(
+      (sum, r) => sum + Number(r.amount || 0),
+      0
+    );
     return sendResponse(res, 200, "SUCCESS", "Person record fetched successfully", formattedRecord);
   } catch (error) {
     console.error("Error fetching person record:", error);
@@ -193,8 +232,9 @@ exports.deletePersonRecord = async (req, res) => {
       return sendResponse(res, 403, "ERROR", "You can only delete your own records");
     }
 
-    // Delete related notifications
+    // Delete related notifications and repayments
     await Notification.destroy({ where: { personRecordId: recordId } });
+    await PersonRecordRepayment.destroy({ where: { personRecordId: recordId } });
 
     await record.destroy();
 
@@ -309,6 +349,136 @@ exports.completePersonRecord = async (req, res) => {
     return sendResponse(res, 200, "SUCCESS", "Person record marked as completed");
   } catch (error) {
     console.error("Error completing person record:", error);
+    return sendResponse(res, 500, "ERROR", "Internal server error");
+  }
+};
+
+exports.addPersonRepayment = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const recordId = req.params.id;
+    const { amount, returnDate, notes } = req.body;
+
+    const record = await PersonRecord.findByPk(recordId, {
+      include: [{ model: PersonRecordRepayment, as: 'repayments' }]
+    });
+
+    if (!record) {
+      return sendResponse(res, 404, "ERROR", "Borrower record not found");
+    }
+
+    if (record.ownerId !== userId) {
+      return sendResponse(res, 403, "ERROR", "Only the owner can record repayments for this borrower record");
+    }
+
+    if (record.status === "REJECTED") {
+      return sendResponse(res, 400, "ERROR", "Cannot record repayment on a rejected record");
+    }
+
+    if (record.status === "COMPLETED") {
+      return sendResponse(res, 400, "ERROR", "This borrower record is already completed");
+    }
+
+    const parsedAmount = parseFloat(amount);
+    if (!amount || isNaN(parsedAmount) || parsedAmount <= 0) {
+      return sendResponse(res, 400, "ERROR", "Return amount must be greater than 0");
+    }
+
+    const existingReturned = (record.repayments || []).reduce(
+      (sum, r) => sum + Number(r.amount || 0),
+      0
+    );
+
+    const maxTotalPayable = computeTotalPayable(record, 1);
+    const remainingAllowed = Math.max(0, maxTotalPayable - existingReturned);
+    if (parsedAmount > remainingAllowed + 1) {
+      return sendResponse(
+        res,
+        400,
+        "ERROR",
+        `Return amount cannot exceed remaining balance of ₹${remainingAllowed.toFixed(2)}`
+      );
+    }
+
+    let paymentScreenshot = null;
+    if (req.file) {
+      paymentScreenshot = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    } else if (req.body.paymentScreenshot) {
+      paymentScreenshot = req.body.paymentScreenshot;
+    }
+
+    const effectiveDate = returnDate || new Date().toISOString().split('T')[0];
+
+    const repayment = await PersonRecordRepayment.create({
+      personRecordId: record.id,
+      amount: parsedAmount,
+      returnDate: effectiveDate,
+      notes: notes ? String(notes).trim() : null,
+      paymentScreenshot
+    });
+
+    const newTotalReturned = Number((existingReturned + parsedAmount).toFixed(2));
+    const currentTotalPayable = computeTotalPayable(record, 0);
+
+    // If borrower paid the full payable amount, automatically mark COMPLETED
+    if (newTotalReturned >= currentTotalPayable - 0.01 && currentTotalPayable > 0) {
+      await record.update({ status: "COMPLETED" });
+    }
+
+    return sendResponse(res, 201, "SUCCESS", "Partial repayment recorded successfully", {
+      repayment,
+      totalReturned: newTotalReturned,
+      status: record.status
+    });
+  } catch (error) {
+    console.error("Error adding borrower repayment:", error);
+    return sendResponse(res, 500, "ERROR", "Internal server error");
+  }
+};
+
+exports.deletePersonRepayment = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { id: recordId, repaymentId } = req.params;
+
+    const record = await PersonRecord.findByPk(recordId);
+    if (!record) {
+      return sendResponse(res, 404, "ERROR", "Borrower record not found");
+    }
+
+    if (record.ownerId !== userId) {
+      return sendResponse(res, 403, "ERROR", "Only the owner can delete repayments for this borrower record");
+    }
+
+    const repayment = await PersonRecordRepayment.findOne({
+      where: { id: repaymentId, personRecordId: recordId }
+    });
+
+    if (!repayment) {
+      return sendResponse(res, 404, "ERROR", "Repayment entry not found");
+    }
+
+    await repayment.destroy();
+
+    const remainingRepayments = await PersonRecordRepayment.findAll({
+      where: { personRecordId: recordId }
+    });
+    const newTotalReturned = remainingRepayments.reduce((sum, r) => sum + Number(r.amount || 0), 0);
+
+    // If record was marked COMPLETED and balance is now remaining, revert status safely
+    if (record.status === "COMPLETED") {
+      const currentTotalPayable = computeTotalPayable(record, 0);
+      if (newTotalReturned < currentTotalPayable - 0.01) {
+        await record.update({ status: record.targetUserId ? "ACCEPTED" : "PENDING" });
+      }
+    }
+
+    return sendResponse(res, 200, "SUCCESS", "Repayment entry deleted successfully", {
+      totalReturned: Number(newTotalReturned.toFixed(2)),
+      status: record.status
+    });
+  } catch (error) {
+    console.error("Error deleting borrower repayment:", error);
     return sendResponse(res, 500, "ERROR", "Internal server error");
   }
 };

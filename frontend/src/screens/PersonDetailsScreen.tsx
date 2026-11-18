@@ -8,12 +8,16 @@ import {
   Image,
   Platform,
   Modal,
+  TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { MainStackParamList } from '../types/navigation';
 import { PersonRecord } from '../types/personRecord';
 import { User } from '../types/user';
@@ -21,6 +25,7 @@ import { personRecordService } from '../services/personRecordService';
 import { getUser } from '../storage/storage';
 import { Loading } from '../components/Loading';
 import { ErrorMessage } from '../components/ErrorMessage';
+import { CustomAlertModal, AlertType } from '../components/CustomAlertModal';
 import { formatCurrency } from '../utils/currency';
 import { sharePaymentScreenshot } from '../utils/shareUtils';
 
@@ -70,6 +75,86 @@ export const PersonDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
     confirmColor: '#056B38',
   });
 
+  // Partial Return Modal state
+  const [returnModalVisible, setReturnModalVisible] = useState(false);
+  const [returnAmount, setReturnAmount] = useState('');
+  const [returnDate, setReturnDate] = useState<Date>(new Date());
+  const [showReturnDatePicker, setShowReturnDatePicker] = useState(false);
+  const [returnNotes, setReturnNotes] = useState('');
+  const [returnProof, setReturnProof] = useState<string | null>(null);
+  const [submittingReturn, setSubmittingReturn] = useState(false);
+
+  // Full Image Proof Viewer Modal
+  const [fullImageUri, setFullImageUri] = useState<string | null>(null);
+
+  // In-app Alert Modal
+  const [alertModalVisible, setAlertModalVisible] = useState(false);
+  const [alertConfig, setAlertConfig] = useState<{
+    type: AlertType;
+    title: string;
+    message: string;
+    onClose?: () => void;
+  }>({
+    type: 'info',
+    title: '',
+    message: '',
+  });
+
+  const showAlert = (config: {
+    type?: AlertType;
+    title: string;
+    message: string;
+    onClose?: () => void;
+  }) => {
+    setAlertConfig({
+      type: config.type || 'info',
+      title: config.title,
+      message: config.message,
+      onClose: config.onClose,
+    });
+    setAlertModalVisible(true);
+  };
+
+  const toISODate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatRepaymentDate = (dateStr?: string | null) => {
+    if (!dateStr) return 'N/A';
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const pickProofImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setReturnProof(result.assets[0].uri);
+      }
+    } catch {
+      showAlert({
+        type: 'error',
+        title: 'Error',
+        message: 'Unable to pick screenshot.',
+      });
+    }
+  };
+
   const fetchPerson = async () => {
     try {
       setError('');
@@ -98,8 +183,11 @@ export const PersonDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
       await personRecordService.deletePersonRecord(id);
       navigation.goBack();
     } catch (err: any) {
-      if (Platform.OS === 'web') window.alert('Failed to delete record');
-      else alert('Failed to delete record');
+      showAlert({
+        type: 'error',
+        title: 'Delete Failed',
+        message: err.response?.data?.message || 'Failed to delete record.',
+      });
     }
   };
 
@@ -120,8 +208,11 @@ export const PersonDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
       await personRecordService.completePersonRecord(id);
       fetchPerson();
     } catch (err: any) {
-      if (Platform.OS === 'web') window.alert('Failed to update record');
-      else alert('Failed to update record');
+      showAlert({
+        type: 'error',
+        title: 'Update Failed',
+        message: err.response?.data?.message || 'Failed to update record.',
+      });
     }
   };
 
@@ -132,6 +223,34 @@ export const PersonDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
       confirmText: 'Mark Complete',
       confirmColor: '#056B38',
       onConfirm: executeStatusUpdate,
+    });
+    setModalVisible(true);
+  };
+
+  const handleDeleteRepayment = (repaymentId: number | string) => {
+    setModalConfig({
+      title: 'Delete Return Entry',
+      message: 'Are you sure you want to remove this partial repayment entry?',
+      confirmText: 'Delete',
+      confirmColor: '#DC2626',
+      onConfirm: async () => {
+        setModalVisible(false);
+        try {
+          await personRecordService.deleteRepayment(id, repaymentId);
+          await fetchPerson();
+          showAlert({
+            type: 'success',
+            title: 'Entry Removed',
+            message: 'Repayment entry deleted successfully.',
+          });
+        } catch (err: any) {
+          showAlert({
+            type: 'error',
+            title: 'Delete Failed',
+            message: err.response?.data?.message || 'Failed to delete return entry.',
+          });
+        }
+      },
     });
     setModalVisible(true);
   };
@@ -215,9 +334,90 @@ export const PersonDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
   const avatarStyle = getAvatarColor(rawName);
 
   const isCompleted = person.status === 'COMPLETED';
-  const progressPercent = isCompleted ? 100 : 0;
-  const paidAmount = isCompleted ? calcResult.total : 0;
-  const remainingAmount = isCompleted ? 0 : calcResult.total;
+  const totalReturnedFromHistory = (person.repayments || []).reduce(
+    (sum, r) => sum + Number(r.amount || 0),
+    0
+  );
+  const paidAmount = isCompleted
+    ? Math.max(totalReturnedFromHistory, calcResult.total)
+    : totalReturnedFromHistory;
+  const remainingAmount = isCompleted
+    ? 0
+    : Math.max(0, calcResult.total - paidAmount);
+  const progressPercent = isCompleted
+    ? 100
+    : calcResult.total > 0
+    ? Math.min(100, Math.round((paidAmount / calcResult.total) * 100))
+    : 0;
+
+  const handleRecordReturn = async () => {
+    const amt = parseFloat(returnAmount);
+    if (!returnAmount || isNaN(amt) || amt <= 0) {
+      showAlert({
+        type: 'warning',
+        title: 'Invalid Amount',
+        message: 'Please enter a valid return amount greater than 0.',
+      });
+      return;
+    }
+
+    if (amt > remainingAmount + 0.01) {
+      showAlert({
+        type: 'warning',
+        title: 'Amount Exceeds Balance',
+        message: `Return amount cannot exceed remaining balance of ${formatCurrency(remainingAmount)}.`,
+      });
+      return;
+    }
+
+    try {
+      setSubmittingReturn(true);
+      const formData = new FormData();
+      formData.append('amount', returnAmount.trim());
+      formData.append('returnDate', toISODate(returnDate));
+      if (returnNotes.trim()) {
+        formData.append('notes', returnNotes.trim());
+      }
+
+      if (returnProof) {
+        if (Platform.OS === 'web') {
+          const response = await fetch(returnProof);
+          const blob = await response.blob();
+          formData.append('paymentScreenshot', blob, 'borrower_return_proof.jpg');
+        } else {
+          const filename = returnProof.split('/').pop() || 'borrower_return_proof.jpg';
+          const match = /\.(\w+)$/.exec(filename);
+          const type = match ? `image/${match[1]}` : 'image/jpeg';
+          formData.append('paymentScreenshot', {
+            uri: returnProof,
+            name: filename,
+            type,
+          } as any);
+        }
+      }
+
+      await personRecordService.addRepayment(id, formData);
+      setReturnModalVisible(false);
+      setReturnAmount('');
+      setReturnNotes('');
+      setReturnProof(null);
+      await fetchPerson();
+      showAlert({
+        type: 'success',
+        title: 'Return Recorded',
+        message: 'Partial return payment stored successfully!',
+      });
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Failed to record return payment.';
+      showAlert({
+        type: 'error',
+        title: 'Error',
+        message: msg,
+      });
+    } finally {
+      setSubmittingReturn(false);
+    }
+  };
 
   const formattedLoanDate = person.givenDate
     ? new Date(person.givenDate).toLocaleDateString('en-GB', {
@@ -360,6 +560,89 @@ export const PersonDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
             </View>
             <Text style={styles.progressText}>{progressPercent}%</Text>
           </View>
+
+          {/* Record Partial Return Button (Owner only, when balance remains) */}
+          {!isRecipient && !isCompleted && person.status !== 'REJECTED' && remainingAmount > 0 && (
+            <TouchableOpacity
+              style={styles.recordReturnBtn}
+              onPress={() => {
+                setReturnAmount('');
+                setReturnDate(new Date());
+                setReturnNotes('');
+                setReturnProof(null);
+                setReturnModalVisible(true);
+              }}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="add-circle" size={19} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Text style={styles.recordReturnBtnText}>Record Partial Return</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* 4B. CARD: RETURN HISTORY */}
+        <View style={styles.infoCard}>
+          <View style={styles.returnHistoryHeaderRow}>
+            <Text style={[styles.cardHeaderTitle, { marginBottom: 0 }]}>Return History</Text>
+            {person.repayments && person.repayments.length > 0 && (
+              <View style={styles.returnCountBadge}>
+                <Text style={styles.returnCountBadgeText}>
+                  {person.repayments.length} {person.repayments.length === 1 ? 'payment' : 'payments'}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {person.repayments && person.repayments.length > 0 ? (
+            person.repayments.map((rep, idx) => (
+              <View
+                key={String(rep.id)}
+                style={[
+                  styles.repaymentRow,
+                  idx === (person.repayments?.length || 1) - 1 && { borderBottomWidth: 0, paddingBottom: 2 },
+                ]}
+              >
+                <View style={styles.repIconCircle}>
+                  <Ionicons name="checkmark-circle" size={20} color="#16A34A" />
+                </View>
+
+                <View style={styles.repDetailsCol}>
+                  <Text style={styles.repAmountText}>{formatCurrency(Number(rep.amount))}</Text>
+                  <View style={styles.repDateRow}>
+                    <Ionicons name="calendar-outline" size={12} color="#64748B" style={{ marginRight: 4 }} />
+                    <Text style={styles.repDateText}>{formatRepaymentDate(rep.returnDate)}</Text>
+                  </View>
+                  {!!rep.notes && <Text style={styles.repNotesText}>{rep.notes}</Text>}
+                </View>
+
+                {!!rep.paymentScreenshot && (
+                  <TouchableOpacity
+                    style={styles.repProofBtn}
+                    onPress={() => setFullImageUri(rep.paymentScreenshot || null)}
+                    activeOpacity={0.75}
+                  >
+                    <Ionicons name="image-outline" size={16} color="#056B38" />
+                    <Text style={styles.repProofBtnText}>Proof</Text>
+                  </TouchableOpacity>
+                )}
+
+                {!isRecipient && (
+                  <TouchableOpacity
+                    style={styles.repDeleteBtn}
+                    onPress={() => handleDeleteRepayment(rep.id)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="trash-outline" size={17} color="#EF4444" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))
+          ) : (
+            <View style={styles.emptyRepaymentsBox}>
+              <Ionicons name="receipt-outline" size={26} color="#CBD5E1" />
+              <Text style={styles.emptyRepaymentsText}>No partial returns recorded yet.</Text>
+            </View>
+          )}
         </View>
 
         {/* 5. CARD: PERSONAL DETAILS */}
@@ -508,6 +791,199 @@ export const PersonDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
         )}
       </View>
 
+      {/* RECORD PARTIAL RETURN MODAL */}
+      <Modal
+        visible={returnModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setReturnModalVisible(false)}
+      >
+        <View style={styles.returnModalOverlay}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setReturnModalVisible(false)}
+          />
+          <View style={styles.returnModalCard}>
+            <View style={styles.returnModalHandle} />
+            <Text style={styles.returnModalTitle}>Record Partial Return</Text>
+            <Text style={styles.returnModalSubtitle}>
+              Remaining balance: {formatCurrency(remainingAmount)}
+            </Text>
+
+            {/* Return Amount Input */}
+            <View style={styles.returnInputGroup}>
+              <Text style={styles.returnFieldLabel}>Return Amount (₹) *</Text>
+              <View style={styles.returnInputBox}>
+                <Text style={styles.rupeePrefix}>₹</Text>
+                <TextInput
+                  style={styles.returnTextInput}
+                  placeholder={`Max ${remainingAmount.toFixed(2)}`}
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="numeric"
+                  value={returnAmount}
+                  onChangeText={setReturnAmount}
+                />
+              </View>
+            </View>
+
+            {/* Given / Return Date */}
+            <View style={styles.returnInputGroup}>
+              <Text style={styles.returnFieldLabel}>Return Date *</Text>
+              {Platform.OS === 'web' ? (
+                React.createElement('input', {
+                  type: 'date',
+                  value: toISODate(returnDate),
+                  max: toISODate(new Date()),
+                  onChange: (e: any) => {
+                    if (e.target.value) {
+                      const parts = e.target.value.split('-');
+                      if (parts.length === 3) {
+                        const newDate = new Date(
+                          parseInt(parts[0], 10),
+                          parseInt(parts[1], 10) - 1,
+                          parseInt(parts[2], 10)
+                        );
+                        if (!isNaN(newDate.getTime())) setReturnDate(newDate);
+                      }
+                    }
+                  },
+                  style: {
+                    height: 48,
+                    borderRadius: 12,
+                    borderWidth: 1.5,
+                    borderStyle: 'solid',
+                    borderColor: '#E2E8F0',
+                    backgroundColor: '#F8FAFC',
+                    paddingLeft: 12,
+                    paddingRight: 12,
+                    fontSize: 14,
+                    fontWeight: '600',
+                    color: '#0F172A',
+                    outlineStyle: 'none',
+                    width: '100%',
+                    boxSizing: 'border-box',
+                  },
+                })
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={styles.returnDateBtn}
+                    onPress={() => setShowReturnDatePicker(true)}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="calendar-outline" size={18} color="#056B38" style={{ marginRight: 8 }} />
+                    <Text style={styles.returnDateText}>{formatRepaymentDate(toISODate(returnDate))}</Text>
+                  </TouchableOpacity>
+                  {showReturnDatePicker && (
+                    <DateTimePicker
+                      value={returnDate}
+                      mode="date"
+                      display="default"
+                      maximumDate={new Date()}
+                      onChange={(_, selDate) => {
+                        setShowReturnDatePicker(Platform.OS === 'ios');
+                        if (selDate) setReturnDate(selDate);
+                      }}
+                    />
+                  )}
+                </>
+              )}
+            </View>
+
+            {/* Notes (Optional) */}
+            <View style={styles.returnInputGroup}>
+              <Text style={styles.returnFieldLabel}>Notes (Optional)</Text>
+              <View style={[styles.returnInputBox, { height: 64, alignItems: 'flex-start', paddingVertical: 8 }]}>
+                <TextInput
+                  style={[styles.returnTextInput, { textAlignVertical: 'top' }]}
+                  placeholder="GPay, PhonePe, cash, etc."
+                  placeholderTextColor="#94A3B8"
+                  multiline
+                  value={returnNotes}
+                  onChangeText={setReturnNotes}
+                />
+              </View>
+            </View>
+
+            {/* Payment Screenshot Proof */}
+            <View style={styles.returnInputGroup}>
+              <Text style={styles.returnFieldLabel}>Payment Screenshot Proof</Text>
+              {returnProof ? (
+                <View style={styles.proofThumbRow}>
+                  <Image source={{ uri: returnProof }} style={styles.proofThumb} />
+                  <View style={styles.proofThumbActions}>
+                    <TouchableOpacity style={styles.proofChangeBtn} onPress={pickProofImage} activeOpacity={0.75}>
+                      <Ionicons name="camera-outline" size={14} color="#056B38" style={{ marginRight: 4 }} />
+                      <Text style={styles.proofChangeBtnText}>Change</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.proofRemoveBtn}
+                      onPress={() => setReturnProof(null)}
+                      activeOpacity={0.75}
+                    >
+                      <Ionicons name="trash-outline" size={14} color="#DC2626" style={{ marginRight: 4 }} />
+                      <Text style={styles.proofRemoveBtnText}>Remove</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <TouchableOpacity style={styles.returnAttachBtn} onPress={pickProofImage} activeOpacity={0.75}>
+                  <Ionicons name="camera-outline" size={18} color="#056B38" style={{ marginRight: 6 }} />
+                  <Text style={styles.returnAttachText}>Attach Receipt / UPI Screenshot</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Action Buttons */}
+            <View style={styles.returnModalActions}>
+              <TouchableOpacity
+                style={styles.returnModalCancelBtn}
+                onPress={() => setReturnModalVisible(false)}
+                activeOpacity={0.75}
+              >
+                <Text style={styles.returnModalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.returnModalSubmitBtn, submittingReturn && { opacity: 0.6 }]}
+                onPress={handleRecordReturn}
+                disabled={submittingReturn}
+                activeOpacity={0.85}
+              >
+                {submittingReturn ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.returnModalSubmitText}>Save Return</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* FULL IMAGE PROOF VIEWER MODAL */}
+      <Modal visible={!!fullImageUri} transparent animationType="fade" onRequestClose={() => setFullImageUri(null)}>
+        <View style={styles.fullImageModal}>
+          <TouchableOpacity style={styles.fullImageCloseBtn} onPress={() => setFullImageUri(null)}>
+            <Ionicons name="close" size={26} color="#FFFFFF" />
+          </TouchableOpacity>
+          {!!fullImageUri && (
+            <>
+              <Image source={{ uri: fullImageUri }} style={styles.fullImageView} resizeMode="contain" />
+              <TouchableOpacity
+                style={styles.fullImageShareBtn}
+                onPress={() => sharePaymentScreenshot(fullImageUri, `${person.name}_return`)}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="share-social" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+                <Text style={styles.fullImageShareBtnText}>Share Screenshot</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      </Modal>
+
       {/* CONFIRMATION MODAL */}
       <Modal visible={modalVisible} transparent={true} animationType="fade">
         <View style={styles.modalOverlay}>
@@ -534,6 +1010,20 @@ export const PersonDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
           </View>
         </View>
       </Modal>
+
+      {/* IN-APP ALERT MODAL */}
+      <CustomAlertModal
+        visible={alertModalVisible}
+        type={alertConfig.type}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        onClose={() => {
+          setAlertModalVisible(false);
+          if (alertConfig.onClose) {
+            alertConfig.onClose();
+          }
+        }}
+      />
     </SafeAreaView>
   );
 };
@@ -910,6 +1400,352 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalConfirmText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  recordReturnBtn: {
+    marginTop: 14,
+    backgroundColor: '#056B38',
+    borderRadius: 12,
+    height: 44,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#056B38',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0 3px 10px rgba(5, 107, 56, 0.2)',
+        cursor: 'pointer',
+      },
+    }),
+  },
+  recordReturnBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  returnHistoryHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  returnCountBadge: {
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  returnCountBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#056B38',
+  },
+  repaymentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    gap: 10,
+  },
+  repIconCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#DCFCE7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  repDetailsCol: {
+    flex: 1,
+  },
+  repAmountText: {
+    fontSize: 14.5,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  repDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  repDateText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  repNotesText: {
+    fontSize: 12,
+    color: '#475569',
+    marginTop: 3,
+  },
+  repProofBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8,
+    gap: 4,
+  },
+  repProofBtnText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#056B38',
+  },
+  repDeleteBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#FEF2F2',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyRepaymentsBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    gap: 6,
+  },
+  emptyRepaymentsText: {
+    fontSize: 12.5,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  returnModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+  },
+  returnModalCard: {
+    width: '100%',
+    maxWidth: 460,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 20,
+    ...Platform.select({
+      web: { boxShadow: '0 -8px 30px rgba(0,0,0,0.18)' },
+    }),
+  },
+  returnModalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#CBD5E1',
+    alignSelf: 'center',
+    marginBottom: 14,
+  },
+  returnModalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+    textAlign: 'center',
+  },
+  returnModalSubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  returnInputGroup: {
+    marginBottom: 14,
+  },
+  returnFieldLabel: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 6,
+  },
+  returnInputBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 12,
+    height: 48,
+  },
+  rupeePrefix: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#056B38',
+    marginRight: 8,
+  },
+  returnTextInput: {
+    flex: 1,
+    fontSize: 14.5,
+    fontWeight: '600',
+    color: '#0F172A',
+    ...Platform.select({
+      web: { outlineStyle: 'none' } as any,
+    }),
+  },
+  returnDateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 12,
+    height: 48,
+  },
+  returnDateText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  returnAttachBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: '#056B38',
+    borderRadius: 12,
+    backgroundColor: '#F0FDF4',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  returnAttachText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#056B38',
+  },
+  proofThumbRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 8,
+  },
+  proofThumb: {
+    width: 64,
+    height: 64,
+    borderRadius: 8,
+    backgroundColor: '#E2E8F0',
+  },
+  proofThumbActions: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  proofChangeBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ECFDF5',
+    borderRadius: 8,
+    paddingVertical: 8,
+  },
+  proofChangeBtnText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#056B38',
+  },
+  proofRemoveBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FEE2E2',
+    borderRadius: 8,
+    paddingVertical: 8,
+  },
+  proofRemoveBtnText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#DC2626',
+  },
+  returnModalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 6,
+  },
+  returnModalCancelBtn: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  returnModalCancelText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  returnModalSubmitBtn: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: '#056B38',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  returnModalSubmitText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  fullImageModal: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  fullImageCloseBtn: {
+    position: 'absolute',
+    top: 44,
+    right: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  fullImageView: {
+    width: '100%',
+    height: '75%',
+  },
+  fullImageShareBtn: {
+    marginTop: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#056B38',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  fullImageShareBtnText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',

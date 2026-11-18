@@ -1,3 +1,14 @@
+export interface PersonRecordRepayment {
+  id: number | string;
+  personRecordId: number | string;
+  amount: number | string;
+  returnDate: string;
+  notes?: string | null;
+  paymentScreenshot?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface PersonRecord {
   id?: string;
   _id?: string;
@@ -18,6 +29,8 @@ export interface PersonRecord {
   paymentScreenshot?: string;
   notes?: string;
   status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'COMPLETED';
+  repayments?: PersonRecordRepayment[];
+  totalReturned?: number;
   createdAt: string;
   updatedAt: string;
 }

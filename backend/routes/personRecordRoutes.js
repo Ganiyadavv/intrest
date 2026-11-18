@@ -12,5 +12,7 @@ router.delete("/:id", authMiddleware, personRecordController.deletePersonRecord)
 router.put("/:id/accept", authMiddleware, personRecordController.acceptPersonRecord);
 router.put("/:id/reject", authMiddleware, personRecordController.rejectPersonRecord);
 router.put("/:id/complete", authMiddleware, personRecordController.completePersonRecord);
+router.post("/:id/repayments", authMiddleware, upload.single('paymentScreenshot'), personRecordController.addPersonRepayment);
+router.delete("/:id/repayments/:repaymentId", authMiddleware, personRecordController.deletePersonRepayment);
 
 module.exports = router;

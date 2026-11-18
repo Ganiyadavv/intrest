@@ -51,4 +51,18 @@ export const personRecordService = {
     const response = await api.put(`/person-records/${id}/reject`);
     return response.data;
   },
+
+  addRepayment: async (id: string | number, data: FormData): Promise<any> => {
+    const response = await api.post(`/person-records/${id}/repayments`, data, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data?.data ? response.data.data : response.data;
+  },
+
+  deleteRepayment: async (id: string | number, repaymentId: string | number): Promise<any> => {
+    const response = await api.delete(`/person-records/${id}/repayments/${repaymentId}`);
+    return response.data?.data ? response.data.data : response.data;
+  },
 };

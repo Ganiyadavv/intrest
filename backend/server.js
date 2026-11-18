@@ -84,11 +84,12 @@ sequelize.authenticate()
   .then(async () => {
     console.log("Database connected successfully.");
     try {
-      const { PersonalRecord, PersonalRecordRepayment } = require("./models");
+      const { PersonalRecord, PersonalRecordRepayment, PersonRecordRepayment } = require("./models");
       await PersonalRecord.sync();
       await PersonalRecordRepayment.sync();
+      await PersonRecordRepayment.sync();
     } catch (syncErr) {
-      console.warn("Background personal records sync notice:", syncErr.message);
+      console.warn("Background records sync notice:", syncErr.message);
     }
     // In local non-production development, sync models in background
     if (process.env.NODE_ENV !== "production") {
