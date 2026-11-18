@@ -65,6 +65,7 @@ export const IncomingRequestDetailsScreen: React.FC<Props> = ({ navigation, rout
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
+  const [fullImageUri, setFullImageUri] = useState<string | null>(null);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [modalConfig, setModalConfig] = useState<{
@@ -523,6 +524,70 @@ export const IncomingRequestDetailsScreen: React.FC<Props> = ({ navigation, rout
           ) : null}
         </View>
 
+        {/* 3B. RETURN HISTORY CARD (SHOWN WHEN PARTIAL RETURNS EXIST) */}
+        {Array.isArray(record.repayments) && record.repayments.length > 0 && (
+          <View style={styles.detailsCard}>
+            <View style={[styles.cardHeader, { justifyContent: 'space-between' }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="checkmark-done-circle-outline" size={18} color="#056B38" style={{ marginRight: 8 }} />
+                <Text style={styles.cardHeaderTitle}>Return History</Text>
+              </View>
+              <View style={styles.returnTotalBadge}>
+                <Text style={styles.returnTotalBadgeText}>
+                  Returned: {formatCurrency(
+                    record.totalReturned ??
+                      record.repayments.reduce((sum: number, r: any) => sum + Number(r.amount || 0), 0)
+                  )}
+                </Text>
+              </View>
+            </View>
+
+            {record.repayments.map((rep: any, idx: number) => (
+              <View
+                key={String(rep.id || idx)}
+                style={[
+                  styles.repaymentItemCard,
+                  idx === record.repayments.length - 1 && { marginBottom: 0 },
+                ]}
+              >
+                <View style={styles.repaymentItemTopRow}>
+                  <View style={styles.repIconCircle}>
+                    <Ionicons name="checkmark-circle" size={19} color="#16A34A" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.repAmountText}>{formatCurrency(Number(rep.amount || 0))}</Text>
+                    <View style={styles.repDateRow}>
+                      <Ionicons name="calendar-outline" size={12} color="#64748B" style={{ marginRight: 4 }} />
+                      <Text style={styles.repDateText}>{formatDate(rep.returnDate)}</Text>
+                    </View>
+                    {!!rep.notes && <Text style={styles.repNotesText}>{rep.notes}</Text>}
+                  </View>
+                  {!!rep.paymentScreenshot && (
+                    <TouchableOpacity
+                      style={styles.shareScreenshotBtn}
+                      onPress={() => sharePaymentScreenshot(rep.paymentScreenshot, `${senderName}_return`)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="share-social-outline" size={14} color="#056B38" style={{ marginRight: 4 }} />
+                      <Text style={styles.shareScreenshotBtnText}>Share</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {!!rep.paymentScreenshot && (
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={() => setFullImageUri(rep.paymentScreenshot)}
+                    style={styles.repProofImageWrap}
+                  >
+                    <Image source={{ uri: rep.paymentScreenshot }} style={styles.repProofImage} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
+          </View>
+        )}
+
         {/* 4. PAYMENT SCREENSHOT (IF ANY) */}
         {record.paymentScreenshot && (
           <View style={styles.detailsCard}>
@@ -653,6 +718,33 @@ export const IncomingRequestDetailsScreen: React.FC<Props> = ({ navigation, rout
               </TouchableOpacity>
             </View>
           </View>
+        </View>
+      </Modal>
+
+      {/* FULL IMAGE PROOF MODAL */}
+      <Modal
+        visible={!!fullImageUri}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setFullImageUri(null)}
+      >
+        <View style={styles.fullImageModal}>
+          <TouchableOpacity style={styles.fullImageCloseBtn} onPress={() => setFullImageUri(null)}>
+            <Ionicons name="close" size={26} color="#FFFFFF" />
+          </TouchableOpacity>
+          {!!fullImageUri && (
+            <>
+              <Image source={{ uri: fullImageUri }} style={styles.fullImageView} resizeMode="contain" />
+              <TouchableOpacity
+                style={styles.fullImageShareBtn}
+                onPress={() => sharePaymentScreenshot(fullImageUri, `${senderName}_return`)}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="share-social" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+                <Text style={styles.fullImageShareBtnText}>Share Screenshot</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </Modal>
     </SafeAreaView>
@@ -1073,6 +1165,111 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalConfirmText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  returnTotalBadge: {
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  returnTotalBadgeText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#056B38',
+  },
+  repaymentItemCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 12,
+    marginBottom: 10,
+  },
+  repaymentItemTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  repIconCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#DCFCE7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  repAmountText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#056B38',
+  },
+  repDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  repDateText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  repNotesText: {
+    fontSize: 12,
+    color: '#475569',
+    marginTop: 3,
+  },
+  repProofImageWrap: {
+    marginTop: 10,
+    borderRadius: 10,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+  },
+  repProofImage: {
+    width: '100%',
+    height: 180,
+    resizeMode: 'contain',
+    backgroundColor: '#F8FAFC',
+  },
+  fullImageModal: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  fullImageCloseBtn: {
+    position: 'absolute',
+    top: 44,
+    right: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  fullImageView: {
+    width: '100%',
+    height: '75%',
+  },
+  fullImageShareBtn: {
+    marginTop: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#056B38',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  fullImageShareBtnText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',

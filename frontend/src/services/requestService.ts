@@ -228,6 +228,8 @@ async function formatNotificationDetailToRequest(detail: any, n?: any, currentUs
       name: senderName,
       userId: senderUserId,
     },
+    repayments: detail.repayments || [],
+    totalReturned: detail.totalReturned ?? 0,
   };
 }
 

@@ -1,4 +1,4 @@
-const { Notification, PersonRecord, LenderRecord, User } = require("../models");
+const { Notification, PersonRecord, PersonRecordRepayment, LenderRecord, User } = require("../models");
 
 const sendResponse = (res, statusCode, status, message, data = null) => {
   const response = { statusCode, status, message };
@@ -47,7 +47,15 @@ exports.getNotificationPersonDetails = async (req, res) => {
 
     if (notification.personRecordId) {
       record = await PersonRecord.findByPk(notification.personRecordId, {
-        include: [{ model: User, as: 'owner', attributes: ['id', 'userId', 'fullName'] }]
+        include: [
+          { model: User, as: 'owner', attributes: ['id', 'userId', 'fullName'] },
+          {
+            model: PersonRecordRepayment,
+            as: 'repayments',
+            separate: true,
+            order: [['returnDate', 'DESC'], ['createdAt', 'DESC']]
+          }
+        ]
       });
       recordType = 'PERSON_RECORD';
     } else if (notification.lenderRecordId) {
@@ -76,8 +84,15 @@ exports.getNotificationPersonDetails = async (req, res) => {
       userId: record.owner.userId
     } : null);
 
+    const recordJson = record.toJSON();
+    const totalReturned = (recordJson.repayments || []).reduce(
+      (sum, r) => sum + Number(r.amount || 0),
+      0
+    );
+
     const responseData = {
-      ...record.toJSON(),
+      ...recordJson,
+      totalReturned,
       recordType,
       notificationId: notification.id,
       title: notification.title,
