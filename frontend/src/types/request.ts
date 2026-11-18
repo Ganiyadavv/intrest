@@ -1,5 +1,3 @@
-import { PersonRecordRepayment } from './personRecord';
-
 export interface RequestSender {
   id?: number;
   userId?: string;
@@ -40,7 +38,5 @@ export interface RequestItem {
   updatedAt: string;
   sender?: RequestSender;
   recipient?: RequestRecipient;
-  repayments?: PersonRecordRepayment[];
-  totalReturned?: number;
 }
 

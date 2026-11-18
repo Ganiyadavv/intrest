@@ -1,4 +1,4 @@
-const { PersonRecord, PersonRecordRepayment, LenderRecord, User, Notification } = require("../models");
+const { PersonRecord, LenderRecord, User, Notification } = require("../models");
 const { Op } = require("sequelize");
 const lenderRecordService = require("../services/lenderRecordService");
 
@@ -203,13 +203,7 @@ exports.getRequestDetails = async (req, res) => {
       record = await PersonRecord.findByPk(recordId, {
         include: [
           { model: User, as: 'owner', attributes: ['id', 'userId', 'fullName', 'email'] },
-          { model: User, as: 'targetUser', attributes: ['id', 'userId', 'fullName', 'email'] },
-          {
-            model: PersonRecordRepayment,
-            as: 'repayments',
-            separate: true,
-            order: [['returnDate', 'DESC'], ['createdAt', 'DESC']]
-          }
+          { model: User, as: 'targetUser', attributes: ['id', 'userId', 'fullName', 'email'] }
         ]
       });
     }
@@ -222,15 +216,8 @@ exports.getRequestDetails = async (req, res) => {
       return sendResponse(res, 403, "ERROR", "You are not authorized to view this request");
     }
 
-    const recordJson = record.toJSON();
-    const totalReturned = (recordJson.repayments || []).reduce(
-      (sum, r) => sum + Number(r.amount || 0),
-      0
-    );
-
     const data = {
-      ...recordJson,
-      totalReturned,
+      ...record.toJSON(),
       recordType,
       interestFrequency: 'Monthly',
       date: record.receivedDate || record.givenDate,

@@ -658,14 +658,20 @@ export const DashboardScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.navTabLabel}>{t('nav.borrowers')}</Text>
         </TouchableOpacity>
 
-        {/* Tab 5: More */}
+        {/* Tab 5: Friend & Family Records */}
         <TouchableOpacity
           style={styles.navTabItem}
-          onPress={() => setMenuModalVisible(true)}
+          onPress={() => navigation.navigate('PersonalRecords')}
           activeOpacity={0.8}
         >
-          <Ionicons name="grid-outline" size={22} color="#64748B" />
-          <Text style={styles.navTabLabel}>{t('nav.more')}</Text>
+          <FontAwesome5 name="handshake" size={20} color="#64748B" />
+          <Text
+            style={[styles.navTabLabel, styles.navTabLabelCompact]}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
+            {t('menu.personalRecords')}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -1364,6 +1370,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#64748B',
     marginTop: 2,
+  },
+  navTabLabelCompact: {
+    fontSize: 8.5,
+    lineHeight: 10,
+    textAlign: 'center',
+    paddingHorizontal: 2,
   },
   centerFabAnchor: {
     flex: 1,
