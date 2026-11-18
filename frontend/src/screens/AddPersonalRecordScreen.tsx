@@ -223,7 +223,6 @@ export const AddPersonalRecordScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.headerTitle}>
             {language === 'te' ? 'వ్యక్తిగత రికార్డు జోడించండి' : 'Add Personal Record'}
           </Text>
-          <Text style={styles.headerSubtitle}>మన లెక్క</Text>
         </View>
 
         <View style={{ width: 40 }} />

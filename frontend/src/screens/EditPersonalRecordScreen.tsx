@@ -231,7 +231,6 @@ export const EditPersonalRecordScreen: React.FC<Props> = ({ navigation, route })
 
         <View style={styles.headerTitleCol}>
           <Text style={styles.headerTitle}>Edit Personal Record</Text>
-          <Text style={styles.headerSubtitle}>మన లెక్క</Text>
         </View>
 
         <View style={{ width: 40 }} />

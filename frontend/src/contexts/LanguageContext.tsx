@@ -61,7 +61,7 @@ const translations = {
     'modal.addLenderDesc': 'Record money received / borrowed from a lender',
     'modal.addFriendFamily': 'Friend & Family',
     'modal.addFriendFamilyDesc': 'Track money given without interest',
-    'menu.personalRecords': 'Friend & Family Records',
+    'menu.personalRecords': 'Friends & Family',
     'common.cancel': 'Cancel',
 
     // Legacy keys

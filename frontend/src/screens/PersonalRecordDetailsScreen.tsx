@@ -357,7 +357,6 @@ Tracked securely on DhanaMitra.`;
 
         <View style={styles.headerTitleCol}>
           <Text style={styles.headerTitle}>Personal Record Details</Text>
-          <Text style={styles.headerSubtitle}>మన లెక్క</Text>
         </View>
 
         <TouchableOpacity
