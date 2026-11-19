@@ -111,10 +111,11 @@ sequelize.authenticate()
   .then(async () => {
     console.log("Database connected successfully.");
     try {
-      const { PersonalRecord, PersonalRecordRepayment, PersonRecordRepayment } = require("./models");
+      const { PersonalRecord, PersonalRecordRepayment, PersonRecordRepayment, LenderRecordRepayment } = require("./models");
       await PersonalRecord.sync();
       await PersonalRecordRepayment.sync();
       await PersonRecordRepayment.sync();
+      await LenderRecordRepayment.sync();
     } catch (syncErr) {
       console.warn("Background records sync notice:", syncErr.message);
     }

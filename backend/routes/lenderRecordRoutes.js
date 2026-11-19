@@ -12,5 +12,7 @@ router.delete("/:id", authMiddleware, lenderRecordController.deleteLenderRecord)
 router.put("/:id/accept", authMiddleware, lenderRecordController.acceptLenderRecord);
 router.put("/:id/reject", authMiddleware, lenderRecordController.rejectLenderRecord);
 router.put("/:id/complete", authMiddleware, lenderRecordController.completeLenderRecord);
+router.post("/:id/repayments", authMiddleware, upload.single('paymentScreenshot'), lenderRecordController.addLenderRepayment);
+router.delete("/:id/repayments/:repaymentId", authMiddleware, lenderRecordController.deleteLenderRepayment);
 
 module.exports = router;

@@ -172,3 +172,59 @@ exports.completeLenderRecord = async (req, res) => {
     return sendResponse(res, 500, "ERROR", "Internal server error");
   }
 };
+
+exports.addLenderRepayment = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const recordId = req.params.id;
+
+    let paymentScreenshot = undefined;
+    if (req.file) {
+      paymentScreenshot = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    } else if (req.body.paymentScreenshot) {
+      paymentScreenshot = req.body.paymentScreenshot;
+    }
+
+    const result = await lenderRecordService.addLenderRepayment(userId, recordId, {
+      ...req.body,
+      paymentScreenshot
+    });
+
+    return sendResponse(res, 201, "SUCCESS", "Partial repayment recorded successfully", result);
+  } catch (error) {
+    if (error.message === "Lender record not found") {
+      return sendResponse(res, 404, "ERROR", error.message);
+    }
+    if (error.message.includes("Only the owner")) {
+      return sendResponse(res, 403, "ERROR", error.message);
+    }
+    if (
+      error.message.includes("Return amount") ||
+      error.message.includes("already completed") ||
+      error.message.includes("rejected record")
+    ) {
+      return sendResponse(res, 400, "ERROR", error.message);
+    }
+    console.error("Error adding lender repayment:", error);
+    return sendResponse(res, 500, "ERROR", "Internal server error");
+  }
+};
+
+exports.deleteLenderRepayment = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { id: recordId, repaymentId } = req.params;
+
+    const result = await lenderRecordService.deleteLenderRepayment(userId, recordId, repaymentId);
+    return sendResponse(res, 200, "SUCCESS", "Repayment entry deleted successfully", result);
+  } catch (error) {
+    if (error.message === "Lender record not found" || error.message === "Repayment entry not found") {
+      return sendResponse(res, 404, "ERROR", error.message);
+    }
+    if (error.message.includes("Only the owner")) {
+      return sendResponse(res, 403, "ERROR", error.message);
+    }
+    console.error("Error deleting lender repayment:", error);
+    return sendResponse(res, 500, "ERROR", "Internal server error");
+  }
+};

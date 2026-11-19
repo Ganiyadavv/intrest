@@ -1,5 +1,16 @@
+export interface LenderRecordRepayment {
+  id: number | string;
+  lenderRecordId: number | string;
+  amount: number | string;
+  returnDate: string;
+  notes?: string | null;
+  paymentScreenshot?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface LenderRecord {
-  id: string; // backend uses id or _id, we map it properly in the service or just use id. Based on PersonRecord let's just use id or _id
+  id?: string;
   _id?: string;
   ownerId: string;
   targetUserId?: string;
@@ -18,6 +29,8 @@ export interface LenderRecord {
   paymentScreenshot?: string;
   notes?: string;
   status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'COMPLETED';
+  repayments?: LenderRecordRepayment[];
+  totalReturned?: number;
   createdAt: string;
   updatedAt: string;
 }

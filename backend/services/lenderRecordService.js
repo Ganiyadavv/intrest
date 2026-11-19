@@ -1,5 +1,32 @@
-const { LenderRecord, PersonRecord, User, Notification } = require("../models");
+const { LenderRecord, LenderRecordRepayment, PersonRecord, User, Notification } = require("../models");
 const { Op } = require("sequelize");
+
+// Helper to compute lender total payable (principal + accrued simple interest)
+const computeTotalPayable = (record, extraDays = 0) => {
+  const d1 = new Date(record.receivedDate);
+  const d2 = new Date();
+  if (extraDays) d2.setDate(d2.getDate() + extraDays);
+
+  let years = d2.getFullYear() - d1.getFullYear();
+  let months = d2.getMonth() - d1.getMonth();
+  let days = d2.getDate() - d1.getDate();
+
+  if (days < 0) {
+    months -= 1;
+    const prevMonth = new Date(d2.getFullYear(), d2.getMonth(), 0);
+    days += prevMonth.getDate();
+  }
+  if (months < 0) {
+    years -= 1;
+    months += 12;
+  }
+
+  const totalMonths = Math.max(0, years * 12 + months + days / 30);
+  const principal = Number(record.amount) || 0;
+  const rate = Number(record.interestRate) || 0;
+  const interest = (principal * rate * totalMonths) / 100;
+  return Math.max(0, principal + interest);
+};
 
 class LenderRecordService {
   async createLenderRecord(ownerId, data) {
@@ -65,7 +92,8 @@ class LenderRecordService {
       attributes: { exclude: ['paymentScreenshot'] },
       include: [
         { model: User, as: 'targetUser', attributes: ['userId', 'fullName'] },
-        { model: User, as: 'owner', attributes: ['userId', 'fullName'] }
+        { model: User, as: 'owner', attributes: ['userId', 'fullName'] },
+        { model: LenderRecordRepayment, as: 'repayments', attributes: ['id', 'amount', 'returnDate'] }
       ],
       order: [['createdAt', 'DESC']]
     });
@@ -75,6 +103,7 @@ class LenderRecordService {
       if (data.targetUser && data.targetUser.userId) {
         data.targetUserId = data.targetUser.userId;
       }
+      data.totalReturned = (data.repayments || []).reduce((sum, r) => sum + Number(r.amount || 0), 0);
       return data;
     });
   }
@@ -83,7 +112,13 @@ class LenderRecordService {
     const record = await LenderRecord.findByPk(recordId, {
       include: [
         { model: User, as: 'targetUser', attributes: ['userId', 'fullName'] },
-        { model: User, as: 'owner', attributes: ['id', 'userId', 'fullName'] }
+        { model: User, as: 'owner', attributes: ['id', 'userId', 'fullName'] },
+        {
+          model: LenderRecordRepayment,
+          as: 'repayments',
+          separate: true,
+          order: [['returnDate', 'DESC'], ['createdAt', 'DESC']]
+        }
       ]
     });
 
@@ -99,6 +134,10 @@ class LenderRecordService {
     if (formattedRecord.targetUser && formattedRecord.targetUser.userId) {
       formattedRecord.targetUserId = formattedRecord.targetUser.userId;
     }
+    formattedRecord.totalReturned = (formattedRecord.repayments || []).reduce(
+      (sum, r) => sum + Number(r.amount || 0),
+      0
+    );
 
     return formattedRecord;
   }
@@ -139,6 +178,7 @@ class LenderRecordService {
     }
 
     await Notification.destroy({ where: { lenderRecordId: recordId } });
+    await LenderRecordRepayment.destroy({ where: { lenderRecordId: recordId } });
     await record.destroy();
     return true;
   }
@@ -224,6 +264,109 @@ class LenderRecordService {
 
     await record.update({ status: "COMPLETED" });
     return record;
+  }
+
+  async addLenderRepayment(userId, recordId, data) {
+    const { amount, returnDate, notes, paymentScreenshot } = data;
+
+    const record = await LenderRecord.findByPk(recordId, {
+      include: [{ model: LenderRecordRepayment, as: 'repayments' }]
+    });
+
+    if (!record) {
+      throw new Error("Lender record not found");
+    }
+
+    if (record.ownerId !== userId) {
+      throw new Error("Only the owner can record repayments for this lender record");
+    }
+
+    if (record.status === "REJECTED") {
+      throw new Error("Cannot record repayment on a rejected record");
+    }
+
+    if (record.status === "COMPLETED") {
+      throw new Error("This lender record is already completed");
+    }
+
+    const parsedAmount = parseFloat(amount);
+    if (!amount || isNaN(parsedAmount) || parsedAmount <= 0) {
+      throw new Error("Return amount must be greater than 0");
+    }
+
+    const existingReturned = (record.repayments || []).reduce(
+      (sum, r) => sum + Number(r.amount || 0),
+      0
+    );
+
+    const maxTotalPayable = computeTotalPayable(record, 1);
+    const remainingAllowed = Math.max(0, maxTotalPayable - existingReturned);
+    if (parsedAmount > remainingAllowed + 1) {
+      throw new Error(`Return amount cannot exceed remaining balance of ₹${remainingAllowed.toFixed(2)}`);
+    }
+
+    const effectiveDate = returnDate || new Date().toISOString().split('T')[0];
+
+    const repayment = await LenderRecordRepayment.create({
+      lenderRecordId: record.id,
+      amount: parsedAmount,
+      returnDate: effectiveDate,
+      notes: notes ? String(notes).trim() : null,
+      paymentScreenshot: paymentScreenshot || null
+    });
+
+    const newTotalReturned = Number((existingReturned + parsedAmount).toFixed(2));
+    const currentTotalPayable = computeTotalPayable(record, 0);
+
+    // If lender was paid back the full payable amount, automatically mark COMPLETED
+    if (newTotalReturned >= currentTotalPayable - 0.01 && currentTotalPayable > 0) {
+      await record.update({ status: "COMPLETED" });
+    }
+
+    return {
+      repayment,
+      totalReturned: newTotalReturned,
+      status: record.status
+    };
+  }
+
+  async deleteLenderRepayment(userId, recordId, repaymentId) {
+    const record = await LenderRecord.findByPk(recordId);
+    if (!record) {
+      throw new Error("Lender record not found");
+    }
+
+    if (record.ownerId !== userId) {
+      throw new Error("Only the owner can delete repayments for this lender record");
+    }
+
+    const repayment = await LenderRecordRepayment.findOne({
+      where: { id: repaymentId, lenderRecordId: recordId }
+    });
+
+    if (!repayment) {
+      throw new Error("Repayment entry not found");
+    }
+
+    await repayment.destroy();
+
+    const remainingRepayments = await LenderRecordRepayment.findAll({
+      where: { lenderRecordId: recordId }
+    });
+    const newTotalReturned = remainingRepayments.reduce((sum, r) => sum + Number(r.amount || 0), 0);
+
+    // If record was marked COMPLETED and balance is now remaining, revert status safely
+    if (record.status === "COMPLETED") {
+      const currentTotalPayable = computeTotalPayable(record, 0);
+      if (newTotalReturned < currentTotalPayable - 0.01) {
+        await record.update({ status: record.targetUserId ? "ACCEPTED" : "PENDING" });
+      }
+    }
+
+    return {
+      totalReturned: Number(newTotalReturned.toFixed(2)),
+      status: record.status
+    };
   }
 }
 
