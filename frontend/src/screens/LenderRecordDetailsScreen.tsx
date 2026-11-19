@@ -593,7 +593,97 @@ export const LenderRecordDetailsScreen: React.FC<Props> = ({ navigation, route }
           </View>
         </View>
 
-        {/* 4. CARD: PAYMENT SUMMARY */}
+        {/* 4. CARD: PERSONAL DETAILS */}
+        <View style={styles.infoCard}>
+          <Text style={styles.cardHeaderTitle}>Personal Details</Text>
+
+          <View style={styles.infoRow}>
+            <Text style={styles.infoRowLabel}>Father's Name</Text>
+            <Text style={styles.infoRowValue}>{person.fatherName || 'Not provided'}</Text>
+          </View>
+
+          {hasAddress && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoRowLabel}>Address</Text>
+              <Text style={[styles.infoRowValue, { flex: 1, textAlign: 'right' }]} numberOfLines={2}>
+                {[
+                  person.village,
+                  person.mandal,
+                  person.district,
+                  person.state,
+                  person.country,
+                  person.pincode,
+                ]
+                  .filter(Boolean)
+                  .join(', ')}
+              </Text>
+            </View>
+          )}
+
+          {!!cleanNotes(person.notes) && (
+            <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
+              <Text style={styles.infoRowLabel}>Notes</Text>
+              <Text style={[styles.infoRowValue, { flex: 1, textAlign: 'right' }]}>{cleanNotes(person.notes)}</Text>
+            </View>
+          )}
+        </View>
+
+        {/* 5. CARD: PAYMENT SCREENSHOT (if available) */}
+        {!!person.paymentScreenshot && (
+          <View style={styles.infoCard}>
+            <View style={styles.screenshotHeaderRow}>
+              <Text style={[styles.cardHeaderTitle, { marginBottom: 0 }]}>Payment Screenshot</Text>
+              <TouchableOpacity
+                style={styles.shareScreenshotBtn}
+                onPress={() => sharePaymentScreenshot(person.paymentScreenshot!, person.name)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="share-social-outline" size={15} color="#056B38" style={{ marginRight: 4 }} />
+                <Text style={styles.shareScreenshotBtnText}>Share</Text>
+              </TouchableOpacity>
+            </View>
+            <Image source={{ uri: person.paymentScreenshot }} style={styles.screenshotImage} />
+            <TouchableOpacity
+              style={styles.shareScreenshotFullBtn}
+              onPress={() => sharePaymentScreenshot(person.paymentScreenshot!, person.name)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="share-social" size={16} color="#056B38" style={{ marginRight: 6 }} />
+              <Text style={styles.shareScreenshotFullBtnText}>Share Screenshot</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* 6. INTEREST CALCULATOR TILE */}
+        <TouchableOpacity
+          style={styles.calcTileBtn}
+          onPress={() =>
+            navigation.navigate('InterestCalculator', {
+              principal: person.amount.toString(),
+              rate: person.interestRate.toString(),
+              years: (calcResult.years ?? 0).toString(),
+              months: (calcResult.months ?? 0).toString(),
+              days: (calcResult.days ?? 0).toString(),
+              givenDate: person.receivedDate,
+              personName: person.name,
+            })
+          }
+          activeOpacity={0.8}
+        >
+          <View style={styles.calcTileIconCircle}>
+            <Ionicons name="calculator-outline" size={20} color="#7C3AED" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.calcTileTitle}>Open in Interest Calculator</Text>
+            <Text style={styles.calcTileSubtitle}>
+              {calcResult.years > 0 ? `${calcResult.years}y ` : ''}
+              {calcResult.months}m {calcResult.days}d duration ({formatCurrency(calcResult.interest)} interest)
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+        </TouchableOpacity>
+
+        {/* 7. CARD: PAYMENT SUMMARY */}
         <View style={styles.infoCard}>
           <Text style={styles.cardHeaderTitle}>Payment Summary</Text>
 
@@ -636,7 +726,7 @@ export const LenderRecordDetailsScreen: React.FC<Props> = ({ navigation, route }
           )}
         </View>
 
-        {/* 4B. CARD: RETURN HISTORY */}
+        {/* 8. CARD: RETURN HISTORY */}
         <View style={styles.infoCard}>
           <View style={styles.returnHistoryHeaderRow}>
             <Text style={[styles.cardHeaderTitle, { marginBottom: 0 }]}>Return History</Text>
@@ -700,96 +790,6 @@ export const LenderRecordDetailsScreen: React.FC<Props> = ({ navigation, route }
             </View>
           )}
         </View>
-
-        {/* 5. CARD: PERSONAL DETAILS */}
-        <View style={styles.infoCard}>
-          <Text style={styles.cardHeaderTitle}>Personal Details</Text>
-
-          <View style={styles.infoRow}>
-            <Text style={styles.infoRowLabel}>Father's Name</Text>
-            <Text style={styles.infoRowValue}>{person.fatherName || 'Not provided'}</Text>
-          </View>
-
-          {hasAddress && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoRowLabel}>Address</Text>
-              <Text style={[styles.infoRowValue, { flex: 1, textAlign: 'right' }]} numberOfLines={2}>
-                {[
-                  person.village,
-                  person.mandal,
-                  person.district,
-                  person.state,
-                  person.country,
-                  person.pincode,
-                ]
-                  .filter(Boolean)
-                  .join(', ')}
-              </Text>
-            </View>
-          )}
-
-          {!!cleanNotes(person.notes) && (
-            <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
-              <Text style={styles.infoRowLabel}>Notes</Text>
-              <Text style={[styles.infoRowValue, { flex: 1, textAlign: 'right' }]}>{cleanNotes(person.notes)}</Text>
-            </View>
-          )}
-        </View>
-
-        {/* 6. CARD: PAYMENT SCREENSHOT (if available) */}
-        {!!person.paymentScreenshot && (
-          <View style={styles.infoCard}>
-            <View style={styles.screenshotHeaderRow}>
-              <Text style={[styles.cardHeaderTitle, { marginBottom: 0 }]}>Payment Screenshot</Text>
-              <TouchableOpacity
-                style={styles.shareScreenshotBtn}
-                onPress={() => sharePaymentScreenshot(person.paymentScreenshot!, person.name)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="share-social-outline" size={15} color="#056B38" style={{ marginRight: 4 }} />
-                <Text style={styles.shareScreenshotBtnText}>Share</Text>
-              </TouchableOpacity>
-            </View>
-            <Image source={{ uri: person.paymentScreenshot }} style={styles.screenshotImage} />
-            <TouchableOpacity
-              style={styles.shareScreenshotFullBtn}
-              onPress={() => sharePaymentScreenshot(person.paymentScreenshot!, person.name)}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="share-social" size={16} color="#056B38" style={{ marginRight: 6 }} />
-              <Text style={styles.shareScreenshotFullBtnText}>Share Screenshot</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* 7. INTEREST CALCULATOR TILE */}
-        <TouchableOpacity
-          style={styles.calcTileBtn}
-          onPress={() =>
-            navigation.navigate('InterestCalculator', {
-              principal: person.amount.toString(),
-              rate: person.interestRate.toString(),
-              years: (calcResult.years ?? 0).toString(),
-              months: (calcResult.months ?? 0).toString(),
-              days: (calcResult.days ?? 0).toString(),
-              givenDate: person.receivedDate,
-              personName: person.name,
-            })
-          }
-          activeOpacity={0.8}
-        >
-          <View style={styles.calcTileIconCircle}>
-            <Ionicons name="calculator-outline" size={20} color="#7C3AED" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.calcTileTitle}>Open in Interest Calculator</Text>
-            <Text style={styles.calcTileSubtitle}>
-              {calcResult.years > 0 ? `${calcResult.years}y ` : ''}
-              {calcResult.months}m {calcResult.days}d duration ({formatCurrency(calcResult.interest)} interest)
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-        </TouchableOpacity>
       </ScrollView>
 
       {/* 8. BOTTOM PINNED BUTTONS */}
