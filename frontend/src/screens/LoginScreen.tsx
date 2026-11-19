@@ -47,7 +47,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation, route }) => {
     if (loading) {
       timer = setTimeout(() => {
         setTakingLonger(true);
-      }, 3500);
+      }, 6000);
     } else {
       setTakingLonger(false);
     }

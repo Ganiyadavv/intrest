@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const { PasswordResetOtp } = require("../models");
+const { Op } = require("sequelize");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const { sendPasswordResetEmail } = require("../services/emailService");
@@ -86,10 +87,10 @@ const login = async (req, res) => {
     }
 
     const cleanEmail = email.trim();
-    let user = await User.findOne({ where: { email: cleanEmail } });
-    if (!user) {
-      user = await User.findOne({ where: { email: cleanEmail.toLowerCase() } });
-    }
+    const lowerEmail = cleanEmail.toLowerCase();
+    const user = await User.findOne({
+      where: cleanEmail === lowerEmail ? { email: lowerEmail } : { [Op.or]: [{ email: cleanEmail }, { email: lowerEmail }] }
+    });
 
     if (!user) {
       return res.status(401).json({

@@ -54,7 +54,7 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
     if (loading) {
       timer = setTimeout(() => {
         setTakingLonger(true);
-      }, 3500);
+      }, 6000);
     } else {
       setTakingLonger(false);
     }

@@ -16,13 +16,15 @@ const sequelize = new Sequelize(process.env.SUPABASE_DB_URL, {
       require: true,
       rejectUnauthorized: false // Required for Supabase connections
     },
-    keepAlive: true
+    keepAlive: true,
+    statement_timeout: 15000 // 15s query timeout prevents hanging queries
   },
   pool: {
     max: 10,
-    min: 2,           // Keep at least 2 connections alive so queries don't wait for TLS handshakes
-    acquire: 30000,
-    idle: 300000      // Keep idle connection open for 5 minutes instead of 10 seconds
+    min: 0,           // min: 0 prevents stale sockets dropped by Supabase PgBouncer
+    acquire: 15000,
+    idle: 20000,      // release idle connections quickly before serverless pooler drops them
+    evict: 5000       // evict dead/stale connections every 5s
   },
   logging: false
 });

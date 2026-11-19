@@ -79,6 +79,33 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
+// Self-ping to prevent Render free-tier spin-down (inactivity threshold is 15 minutes)
+const KEEP_ALIVE_URL = process.env.RENDER_EXTERNAL_URL || "https://intrest.onrender.com";
+const PING_INTERVAL = 9 * 60 * 1000; // 9 minutes
+
+const pingKeepAlive = () => {
+  try {
+    const https = require("https");
+    const http = require("http");
+    const client = KEEP_ALIVE_URL.startsWith("https") ? https : http;
+    client.get(`${KEEP_ALIVE_URL}/health`, (res) => {
+      res.resume(); // consume response data to free memory
+    }).on("error", () => {
+      // ignore network errors silently
+    });
+  } catch (_) {}
+};
+
+setInterval(pingKeepAlive, PING_INTERVAL);
+setTimeout(pingKeepAlive, 15000); // initial ping 15s after startup
+
+// Keep Supabase connection pool alive and prevent PgBouncer idle socket disconnect
+setInterval(async () => {
+  try {
+    await sequelize.query('SELECT 1;');
+  } catch (_) {}
+}, 4 * 60 * 1000); // every 4 minutes
+
 // Authenticate and connect database in background
 sequelize.authenticate()
   .then(async () => {
